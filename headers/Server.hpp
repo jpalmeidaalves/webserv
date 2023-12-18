@@ -3,9 +3,21 @@
 
 
 #include <iostream>
+#include <string>
+#include <sys/types.h>
+#include <sys/socket.h>
 
-Class Server{
-    
+class Server{
+
+	private:
+		int _socket;
+		std::string _host;
+		int _port;
+		Server();
+		struct socketinfo;
+	public:
+		Server(const std::string &configfile, const std::string &host, int port);
+		~Server();
 
 };
 
