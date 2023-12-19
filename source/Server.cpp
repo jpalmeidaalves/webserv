@@ -60,10 +60,11 @@ void Server::start_listen() {
               << std::endl;
 
     // ---------------------------------------
+    char read_buffer[10 + 1];
 
     int MAX_EVENTS = 10;
     struct epoll_event ev, events[MAX_EVENTS];
-    int listen_sock, conn_sock, nfds, epollfd;
+    int listen_sock, epollfd;
 
     /* Code to set up listening socket, 'listen_sock',
        (socket(), bind(), listen()) omitted. */
@@ -82,37 +83,34 @@ void Server::start_listen() {
         // perror("epoll_ctl: listen_sock");
         return;
     }
+    int in_sockfd = this->accept_connection();
+    if (in_sockfd < 0)
+        (void)in_sockfd; // if connection refused continue to next request
 
-    for (;;) {
-        nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
-        if (nfds == -1) {
-            // perror("epoll_wait");
-            break;
-        }
+   while (1) 
+   {
+		std::cout << ("\nPolling for input...\n");
+		int event_count = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+		std::cout << event_count << "ready events\n";
+		for (int i = 0; i < event_count; i++) {
+			std::cout << ("Reading file descriptor-") << events[i].data.fd;
+			int bytes_read = read(events[i].data.fd, read_buffer, 10);
+			std::cout << bytes_read << " bytes read.\n";
+			read_buffer[bytes_read] = '\0';
+			std::cout << "Read" << read_buffer << std::endl;
+		
+/* 			if(!strncmp(read_buffer, "stop\n", 5))
+			running = 0; */
+		}
+	}
 
-        for (int n = 0; n < nfds; ++n) {
-            if (events[n].data.fd == listen_sock) {
-                conn_sock =
-                    accept(listen_sock, (struct sockaddr *)&this->_address,
-                           (socklen_t *)&this->_address_len);
-                if (conn_sock == -1) {
-                    // perror("accept");
-                    break;
-                }
-                // setnonblocking(conn_sock);
-                ev.events = EPOLLIN | EPOLLET;
-                ev.data.fd = conn_sock;
-                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1) {
-                    // perror("epoll_ctl: conn_sock");
-                    break;
-                }
-            } else {
-                std::cout << "do use fd " << events[n].data.fd << std::endl;
-            }
-        }
-    }
+    if (close(epollfd)) {
+        std::cout << "estouro" << std::endl;
+		// fprintf(stderr, "Failed to close epoll file descriptor\n");
+		return;
+	}
 
-    // ---------------------------------------
+    /* ---------------------------------------
 
     while (g_stop == 0) {
         std::cout << "  > Waiting for new connection\n";
@@ -141,7 +139,7 @@ void Server::start_listen() {
         write(in_sockfd, ss.str().c_str(), ss.str().size());
 
         close(in_sockfd);
-    }
+    }*/
 }
 
 int Server::accept_connection() {
