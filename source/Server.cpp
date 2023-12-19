@@ -51,7 +51,6 @@ void Server::create_server() {
 }
 
 void Server::start_listen() {
-
     // Start listen for incomming requests
     if (listen(this->_sockfd, SOMAXCONN) < 0)
         throw Server::ListenException();
@@ -59,6 +58,61 @@ void Server::start_listen() {
     std::cout << "Server listening on " << BOLDGREEN
               << "http://127.0.0.1:" << ntohs(this->_address.sin_port) << RESET
               << std::endl;
+
+    // ---------------------------------------
+
+    int MAX_EVENTS = 10;
+    struct epoll_event ev, events[MAX_EVENTS];
+    int listen_sock, conn_sock, nfds, epollfd;
+
+    /* Code to set up listening socket, 'listen_sock',
+       (socket(), bind(), listen()) omitted. */
+
+    epollfd = epoll_create(SOMAXCONN);
+    if (epollfd == -1) {
+        // perror("epoll_create1");
+        return;
+    }
+
+    listen_sock = 0;
+
+    ev.events = EPOLLIN;
+    ev.data.fd = listen_sock;
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, listen_sock, &ev) == -1) {
+        // perror("epoll_ctl: listen_sock");
+        return;
+    }
+
+    for (;;) {
+        nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+        if (nfds == -1) {
+            // perror("epoll_wait");
+            break;
+        }
+
+        for (int n = 0; n < nfds; ++n) {
+            if (events[n].data.fd == listen_sock) {
+                conn_sock =
+                    accept(listen_sock, (struct sockaddr *)&this->_address,
+                           (socklen_t *)&this->_address_len);
+                if (conn_sock == -1) {
+                    // perror("accept");
+                    break;
+                }
+                // setnonblocking(conn_sock);
+                ev.events = EPOLLIN | EPOLLET;
+                ev.data.fd = conn_sock;
+                if (epoll_ctl(epollfd, EPOLL_CTL_ADD, conn_sock, &ev) == -1) {
+                    // perror("epoll_ctl: conn_sock");
+                    break;
+                }
+            } else {
+                std::cout << "do use fd " << events[n].data.fd << std::endl;
+            }
+        }
+    }
+
+    // ---------------------------------------
 
     while (g_stop == 0) {
         std::cout << "  > Waiting for new connection\n";

@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <sstream>
 #include <string>
+#include <sys/epoll.h>
 #include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <sys/types.h>
 #include <unistd.h> // close
