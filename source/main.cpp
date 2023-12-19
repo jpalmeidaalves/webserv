@@ -1,5 +1,4 @@
 #include "../headers/Server.hpp"
-#include "../headers/base.hpp"
 #include "../headers/utils.hpp"
 
 #include <iostream>
@@ -8,7 +7,7 @@
 int main(int argc, char **argv) {
     if (argc != 2) {
         print_error("missing config file");
-        return (EXIT_FAILURE);
+        return (1);
     }
 
     try {
@@ -16,8 +15,8 @@ int main(int argc, char **argv) {
         server.start_listen();
     } catch (const std::exception &e) {
         print_error(e.what());
-        return (EXIT_FAILURE);
+        return (1);
     }
 
-    return (EXIT_SUCCESS);
+    return (0);
 }

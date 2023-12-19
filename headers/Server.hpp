@@ -1,12 +1,12 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "base.hpp"
+#include "../headers/utils.hpp"
 #include "colors.hpp"
-#include "utils.hpp"
 
 #include <arpa/inet.h> // htons, htonl
 #include <iostream>
+#include <signal.h>
 #include <sstream>
 #include <string>
 #include <sys/socket.h> // socket, bind, struct sockaddr_in

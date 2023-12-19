@@ -1,5 +1,12 @@
 #include "../headers/Server.hpp"
 
+int g_stop = 0;
+
+void sighandler(int signum) {
+    (void)signum;
+    g_stop = 1;
+}
+
 /* -------------------------------------------------------------------------- */
 /*                         Constructers & Desctructer                         */
 /* -------------------------------------------------------------------------- */
@@ -13,6 +20,8 @@ Server::~Server() {
 
 Server::Server(const std::string &configfile, int port) {
     (void)configfile;
+
+    signal(SIGINT, sighandler);
 
     // Define address struct
     this->_address.sin_family = AF_INET;
@@ -42,8 +51,8 @@ void Server::create_server() {
 }
 
 void Server::start_listen() {
-    // Start listen for incomming requests
 
+    // Start listen for incomming requests
     if (listen(this->_sockfd, SOMAXCONN) < 0)
         throw Server::ListenException();
 
@@ -51,7 +60,7 @@ void Server::start_listen() {
               << "http://127.0.0.1:" << ntohs(this->_address.sin_port) << RESET
               << std::endl;
 
-    while (1) {
+    while (g_stop == 0) {
         std::cout << "  > Waiting for new connection\n";
 
         int in_sockfd = this->accept_connection();
