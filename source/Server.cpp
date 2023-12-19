@@ -29,6 +29,7 @@ Server::Server(const std::string &configfile, int port) {
 /* -------------------------------------------------------------------------- */
 
 void Server::create_server() {
+
     // Create socket
     this->_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_sockfd < 0)
@@ -42,6 +43,7 @@ void Server::create_server() {
 
 void Server::start_listen() {
     // Start listen for incomming requests
+
     if (listen(this->_sockfd, SOMAXCONN) < 0)
         throw Server::ListenException();
 
@@ -56,17 +58,24 @@ void Server::start_listen() {
         if (in_sockfd < 0)
             continue; // if connection refused continue to next request
 
-        // char buffer[30720] = {0};
-        // int bytesReceived = read(in_sockfd, buffer, 30720);
-        // if (bytesReceived < 0) {
-        //     print_error("Failed to read bytes from client socket
-        //     connection"); continue;
-        // }
+        char buffer[30720] = {0};
+        int bytesReceived = read(in_sockfd, buffer, 30720);
+        if (bytesReceived < 0) {
+            print_error("Failed to read bytes from client socket connection");
+            continue;
+        }
 
-        std::cout << "------ Received Request from client ------\n"
-                  << std::endl;
+        std::cout << "  < Received Request from client \n" << std::endl;
 
-        // sendResponse();
+        std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
+                               "HOME </h1><p> Hello from "
+                               "your Server :) </p></body></html>";
+        std::ostringstream ss;
+        ss << "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "
+           << htmlFile.size() << "\n\n"
+           << htmlFile;
+
+        write(in_sockfd, ss.str().c_str(), ss.str().size());
 
         close(in_sockfd);
     }

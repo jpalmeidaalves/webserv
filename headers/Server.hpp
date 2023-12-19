@@ -1,15 +1,15 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include "base.hpp"
 #include "colors.hpp"
 #include "utils.hpp"
 
 #include <arpa/inet.h> // htons, htonl
-#include <cstdlib>     // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream>
-#include <netinet/in.h> // struct sockaddr_in
+#include <sstream>
 #include <string>
-#include <sys/socket.h> // socket, bind
+#include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <sys/types.h>
 #include <unistd.h> // close
 
