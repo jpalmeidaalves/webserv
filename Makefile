@@ -1,6 +1,8 @@
 NAME = webserv
 
-SRC = ./source/main.cpp
+SRC = ./source/main.cpp\
+		./source/utils.cpp\
+		./source/Server.cpp\
 		
 
 OBJS = ${SRC:.cpp=.o}
@@ -27,4 +29,20 @@ fclean:	clean
 
 re: clean all
 
-.PHONY: all clean re
+# ---------------------------------------------------------------------------- #
+#                                 FORMAT RULES                                 #
+# ---------------------------------------------------------------------------- #
+format:
+	clang-format -style=file -i ${SRCS} ${HEADERS}
+
+# ---------------------------------------------------------------------------- #
+#                                 LINTER RULES                                 #
+# ---------------------------------------------------------------------------- #
+lint:
+	clang-tidy ${HEADERS} -checks=-*,cppcoreguidelines-*,readability-*
+	clang-tidy ${SRC} -checks=-*,cppcoreguidelines-*,readability-*
+
+# ------------------------------- END OF RULES ------------------------------- #
+
+
+.PHONY: all clean flcean re format lint
