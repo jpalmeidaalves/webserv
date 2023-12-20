@@ -10,13 +10,13 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    try {
-        Server server(argv[1], 8080);
-        server.start_listen();
-    } catch (const std::exception &e) {
-        print_error(e.what());
+    Server server(argv[1], 8080);
+
+    if (server.create_server())
         return (1);
-    }
+
+    if (server.monitor_multiple_fds())
+        return (1);
 
     return (0);
 }

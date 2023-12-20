@@ -5,6 +5,8 @@
 #include "colors.hpp"
 
 #include <arpa/inet.h> // htons, htonl
+#include <cerrno>
+#include <cstring>
 #include <iostream>
 #include <signal.h>
 #include <sstream>
@@ -13,6 +15,11 @@
 #include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <sys/types.h>
 #include <unistd.h> // close
+#include <vector>
+
+#define MAXEPOLLSIZE SOMAXCONN
+#define BUFSIZ 1000
+#define BACKLOG 200 // how many pending connections queue will hold
 
 class Server {
 
@@ -27,19 +34,12 @@ class Server {
     Server(const std::string &configfile, int port);
     ~Server();
 
-    void create_server();
+    int create_server();
     void start_listen();
     int accept_connection();
-
-    class SocketException : public std::exception {
-        virtual const char *what() const throw();
-    };
-    class BindException : public std::exception {
-        virtual const char *what() const throw();
-    };
-    class ListenException : public std::exception {
-        virtual const char *what() const throw();
-    };
+    int monitor_multiple_fds();
+    int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
+    int send_response(int &cfd);
 };
 
 #endif /* SERVER_HPP */
