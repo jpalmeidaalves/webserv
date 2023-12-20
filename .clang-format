@@ -2,8 +2,7 @@
 Language:        Cpp
 BasedOnStyle:  LLVM
 IndentWidth:     4
-# Must be 80 characters or less!
-ColumnLimit: 80
+ColumnLimit: 100
 AlwaysBreakTemplateDeclarations: Yes
 ...
 
