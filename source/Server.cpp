@@ -149,6 +149,7 @@ int Server::monitor_multiple_fds() {
 
                 int cfd = evlist[i].data.fd;
 
+
                 // read
                 buflen = read(cfd, buf, BUFSIZ - 1);
 
@@ -179,6 +180,7 @@ int Server::monitor_multiple_fds() {
                     std::string msg = buf;
 
                     std::cout << "inc msg: " << std::string(buf) << std::endl;
+
 
                     if (msgPrefix.length() > msg.length())
                         continue;
