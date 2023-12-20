@@ -99,13 +99,79 @@ int Server::send_response(int &cfd) {
     return 0;
 }
 
+int Server::accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd) {
+
+    struct sockaddr_in cur_sockin;
+    socklen_t socklen = sizeof(struct sockaddr);
+
+    // accept connection
+    int cfd = accept(this->_sockfd, (struct sockaddr *)&cur_sockin, &socklen);
+    if (cfd == -1) {
+        print_error("failed to accept connection");
+        return 1;
+    }
+
+    std::cout << "accepted connection for fd " << cfd << std::endl;
+
+    // add to epoll
+    ev.events = EPOLLIN;
+    ev.data.fd = cfd;
+    ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
+    if (ret == -1) {
+        print_error("failed epoll_ctl");
+        return 1;
+    }
+    return 0;
+}
+
+int Server::read_complete(int &cfd, int &epfd, epoll_event &ev, int &ret) {
+    // close
+    close(cfd);
+    if (cfd == -1) {
+        print_error("failed to close fd");
+        return 1;
+    }
+
+    std::cout << "closed connection for fd " << cfd << std::endl;
+
+    // Removes cfd from the EPOLL
+    epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
+    if (ret == -1) {
+        print_error("failed to delele from epoll_ctl");
+        return 1;
+    }
+    return 0;
+}
+
+int Server::still_reading(char *buf, int buflen) {
+
+    buf[buflen] = '\0';
+    std::string msgPrefix = "some-prefix-to-prevent-arbitrary-connection";
+    std::string msg = buf;
+
+    std::cout << "inc msg: " << std::string(buf) << std::endl;
+
+    if (msgPrefix.length() > msg.length())
+        return 1;
+
+    std::cout << "test" << std::endl;
+    if (!strcmp(msgPrefix.c_str(), msg.substr(0, msgPrefix.length()).c_str())) {
+        msg = msg.substr(msgPrefix.length(), msg.length());
+        std::cout << "XXXXX" << msg << std::endl;
+
+        // write(cfd, buf, buflen);  // write back to client if
+        // needed
+    } // else, reject
+
+    return 0;
+}
+
 int Server::monitor_multiple_fds() {
 
     int ret;
     int epfd; // epoll fd
     struct epoll_event ev;
     struct epoll_event evlist[MAXEPOLLSIZE];
-    socklen_t socklen = sizeof(struct sockaddr);
 
     if (this->setup_epoll(ev, ret, epfd)) {
         return 1;
@@ -119,81 +185,31 @@ int Server::monitor_multiple_fds() {
         // epoll
         int nfds = epoll_wait(epfd, evlist, MAXEPOLLSIZE, -1);
         if (ret == -1) {
-            // perror("epoll_wait");
-            // exit(1);
+            print_error("epoll_wait failed");
             break;
         }
 
-        struct sockaddr_in cur_sockin;
-
         for (i = 0; i < nfds; i++) {
             if (evlist[i].data.fd == this->_sockfd) {
-                // accept
-                int cfd = accept(this->_sockfd, (struct sockaddr *)&cur_sockin, &socklen);
-                if (cfd == -1) {
-                    // perror("accept");
-                    // exit(1);
+                if (this->accept_and_add_to_poll(ev, ret, epfd))
                     break;
-                }
-                std::cout << "accepted connection for fd " << cfd << std::endl;
-                // printf("\x1b[0;32m[*] accept\x1b[0m\n");
-                // epoll_ctl
-                ev.events = EPOLLIN;
-                ev.data.fd = cfd;
-                ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
-                if (ret == -1) {
-                    print_error("failed epoll_ctl");
-                    break;
-                }
             } else {
 
                 int cfd = evlist[i].data.fd;
-
 
                 // read
                 buflen = read(cfd, buf, BUFSIZ - 1);
 
                 // received EOF
                 if (buflen == 0) {
-
-                    // close
-                    close(cfd);
-                    if (cfd == -1) {
-                        print_error("failed to close fd");
+                    if (this->read_complete(cfd, epfd, evlist[i], ret))
                         break;
-                    }
-
-                    std::cout << "closed connection for fd " << cfd << std::endl;
-
-                    // Removes cfd from the EPOLL
-                    epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &evlist[i]);
-                    if (ret == -1) {
-                        print_error("failed to delele from epoll_ctl");
-                        break;
-                    }
-
                 } else {
-
-                    // do something with data
-                    buf[buflen] = '\0';
-                    std::string msgPrefix = "some-prefix-to-prevent-arbitrary-connection";
-                    std::string msg = buf;
-
-                    std::cout << "inc msg: " << std::string(buf) << std::endl;
-
-
-                    if (msgPrefix.length() > msg.length())
+                    if (still_reading(buf, buflen))
                         continue;
-
-                    if (!strcmp(msgPrefix.c_str(), msg.substr(0, msgPrefix.length()).c_str())) {
-                        msg = msg.substr(msgPrefix.length(), msg.length());
-                        std::cout << msg << std::endl;
-
-                        // write(cfd, buf, buflen);  // write back to client if
-                        // needed
-                    } // else, reject
                 }
 
+                // means it read the hole socket and we must responde
                 this->send_response(cfd);
 
                 close(cfd);

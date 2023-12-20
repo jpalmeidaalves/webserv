@@ -18,7 +18,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFSIZ 1000
+#define BUFSIZ 2000
 #define BACKLOG 200 // how many pending connections queue will hold
 
 class Server {
@@ -40,6 +40,9 @@ class Server {
     int monitor_multiple_fds();
     int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
     int send_response(int &cfd);
+    int accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd);
+    int read_complete(int &cfd, int &epfd, epoll_event &ev, int &ret);
+    int still_reading(char *buf, int buflen);
 };
 
 #endif /* SERVER_HPP */
