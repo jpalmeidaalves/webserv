@@ -35,8 +35,6 @@ class Server {
     ~Server();
 
     int create_server();
-    void start_listen();
-    int accept_connection();
     int monitor_multiple_fds();
     int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
     int send_response(int &cfd);
