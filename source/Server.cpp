@@ -118,7 +118,7 @@ int Server::accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd) 
     std::cout << "accepted connection for fd " << cfd << std::endl;
 
     // add to epoll
-    ev.events = EPOLLIN | EPOLLONESHOT;
+    ev.events = EPOLLIN | EPOLLOUT;
     ev.data.fd = cfd;
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
     if (ret == -1) {
