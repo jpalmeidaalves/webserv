@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <signal.h>
 #include <sstream>
 #include <string>
@@ -18,8 +19,9 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFSIZ 2000
-#define BACKLOG 200 // how many pending connections queue will hold
+#define BUFSIZ 10000 // TODO change this
+#define BACKLOG 200  // how many pending connections queue will hold
+typedef std::map<int, std::string> sss;
 
 class Server {
 
@@ -27,6 +29,8 @@ class Server {
     int _sockfd;
     struct sockaddr_in _address;
     unsigned long _address_len;
+
+    sss _inc_msgs;
 
     Server(); // disable default constructer
 
