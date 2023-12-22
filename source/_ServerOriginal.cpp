@@ -11,6 +11,8 @@ void sighandler(int signum) {
 /*                         Constructors & Desctructor                         */
 /* -------------------------------------------------------------------------- */
 
+Server::Server() {} // disabled default constructer
+
 Server::~Server() {
     if (this->_sockfd)
         close(this->_sockfd);
@@ -36,14 +38,13 @@ Server::Server(const std::string &configfile, int port) {
 /*                              Member Functions                              */
 /* -------------------------------------------------------------------------- */
 
-
 int Server::create_server() {
 
     /*  int socket(int domain, int type, int protocol);                          
-    domain -> protocol family - AF_INET = ip
-    type -> specifies the communication semantics - SOCK_STREAM = sequenced, 
-            reliable, two-way, connection-based
-    protocol -> a particular protocol to be used - 0 = a single protocol exists */
+        domain -> protocol family - AF_INET = ip
+        type -> specifies the communication semantics - SOCK_STREAM = sequenced, 
+                reliable, two-way, connection-based
+        protocol -> a particular protocol to be used - 0 = a single protocol exists */
     this->_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_sockfd < 0) {
         print_error("Failed to create socket");
@@ -153,7 +154,7 @@ int Server::accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd) 
     }
 
     this->_inc_msgs[cfd] = "";
-    std::cout << "added success" << std::endl;
+
     return 0;
 }
 
@@ -165,7 +166,7 @@ int Server::end_connection(int &cfd, int &epfd, epoll_event &ev, int &ret) {
         return 1;
     }
 
-    std::cout << "closed connection for fd(socket) " << cfd << std::endl;
+    std::cout << "closed connection for fd " << cfd << std::endl;
 
     // Removes cfd from the EPOLL
     epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
@@ -191,8 +192,10 @@ int Server::monitor_multiple_fds() {
         return 1;
     }
 
+    int i;
     char buf[BUFSIZ]; // TODO is ok using this buff?
-   
+    int buflen;
+
     while (!g_stop) {
         // epoll
         int nfds = epoll_wait(epfd, evlist, MAXEPOLLSIZE, -1);
@@ -201,106 +204,44 @@ int Server::monitor_multiple_fds() {
             break;
         }
 
-        for (int i = 0; i < nfds; i++) {
-
-            // std::cout << "listening socket " << this->_sockfd << std::endl;
-            // listning socket
+        for (i = 0; i < nfds; i++) {
             if (evlist[i].data.fd == this->_sockfd) {
                 if (this->accept_and_add_to_poll(ev, ret, epfd))
                     break;
-                continue;
-            }
+            } else {
 
-            if (evlist[i].events & EPOLLIN) {
-                // Ready for read
-
-                // accepted socket
                 int cfd = evlist[i].data.fd;
 
-                int buflen;
-                std::cout << "reading socket " << cfd << std::endl; // TODO remove DEBUG
-                buflen = read(cfd, buf, BUFSIZ - 1);
-                buf[buflen] = '\0';
-                std::cout << buflen << std::endl;// TODO remove DEBUG
+                while (1) {
+                    // read
+                    std::cout << "reading ..." << std::endl;
+                    buflen = read(cfd, buf, BUFSIZ - 1);
+                    std::cout << buflen << std::endl;
+                    buf[buflen] = '\0';
 
-                if (buflen == 0 && this->_inc_msgs[cfd].size() == 0) {
-                    this->end_connection(cfd, epfd, evlist[i], ret);
-                    this->_inc_msgs.erase(cfd);
-                    break;
-                }
+                    if (buflen == -1) {
+                        print_error("failed to read socket");
+                        if (this->end_connection(cfd, epfd, evlist[i], ret))
+                            break;
+                    }
 
-                if (buflen == -1) {
-                    print_error("failed to read socket");
-                    if (this->end_connection(cfd, epfd, evlist[i], ret)) {
+                    if (buflen < (BUFSIZ - 1)) {
+                        // has read everything
+                        std::cout << "last read" << std::endl;
+                        this->_inc_msgs[cfd] += buf;
+                        std::cout << "Message from Socket\n" << this->_inc_msgs[cfd] << std::endl;
+                        this->send_response(cfd);
+
+                        this->end_connection(cfd, epfd, evlist[i], ret);
                         this->_inc_msgs.erase(cfd);
                         break;
+
+                    } else {
+                        // append request to list of requests
+                        this->_inc_msgs[cfd] += buf;
                     }
                 }
-
-                this->_inc_msgs[cfd] += buf;
-
-                continue;
-
             }
-
-             if (evlist[i].events & EPOLLOUT) { 
-                // Ready for write
-                // std::cout << "inside EPOLLOUT" << std::endl;
-
-                int cfd = evlist[i].data.fd;
-
-                if (has_suffix(this->_inc_msgs[cfd], "\r\n\r\n")) {
-                    std::cout << "has the complete request" << std::endl;
-                    std::cout << "Message from Socket\n" << this->_inc_msgs[cfd] << std::endl; // TODO remove DEBUG
-                    this->send_response(cfd);
-                    this->end_connection(cfd, epfd, evlist[i], ret);
-                    this->_inc_msgs.erase(cfd);
-                }
-             }
-
-
-
-        //    {
-
-               
-
-            //         while (1) {
-            //             int buflen;
-            //             // read
-            //             std::cout << "reading ..." << std::endl; // TODO remove DEBUG
-            //             buflen = read(cfd, buf, BUFSIZ - 1);
-            //             buf[buflen] = '\0';
-            //             std::cout << buflen << std::endl;// TODO remove DEBUG
-
-            //             if (buflen == -1) {
-            //                 print_error("failed to read socket");
-            //                 if (this->end_connection(cfd, epfd, evlist[i], ret))
-            //                     break;
-            //             }
-                        
-            //             this->_inc_msgs[cfd] += buf;
-                        
-            //             // char *ptr = buf;
-            //             // while (*ptr)
-            //             // {
-            //             //     std::cout << (int)*ptr << std::endl;
-            //             //     ptr++;
-            //             // }
-                    
-
-            //             if (!has_suffix(buf, "\r\n\r\n")) {
-            //                 std::cout << "has more data to read" << std::endl;
-            //                 continue;
-            //             }
-
-            //             // // has read everything
-            //             std::cout << "Message from Socket\n" << this->_inc_msgs[cfd] << std::endl; // TODO remove DEBUG
-            //             this->send_response(cfd);
-            //             this->end_connection(cfd, epfd, evlist[i], ret);
-            //             this->_inc_msgs.erase(cfd);
-            //         }
-
-            // }
         }
     }
 

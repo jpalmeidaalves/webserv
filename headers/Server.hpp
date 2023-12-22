@@ -19,7 +19,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFSIZ 10000 // TODO change this
+#define BUFSIZ 1000 // TODO change this
 #define BACKLOG 200  // how many pending connections queue will hold
 typedef std::map<int, std::string> sss;
 
@@ -43,8 +43,9 @@ class Server {
     int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
     int send_response(int &cfd);
     int accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd);
-    int read_complete(int &cfd, int &epfd, epoll_event &ev, int &ret);
+    int end_connection(int &cfd, int &epfd, epoll_event &ev, int &ret);
     int still_reading(char *buf, int buflen);
+    int monitor_multiple_fds_aux(int &epfd, struct epoll_event evlist[], int &i, int &ret);
 };
 
-#endif /* SERVER_HPP */
+#endif/* SERVER_HPP */
