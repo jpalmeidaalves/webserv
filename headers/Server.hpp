@@ -37,7 +37,7 @@ class Server {
   public:
     Server(const std::string &configfile, int port);
     ~Server();
-
+    
     int create_server();
     int monitor_multiple_fds();
     int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
