@@ -13,12 +13,12 @@ HTTP::HTTP(): _epfd(0) {
 
      signal(SIGINT, sighandler);
 
-    Server *srv1 = new Server(8080); //TODO check if other args are required
+    Server *srv1 = new Server(8084); //TODO check if other args are required
     if(srv1->create_server())
         throw HTTP::FailedToCreateServer();
     this->_servers.push_back(srv1);
 
-    Server *srv2 = new Server(8081); //TODO check if other args are required
+    Server *srv2 = new Server(8085); //TODO check if other args are required
     if(srv2->create_server())
         throw HTTP::FailedToCreateServer();
     this->_servers.push_back(srv2);
@@ -33,7 +33,10 @@ HTTP::HTTP(): _epfd(0) {
 }
 
 HTTP::~HTTP() {
-
+    std::vector<Server *>::iterator it;
+    for (it = this->_servers.begin() ; it != this->_servers.end(); ++it) {
+        delete *it;
+    }
 }
 
 
