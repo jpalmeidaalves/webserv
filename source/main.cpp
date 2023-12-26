@@ -1,4 +1,5 @@
 #include "../headers/Server.hpp"
+#include "../headers/HTTP.hpp"
 #include "../headers/utils.hpp"
 
 #include <iostream>
@@ -10,13 +11,13 @@ int main(int argc, char **argv) {
         return (1);
     }
 
-    Server server(argv[1], 8083);
+    (void) argv;
 
-    if (server.create_server())
-        return (1);
-
-    if (server.monitor_multiple_fds())
-        return (1);
-
+    try {
+        HTTP http;
+    } catch(const std::exception& e) {
+        print_error(e.what());
+    }
+    
     return (0);
 }

@@ -3,6 +3,7 @@ NAME = webserv
 SRC = ./source/main.cpp\
 		./source/utils.cpp\
 		./source/Server.cpp\
+		./source/HTTP.cpp\
 		
 
 OBJS = ${SRC:.cpp=.o}
