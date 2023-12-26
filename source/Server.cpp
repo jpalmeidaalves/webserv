@@ -203,9 +203,9 @@ int Server::monitor_multiple_fds() {
 
         for (int i = 0; i < nfds; i++) {
 
-            // std::cout << "listening socket " << this->_sockfd << std::endl;
             // listning socket
             if (evlist[i].data.fd == this->_sockfd) {
+            // std::cout << "listening socket " << this->_sockfd << std::endl;
                 if (this->accept_and_add_to_poll(ev, ret, epfd))
                     break;
                 continue;
@@ -240,7 +240,6 @@ int Server::monitor_multiple_fds() {
                 this->_inc_msgs[cfd] += buf;
 
                 continue;
-
             }
 
              if (evlist[i].events & EPOLLOUT) { 
@@ -261,6 +260,17 @@ int Server::monitor_multiple_fds() {
 
 
         //    {
+
+
+/*
+
+* input operation
+- output operation
+
+Request A |*****************--------------------------------------------------------------]
+Request B |***-----]
+
+*/
 
                
 
