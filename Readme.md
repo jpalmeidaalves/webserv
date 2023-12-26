@@ -13,11 +13,22 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 - **ntohs** - convert network to host short.
 - **ntohl** - convert network to host long.
 
+- **epoll (epoll_create, epoll_ctl, epoll_wait)** - handle multiple requests (nonblocking)
+
+- **read** - 
+- **write** - 
+- **close** - 
+- **signal** - 
+
 
 ### Known but will not be used
 - **kqueue** (kqueue, kevent) - handle multiple connections in a queue (nonblocking). **Reason**: not available in Linux.
 - **connect** - connect to a server (used in a client socket)
 - **fcntl** - can be used to set fd to non-blocking. Maybe only allowed for MAC
+- **select** - handle multiple requests (nonblocking)
+- **poll** - handle multiple requests (nonblocking)
+- **send** - similar to write
+- **recv** - similar to read
 
 
 ### Unsed
@@ -28,37 +39,37 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 - **dup2** - 
 - **pipe** - 
 - **fork** - 
-- **close** - 
-- **read** - 
-- **write** - 
 - **waitpid** - 
 - **kill** - 
-- **signal** - 
 - **errno** - 
 - **strerror** - 
 - **open** - opens a file.
 - **chdir** - change directory.
 - **access** - check users permissions about a file.
 - **stat** - informations about a file.
-
+- **opendir** - opens a directory.
+- **readdir** - returns a pointer to a dirent structure representing the next directory entry.
+- **closedir** - closes a dir.
 
 #### Others
-
-- **select** - handle multiple requests (nonblocking)
-- **poll** - handle multiple requests (nonblocking)
-- **epoll (epoll_create, epoll_ctl, epoll_wait)** - handle multiple requests (nonblocking)
 
 - getaddrinfo - 
 - **gai_strerror** - returns getaddrinfor error message
 - freeaddrinfo - 
 
-- **opendir** - opens a directory.
-- **readdir** - returns a pointer to a dirent structure representing the next directory entry.
-- **closedir** - closes a dir.
+- **socketpair** - creates an unnamed pair of connected sockets in the specified domain,
+                    of the specified type, and using the  optionally specified  protocol;
+- **setsockopt** - get and set options on sockets
+- **getsockname** - returns the current address to which the socket sockfd is
+                    bound, in the buffer pointed to by addr.
+- **getprotobyname** - returns a protoent structure for the entry from the database that
+                       matches the protocol name name.
 
-- socketpair - 
-- send - 
-- recv - 
-- setsockopt - 
-- getsockname - 
-- getprotobyname - 
+<!-- 
+The protoent structure is defined in <netdb.h> as follows:
+
+struct protoent {
+    char  *p_name;       /* official protocol name */
+    char **p_aliases;    /* alias list */
+    int    p_proto;      /* protocol number */
+} -->

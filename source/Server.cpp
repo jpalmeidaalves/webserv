@@ -6,7 +6,10 @@
 
 /*  Constructor: Initialize the members of the struct sockaddr_in and its adress_len
     a atribute. Also intalls a signal handler  */
-Server::Server(int port) {
+Server::Server(int port): _sockfd(0) {
+
+    ft_memset(&(this->_address), 0, sizeof(this->_address));
+
     // Define address struct
     this->_address.sin_family = AF_INET;
     this->_address.sin_port = htons(port);       // host to network short
@@ -15,7 +18,10 @@ Server::Server(int port) {
     this->_address_len = sizeof(this->_address);
 }
 
-Server::~Server() {}
+Server::~Server() {
+    if (this->_sockfd)
+        close(this->_sockfd);
+}
 
 /* -------------------------------------------------------------------------- */
 /*                              Member Functions                              */

@@ -14,13 +14,17 @@ HTTP::HTTP(): _epfd(0) {
      signal(SIGINT, sighandler);
 
     Server *srv1 = new Server(8084); //TODO check if other args are required
-    if(srv1->create_server())
+    if(srv1->create_server()) {
+        delete srv1;
         throw HTTP::FailedToCreateServer();
+    }
     this->_servers.push_back(srv1);
 
     Server *srv2 = new Server(8085); //TODO check if other args are required
-    if(srv2->create_server())
+    if(srv2->create_server()) {
+        delete srv2;
         throw HTTP::FailedToCreateServer();
+    }
     this->_servers.push_back(srv2);
 
      // create new epoll instance

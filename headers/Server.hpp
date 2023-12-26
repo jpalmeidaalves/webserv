@@ -7,17 +7,18 @@
 #include <arpa/inet.h> // htons, htonl
 #include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <string>
+#include <unistd.h> // close
 
 class Server {
 
   private:
     struct sockaddr_in _address;
     unsigned long _address_len;
+    int _sockfd;
 
     Server(); // disable default constructer
 
   public:
-    int _sockfd;
     Server(int port);
     ~Server();
     
