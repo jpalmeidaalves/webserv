@@ -40,6 +40,11 @@ int Server::create_server() {
         return 1;
     }
 
+    int optval = 1;
+
+    if ((setsockopt(this->_sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof (optval))) != 0)
+        return 1;
+
     /*  int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
         Assigns the address specified by addr to the socket referred to by the file
         descriptor sockfd(“assigning a name to a socket”).
