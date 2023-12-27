@@ -65,6 +65,7 @@ int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int &ret, int lis
         print_error("failed add to epoll");
         return 1;
     }
+
     return 0;
 }
 
@@ -196,10 +197,15 @@ int HTTP::monitor_multiple_fds() {
 
             } else if (evlist[i].events & EPOLLOUT) { 
                 // Ready for write
-
                 int cfd = evlist[i].data.fd;
+
                 std::cout << "Message from Socket\n" << this->_inc_msgs[cfd] << std::endl; // TODO remove DEBUG
+                Request request(this->_inc_msgs[cfd]);
+
+                std::cout << "[Request object]: \n" << request << std::endl;
+
                 this->send_response(cfd);
+                
                 this->close_connection(cfd, this->_epfd, evlist[i], ret);
                 this->_inc_msgs.erase(cfd);
             }

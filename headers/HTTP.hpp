@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "Server.hpp"
+#include "Request.hpp"
 #include "../headers/utils.hpp"
 #include "colors.hpp"
 

@@ -4,6 +4,8 @@ SRC = ./source/main.cpp\
 		./source/utils.cpp\
 		./source/Server.cpp\
 		./source/HTTP.cpp\
+		./source/Request.cpp\
+		./source/Response.cpp\
 		
 
 OBJS = ${SRC:.cpp=.o}
