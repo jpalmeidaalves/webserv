@@ -1,8 +1,16 @@
 #ifndef HTTP_HPP
 #define HTTP_HPP
 
+#include "../headers/utils.hpp"
+#include "MimeTypes.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
+#include "Server.hpp"
+#include "colors.hpp"
 #include <cerrno>
 #include <cstring>
+#include <dirent.h>
+#include <fcntl.h>
 #include <iostream>
 #include <map>
 #include <signal.h>
@@ -12,12 +20,6 @@
 #include <sys/types.h>
 #include <unistd.h> // close
 #include <vector>
-
-#include "../headers/utils.hpp"
-#include "MimeTypes.hpp"
-#include "Request.hpp"
-#include "Server.hpp"
-#include "colors.hpp"
 
 #define MAXEPOLLSIZE SOMAXCONN
 #define BUFSIZ 1000 // TODO change this

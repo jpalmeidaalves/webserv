@@ -168,6 +168,8 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     return 0;
 }
+char buf[BUFSIZ];
+int buflen;
 
 int HTTP::monitor_multiple_fds() {
     struct epoll_event ev;
@@ -219,6 +221,42 @@ int HTTP::monitor_multiple_fds() {
 
                         std::cout << "MimeType: " << MimeTypes::indentify(request.getUrl())
                                   << std::endl;
+
+                        std::string root_folder = "./www";
+
+                        Response response;
+
+                        if (opendir(root_folder.c_str()) == NULL) {
+                            print_error(strerror(errno));
+                            // response.set_status_code(401);
+                        }
+
+                        std::string full_path = root_folder + request.getUrl();
+
+                        std::cout << "full_path: " << full_path << std::endl;
+                        int fd = open(full_path.c_str(), O_RDONLY);
+                        if (fd == -1) {
+                            print_error(strerror(errno));
+                        }
+
+                        // TODO check permission
+
+                        // TODO check for invalid read
+
+                        std::string response_data;
+                        char buf[BUFSIZ];
+                        int buflen = 0;
+
+                        while (1) {
+                            buflen = read(fd, buf, BUFSIZ - 1);
+                            if (buflen <= 0)
+                                break;
+                            buf[buflen] = '\0';
+
+                            response_data += buf;
+                        }
+
+                        std::cout << "response data: \n" << response_data << std::endl;
 
                         this->send_response(cfd);
 

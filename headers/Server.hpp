@@ -5,9 +5,9 @@
 #include "colors.hpp"
 
 #include <arpa/inet.h> // htons, htonl
-#include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <string>
-#include <unistd.h> // close
+#include <sys/socket.h> // socket, bind, struct sockaddr_in
+#include <unistd.h>     // close
 
 class Server {
 
@@ -21,9 +21,9 @@ class Server {
   public:
     Server(int port);
     ~Server();
-    
+
     int create_server();
     int get_sockfd() const;
 };
 
-#endif/* SERVER_HPP */
+#endif /* SERVER_HPP */
