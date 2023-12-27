@@ -6,6 +6,7 @@ SRC = ./source/main.cpp\
 		./source/HTTP.cpp\
 		./source/Request.cpp\
 		./source/Response.cpp\
+		./source/MimeTypes.cpp\
 		
 
 OBJS = ${SRC:.cpp=.o}
