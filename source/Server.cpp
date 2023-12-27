@@ -69,7 +69,7 @@ int Server::create_server() {
 
     // show message
     std::cout << "Server listening on " << BOLDGREEN
-              << "http://127.0.0.1:" << ntohs(this->_address.sin_port) << RESET << std::endl;
+              << "http://127.0.0.1:" << ntohs(this->_address.sin_port) << RESET << ", sockfd: " << this->_sockfd << std::endl;
 
     return 0;
 }
