@@ -48,6 +48,7 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "map": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "fstream": "cpp"
     }
 }

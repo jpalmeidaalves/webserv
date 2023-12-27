@@ -38,13 +38,12 @@ class HTTP {
         HTTP();
         ~HTTP();
         int monitor_multiple_fds();
-        int setup_epoll(struct epoll_event &ev, int &ret, int &epfd);
         int send_response(int &cfd);
         int accept_and_add_to_poll(struct epoll_event &ev, int &ret, int &epfd, int sockfd);
-        int end_connection(int &cfd, int &epfd, epoll_event &ev, int &ret);
-        int still_reading(char *buf, int buflen);
-        int add_to_poll(struct epoll_event &ev, int &ret, int listening_socket);
+        int close_connection(int &cfd, int &epfd, epoll_event &ev, int &ret);
+        int add_listening_socket_to_poll(struct epoll_event &ev, int &ret, int listening_socket);
         bool is_listening_socket(int sockfd); 
+        int read_socket(struct epoll_event &ev, int &ret);
 
         class FailedToInit : public std::exception {
             virtual const char *what() const throw();
