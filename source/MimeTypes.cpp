@@ -34,7 +34,7 @@ std::string MimeTypes::indentify(const std::string &path) {
     supported_types::iterator it;
 
     std::size_t found = path.find_last_of(".");
-    if (found) {
+    if (found != std::string::npos) {
 
         std::string ext = path.substr(found);
 
