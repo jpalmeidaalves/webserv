@@ -56,9 +56,9 @@ bool MimeTypes::is_binary_file(const std::string &mime) {
         return true;
     if (mime.find("audio/") != std::string::npos)
         return true;
-    // if (mime.find("pdf") != std::string::npos)
-    //     return true;
-    // if (mime.find("zip") != std::string::npos)
+    if (mime.find("pdf") != std::string::npos)
+        return true;
+    // if (mime.find("json") != std::string::npos)
     //     return true;
 
     return false;

@@ -49,6 +49,8 @@ class HTTP {
     int add_listening_socket_to_poll(struct epoll_event &ev, int listening_socket);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
+    int send_header(int &cfd, const Response& response);
+    
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();
@@ -59,4 +61,4 @@ class HTTP {
     };
 };
 
-#endif /* HTTP_HPP */
+#endif/* HTTP_HPP */

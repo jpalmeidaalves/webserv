@@ -252,56 +252,54 @@ int HTTP::monitor_multiple_fds() {
                             // TODO early response
                         }
 
-                     
-
-                        if (response.get_content_type().find("image/") != std::string::npos) {
-
-                        }
-
-                        std::cout << "TYPE: " << sb.st_mode << std::endl;
-
-                        response.set_content_length((std::size_t)sb.st_size);
+                        
 
                        
-                        // //  iostream's ifstream with the ios::binary flag
-                        // std::ifstream in_file_stream;
 
-                        // if (MimeTypes::is_binary_file(response.get_content_type())) {
-                        //     std::ifstream   in_file_stream(full_path.c_str(), std::ios::binary);
+                        if (MimeTypes::is_binary_file(response.get_content_type())) {
+                            std::ifstream   in_file_stream(full_path.c_str(), std::ios::binary);
+                            response.set_content_length((std::size_t)sb.st_size);
 
-                        //     if(!in_file_stream.is_open())
-                        //     {
-                        //         print_error("Error opening file");
-                        //         response.set_status_code("403");
-                        //         // this->send_response(cfd, response);
-                        //     }
+                            if(!in_file_stream.is_open())
+                            {
+                                print_error("Error opening file");
+                                response.set_status_code("403");
+                                // this->send_response(cfd, response);
+                            }
 
-                        //     std::streampos size;
-                        //     char * memblock;
+                            std::streampos size;
+                            char * memblock;
 
-                        //     std::ifstream file (full_path.c_str(), std::ios::in|std::ios::binary|std::ios::ate);
-                        //     if (file.is_open())
-                        //     {
-                        //         size = file.tellg();
-                        //         memblock = new char [size];
-                        //         file.seekg (0, std::ios::beg);
-                        //         file.read (memblock, size);
-                        //         file.close();
+                            std::ifstream file (full_path.c_str(), std::ios::in|std::ios::binary|std::ios::ate);
+                            if (file.is_open())
+                            {
+                                size = file.tellg();
+                                memblock = new char [size];
+                                file.seekg (0, std::ios::beg);
+                                file.read (memblock, size);
+                                file.close();
 
-                        //         std::cout << "Memory" << std::endl;
+                                std::cout << "Memory" << std::endl;
 
-                        //         response.set_content_data(memblock);
+                                this->send_header(cfd, response);
 
-                        //         delete[] memblock;
-                        //     } else {
-                        //         std::cout << "Unable to open file" << std::endl;
-                        //         response.set_content_data('\0');
-                        //     }
+                                if (write(cfd, memblock, response.get_content_length()) == -1) {
+                                    print_error("failed to write");
+                                }
+
+                                // response.set_content_data(memblock);
+
+                                delete[] memblock;
+                            } else {
+                                std::cout << "Unable to open file" << std::endl;
+                                // response.set_content_data('\0');
+                            }
 
 
-                        // } else {
+                        } else {
                             // Not binary file
                             std::ifstream   in_file_stream(full_path.c_str());
+
                             if(!in_file_stream.is_open())
                             {
                                 print_error("Error opening file");
@@ -316,14 +314,21 @@ int HTTP::monitor_multiple_fds() {
 
                             std::string line;
                             while (std::getline(in_file_stream, line)) {
-                                response_data << line;
+                                response_data << line << std::endl;
                             }
 
-        
-                            response.set_content_data((char *)response_data.str().c_str());
+                            // TODO json from js not working
+
+                            response.set_content_length(response_data.str().size());
+
+                            this->send_header(cfd, response);
+
+                            if (write(cfd, response_data.str().c_str(), response_data.str().size()) == -1) {
+                                print_error("failed to write");
+                            }
 
                         
-                        // }
+                        }
 
 /* ------------------------------------ c ----------------------------------- */
 
@@ -351,6 +356,28 @@ const char *HTTP::FailedToInit::what() const throw() { return ("Failed to initia
 
 const char *HTTP::FailedToCreateServer::what() const throw() { return ("Failed to Create Server"); }
 
+int HTTP::send_header(int &cfd, const Response& response) {
+    std::ostringstream ss;
+    ss << "HTTP/1.1 " <<  response.get_status_code() << "\n"
+       << "Content-Type: " << response.get_content_type() << "\n"
+       << "Content-Length: " << response.get_content_length() << "\n"
+       << "Access-Control-Allow-Origin: *" << "\n"
+       << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS" << "\n"
+       << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With" << "\n"
+       << "Access-Control-Allow-Credentials: true"
+       << "\n\n";
+
+
+    // response.set_header("Access-Control-Allow-Origin", "*");
+    // response.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    // response.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    // response.set_header("Access-Control-Allow-Credentials", "true");
+
+    if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
+        return 1;
+    return 0;
+}
+
 int HTTP::send_response(int &cfd, const Response& response) {
 
     // std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
@@ -369,11 +396,11 @@ int HTTP::send_response(int &cfd, const Response& response) {
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
 
-    if (response.get_content_length()) {
-        if (write(cfd, response.get_content_data(), response.get_content_length()) == -1) {
-            return 1;
-        }
-    }
+    // if (response.get_content_data().size()) {
+    //     if (write(cfd, response.get_content_data().c_str(), response.get_content_length()) == -1) {
+    //         return 1;
+    //     }
+    // }
 
 
     return 0;
