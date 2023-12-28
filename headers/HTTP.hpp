@@ -3,10 +3,12 @@
 
 #include "../headers/utils.hpp"
 #include "MimeTypes.hpp"
+#include "StatusCode.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
 #include "Server.hpp"
 #include "colors.hpp"
+#include <fstream>
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
@@ -22,7 +24,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFSIZ 1000 // TODO change this
+#define BUFERSIZE 1000 // TODO change this
 #define BACKLOG 200 // how many pending connections queue will hold
 
 typedef std::map<int, std::string> msgs_map;
@@ -40,7 +42,7 @@ class HTTP {
     HTTP();
     ~HTTP();
     int monitor_multiple_fds();
-    int send_response(int &cfd);
+    int send_response(int &cfd, const Response& response);
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int &cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int listening_socket);

@@ -6,7 +6,47 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include "utils.hpp"
 
+
+struct SServer {
+    std::string host;
+    std::string port;
+    std::vector<std::string> server_name;
+    int client_max_body_size;
+    std::string root;
+    // std::vector<std::string> index;
+};
+
+class ParserConfFile{
+    private:
+        int fd;
+        std::string _path;
+        std::vector<SServer> servers;
+        ParserConfFile(const ParserConfFile& src);
+        ParserConfFile& operator=(const ParserConfFile& src);
+        ParserConfFile();
+
+    public:
+        ParserConfFile(std::string path);
+        ~ParserConfFile();
+        int open_config_file();
+        int extract_data();
+        
+        void printMembers(std::ostream &out) const;
+        
+        // template <typename T>
+        // void printVector(std::vector<T> v);
+      
+
+        class FailedToOpenConfFile : public std::exception {
+            virtual const char *what() const throw();
+        };
+
+};
+std::ostream &operator<<(std::ostream &out, const SServer &obj);
+
+#endif/* PARSERCONFFILE_HPP */
 
 /*
     [X] Choose the port and host of each 'server'.
@@ -75,45 +115,4 @@ http {
         }
     }
 }
-
-
-
-
-
 */
-
-struct SServer {
-    std::string host;
-    std::string port;
-    std::vector<std::string> server_name;
-    int client_max_body_size;
-    std::string root;
-    //std::vector<std::string> index;
-};
-
-struct SConfig {
-    std::vector<std::string> types;
-    std::vector<SServer> servers;
-    int client_max_body_size;
-};
-
-class ParserConfFile{
-    private:
-        int fd;
-        std::string _path;
-        ParserConfFile(const ParserConfFile& src);
-        ParserConfFile& operator=(const ParserConfFile& src);
-        ParserConfFile();
-
-    public:
-        ParserConfFile(std::string path);
-        ~ParserConfFile();
-        std::ifstream&  open_config_file();
-        
-        class FailedToOpenConfFile : public std::exception {
-            virtual const char *what() const throw();
-        };
-
-};
-
-#endif/* PARSERCONFFILE_HPP */

@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     }
 
     int i;
-    char buf[BUFSIZ];
+    char buf[BUFERSIZE];
     int buflen;
 
     for (;;) {
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
 
         for (i = 0; i < nfds; i++) {
             if (evlist[i].data.fd == STDIN_FILENO) {
-                fgets(buf, BUFSIZ - 1, stdin);
+                fgets(buf, BUFERSIZE - 1, stdin);
                 if (!strcmp(buf, "quit") || !strcmp(buf, "exit")) {
                     close(fd);
                     exit(0);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
             } else {
                 cfd = evlist[i].data.fd;
                 // read
-                buflen = read(cfd, buf, BUFSIZ - 1);
+                buflen = read(cfd, buf, BUFERSIZE - 1);
                 if (buflen == 0) {
                     // close
                     close(cfd);

@@ -135,10 +135,10 @@ bool HTTP::is_listening_socket(int sockfd) {
 
 int HTTP::read_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
-    char buf[BUFSIZ];
+    char buf[BUFERSIZE];
     int buflen;
 
-    buflen = read(cfd, buf, BUFSIZ - 1);
+    buflen = read(cfd, buf, BUFERSIZE - 1);
     buf[buflen] = '\0';
 
     if (buflen == 0 && this->_inc_msgs[cfd].size() == 0) {
@@ -168,8 +168,8 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     return 0;
 }
-char buf[BUFSIZ];
-int buflen;
+// char buf[BUFERSIZE];
+// int buflen;
 
 int HTTP::monitor_multiple_fds() {
     struct epoll_event ev;
@@ -234,31 +234,32 @@ int HTTP::monitor_multiple_fds() {
                         std::string full_path = root_folder + request.getUrl();
 
                         std::cout << "full_path: " << full_path << std::endl;
-                        int fd = open(full_path.c_str(), O_RDONLY);
-                        if (fd == -1) {
-                            print_error(strerror(errno));
+
+                        std::ifstream   in_file_stream(full_path.c_str());
+                        if(!in_file_stream.is_open())
+                        {
+                            print_error("Error opening file");
+                            response.set_status_code("403");
+                            this->send_response(cfd, response);
                         }
 
                         // TODO check permission
 
                         // TODO check for invalid read
 
-                        std::string response_data;
-                        char buf[BUFSIZ];
-                        int buflen = 0;
+                        std::ostringstream response_data;
 
-                        while (1) {
-                            buflen = read(fd, buf, BUFSIZ - 1);
-                            if (buflen <= 0)
-                                break;
-                            buf[buflen] = '\0';
-
-                            response_data += buf;
+                        std::string line;
+                        while (std::getline(in_file_stream, line)) {
+                            response_data << line;
                         }
 
-                        std::cout << "response data: \n" << response_data << std::endl;
-
-                        this->send_response(cfd);
+                        std::cout << "response data: \n" << response_data.str() << std::endl;
+                        response.set_content_data(response_data.str());
+                        response.set_content_type("text/html");
+                        response.set_content_length(response_data.str().size());
+                        
+                        this->send_response(cfd, response);
 
                         this->close_connection(cfd, this->_epfd, evlist[i]);
                         this->_inc_msgs.erase(cfd);
@@ -275,16 +276,20 @@ const char *HTTP::FailedToInit::what() const throw() { return ("Failed to initia
 
 const char *HTTP::FailedToCreateServer::what() const throw() { return ("Failed to Create Server"); }
 
-int HTTP::send_response(int &cfd) {
+int HTTP::send_response(int &cfd, const Response& response) {
 
-    std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
-                           "HOME </h1><p> Hello from "
-                           "your Server :) </p></body></html>";
+    // std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
+    //                        "HOME </h1><p> Hello from "
+    //                        "your Server :) </p></body></html>";
     std::ostringstream ss;
-    ss << "HTTP/1.1 200 OK\nContent-Type: "
-          "text/html\nContent-Length: "
-       << htmlFile.size() << "\n\n"
-       << htmlFile;
+    ss << "HTTP/1.1 " <<  response.get_status_code() << "\n"
+       << "Content-Type: " << response.get_content_type() << "\n"
+       << "Content-Length: " << response.get_content_length() 
+       << "\n\n";
+       
+    if (response.get_content_length()) {
+        ss << response.get_content_data();
+    }
 
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
