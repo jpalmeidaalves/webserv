@@ -30,7 +30,7 @@ supported_types MimeTypes::init_types() {
 
 supported_types MimeTypes::types = init_types();
 
-std::string MimeTypes::indentify(const std::string &path) {
+std::string MimeTypes::identify(const std::string &path) {
     supported_types::iterator it;
 
     std::size_t found = path.find_last_of(".");
@@ -47,4 +47,19 @@ std::string MimeTypes::indentify(const std::string &path) {
     }
 
     return ""; // unknow mime type, browser will try to assume the correct type
+}
+
+bool MimeTypes::is_binary_file(const std::string &mime) {
+    if (mime.find("image/") != std::string::npos)
+        return true;
+    if (mime.find("video/") != std::string::npos)
+        return true;
+    if (mime.find("audio/") != std::string::npos)
+        return true;
+    // if (mime.find("pdf") != std::string::npos)
+    //     return true;
+    // if (mime.find("zip") != std::string::npos)
+    //     return true;
+
+    return false;
 }

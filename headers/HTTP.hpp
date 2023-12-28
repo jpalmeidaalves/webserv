@@ -22,9 +22,10 @@
 #include <sys/types.h>
 #include <unistd.h> // close
 #include <vector>
+#include <sys/stat.h>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFERSIZE 1000 // TODO change this
+#define BUFFERSIZE 1000 // TODO change this
 #define BACKLOG 200 // how many pending connections queue will hold
 
 typedef std::map<int, std::string> msgs_map;
