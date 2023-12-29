@@ -135,10 +135,10 @@ bool HTTP::is_listening_socket(int sockfd) {
 
 int HTTP::read_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
-    char buf[BUFERSIZE];
+    char buf[BUFFERSIZE];
     int buflen;
 
-    buflen = read(cfd, buf, BUFERSIZE - 1);
+    buflen = read(cfd, buf, BUFFERSIZE - 1);
     buf[buflen] = '\0';
 
     if (buflen == 0 && this->_inc_msgs[cfd].size() == 0) {
@@ -156,7 +156,7 @@ int HTTP::read_socket(struct epoll_event &ev) {
         }
     }
 
-    // std::cout << "read OK: " << buf << std::endl;
+    // std::cout << "read OK: " << buf << std::endl; //d
 
     // char *ptr = buf;
     // while (*ptr) {
@@ -168,7 +168,7 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     return 0;
 }
-// char buf[BUFERSIZE];
+// char buf[BUFFERSIZE];
 // int buflen;
 
 int HTTP::monitor_multiple_fds() {
@@ -219,47 +219,175 @@ int HTTP::monitor_multiple_fds() {
 
                         std::cout << "[Request object]: \n" << request << std::endl;
 
-                        std::cout << "MimeType: " << MimeTypes::indentify(request.getUrl())
+                        std::cout << "MimeType: " << MimeTypes::identify(request.getUrl())
                                   << std::endl;
 
                         std::string root_folder = "./www";
 
                         Response response;
 
-                        if (opendir(root_folder.c_str()) == NULL) {
+                        DIR *dir = opendir(root_folder.c_str());
+
+                        if (dir == NULL) {
                             print_error(strerror(errno));
                             // response.set_status_code(401);
+                        }
+
+                        if (closedir(dir) == -1) {
+                            print_error(strerror(errno));
                         }
 
                         std::string full_path = root_folder + request.getUrl();
 
                         std::cout << "full_path: " << full_path << std::endl;
 
-                        std::ifstream   in_file_stream(full_path.c_str());
-                        if(!in_file_stream.is_open())
-                        {
-                            print_error("Error opening file");
-                            response.set_status_code("403");
-                            this->send_response(cfd, response);
-                        }
+                        /* ------------------------------------ s
+                         * ----------------------------------- */
 
                         // TODO check permission
 
                         // TODO check for invalid read
 
-                        std::ostringstream response_data;
+                        response.set_status_code("200");
+                        response.set_content_type(MimeTypes::identify(request.getUrl()));
 
-                        std::string line;
-                        while (std::getline(in_file_stream, line)) {
-                            response_data << line;
+                        struct stat sb;
+                        if (stat(full_path.c_str(), &sb) == -1) {
+                            print_error("failed to get file information");
+                            // TODO early response
                         }
 
-                        std::cout << "response data: \n" << response_data.str() << std::endl;
-                        response.set_content_data(response_data.str());
-                        response.set_content_type("text/html");
-                        response.set_content_length(response_data.str().size());
-                        
-                        this->send_response(cfd, response);
+                        if (MimeTypes::is_binary_file(response.get_content_type())) {
+                            std::cout << "----------- SENT BINARY FILE -----------" << std::endl;
+                            std::ifstream in_file_stream(full_path.c_str(), std::ios::binary);
+                            response.set_content_length((std::size_t)sb.st_size);
+
+                            if (!in_file_stream.is_open()) {
+                                print_error("Error opening file");
+                                response.set_status_code("403");
+                                // this->send_response(cfd, response);
+                            }
+
+                            std::streampos size;
+                            char *memblock;
+
+                            std::ifstream file(full_path.c_str(),
+                                               std::ios::in | std::ios::binary | std::ios::ate);
+                            if (file.is_open()) {
+                                size = file.tellg();
+                                memblock = new char[size];
+                                file.seekg(0, std::ios::beg);
+                                file.read(memblock, size);
+                                file.close();
+
+                                std::cout << "Memory" << std::endl;
+
+                                this->send_header(cfd, response);
+
+                                if (write(cfd, memblock, response.get_content_length()) == -1) {
+                                    print_error("failed to write");
+                                }
+
+                                // response.set_content_data(memblock);
+
+                                delete[] memblock;
+                            } else {
+                                std::cout << "Unable to open file" << std::endl;
+                                // response.set_content_data('\0');
+                            }
+
+                        } else {
+                            // Not binary file
+                            std::cout << "----------- SENT NORMAL FILE -----------" << std::endl;
+                            // std::ifstream in_file_stream(full_path.c_str());
+
+                            // if (!in_file_stream.is_open()) {
+                            //     print_error("Error opening file");
+                            //     response.set_status_code("403");
+                            //     this->send_response(cfd, response);
+                            // }
+
+                            struct stat struc_st;
+                            if (stat(full_path.c_str(), &struc_st) == -1) {
+                                print_error("failed to get file information");
+                                // TODO early response
+                            }
+
+                            response.set_content_length(struc_st.st_size);
+
+                            int file_fd = open(full_path.c_str(), O_RDONLY);
+                            if (!file_fd) {
+                                print_error("Error opening file");
+                                response.set_status_code("500");
+                                this->send_response(cfd, response);
+                            }
+
+                            // TODO check permission
+                            // TODO check for invalid read
+
+                            int bytes_read = 0;
+                            char buff[BUFFERSIZE];
+
+                            // send header first
+                            this->send_header(cfd, response);
+
+                            // TODO send body
+                            std::cout << "reading file.........." << std::endl;
+                            while (1) {
+                                bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
+                                buff[bytes_read] = '\0';
+                                std::cout << "read " << bytes_read << " bytes" << std::endl;
+                                if (bytes_read == -1) {
+                                    print_error("Failed read file");
+                                    break;
+                                }
+                                if (bytes_read == 0) {
+                                    close(file_fd);
+                                    break;
+                                }
+
+                                if (write(cfd, buff, bytes_read) == -1) {
+                                    print_error("failed to write");
+                                    break;
+                                }
+                            }
+
+                            std::cout << "end reading file.........." << std::endl;
+
+                            std::cout << ">>>>> SIZES <<<<<<" << std::endl;
+                            std::cout << "bytes read: " << response.get_content_length()
+                                      << std::endl;
+                            std::cout << "from stat: " << struc_st.st_size << std::endl;
+                            // std::ostringstream response_data;
+
+                            // std::string line;
+                            // while (std::getline(in_file_stream, line)) {
+                            //     response_data << line << std::endl;
+                            // }
+
+                            // response.set_content_length(response_data.str().size());
+
+                            // this->send_header(cfd, response);
+
+                            // if (write(cfd, response_data.str().c_str(),
+                            //           response_data.str().size()) == -1) {
+                            //     print_error("failed to write");
+                            // }
+                        }
+
+                        // this->send_response(cfd, response);
+
+                        /* ----------------------------------- ds
+                         * ----------------------------------- */
+
+                        // struct stat sT;
+                        // if (stat(full_path.c_str(), &sT) == -1) {
+                        //     print_error("failed to get file information");
+                        //     // TODO early response
+                        // }
+
+                        /* ----------------------------------- end
+                         * ---------------------------------- */
 
                         this->close_connection(cfd, this->_epfd, evlist[i]);
                         this->_inc_msgs.erase(cfd);
@@ -276,23 +404,54 @@ const char *HTTP::FailedToInit::what() const throw() { return ("Failed to initia
 
 const char *HTTP::FailedToCreateServer::what() const throw() { return ("Failed to Create Server"); }
 
-int HTTP::send_response(int &cfd, const Response& response) {
+int HTTP::send_header(int &cfd, const Response &response) {
+    std::ostringstream ss;
+    ss << "HTTP/1.1 " << response.get_status_code() << "\n"
+       << "Content-Type: " << response.get_content_type() << "\n"
+       << "Content-Length: " << response.get_content_length() << "\n"
+       << "Access-Control-Allow-Origin: *"
+       << "\n"
+       << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS"
+       << "\n"
+       << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With"
+       << "\n"
+       << "Access-Control-Allow-Credentials: true"
+       << "\n\n";
+
+    // response.set_header("Access-Control-Allow-Origin", "*");
+    // response.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    // response.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization,
+    // X-Requested-With"); response.set_header("Access-Control-Allow-Credentials", "true");
+
+    if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
+        return 1;
+    return 0;
+}
+
+int HTTP::send_response(int &cfd, const Response &response) {
 
     // std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
     //                        "HOME </h1><p> Hello from "
     //                        "your Server :) </p></body></html>";
     std::ostringstream ss;
-    ss << "HTTP/1.1 " <<  response.get_status_code() << "\n"
+    ss << "HTTP/1.1 " << response.get_status_code() << "\n"
        << "Content-Type: " << response.get_content_type() << "\n"
-       << "Content-Length: " << response.get_content_length() 
-       << "\n\n";
-       
-    if (response.get_content_length()) {
-        ss << response.get_content_data();
-    }
+       << "Content-Length: " << response.get_content_length() << "\n\n";
+
+    // if (response.get_content_length()) {
+    //     ss << response.get_content_data();
+    // }
 
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
+
+    // if (response.get_content_data().size()) {
+    //     if (write(cfd, response.get_content_data().c_str(), response.get_content_length()) ==
+    //     -1)
+    //     {
+    //         return 1;
+    //     }
+    // }
 
     return 0;
 }

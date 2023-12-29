@@ -17,9 +17,9 @@ void Response::set_status_code(std::string code) {
     this->_status = code;
 }
 
-void Response::set_content_data(const std::string &data) {
-    this->_content_data = data;
-}
+// void Response::set_content_data(std::string data) {
+//     this->_content_data = data;
+// }
 
 void Response::set_content_type(const std::string type) {
     this->_content_type = type;
@@ -32,9 +32,9 @@ std::string Response::get_status_code() const{
     return (this->_status);
 }
 
-std::string Response::get_content_data() const{
-    return (this->_content_data);
-}
+// std::string  Response::get_content_data() const{
+//     return (this->_content_data);
+// }
 std::string Response::get_content_type() const{
     return (this->_content_type);
 }

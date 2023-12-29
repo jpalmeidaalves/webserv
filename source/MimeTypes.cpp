@@ -10,6 +10,7 @@ supported_types MimeTypes::init_types() {
     mimeMap[".json"] = "application/json";
     mimeMap[".xml"] = "application/xml";
     mimeMap[".jpeg"] = "image/jpeg";
+    mimeMap[".jpg"] = "image/jpeg";
     mimeMap[".png"] = "image/png";
     mimeMap[".gif"] = "image/gif";
     mimeMap[".mp3"] = "audio/mpeg";
@@ -30,9 +31,12 @@ supported_types MimeTypes::init_types() {
 
 supported_types MimeTypes::types = init_types();
 
-std::string MimeTypes::indentify(const std::string &path) {
-    supported_types::iterator it;
+std::string MimeTypes::identify(const std::string &original_path) {
 
+    std::string path = original_path;
+    std::transform(path.begin(), path.end(), path.begin(), ::tolower);
+
+    supported_types::iterator it;
     std::size_t found = path.find_last_of(".");
     std::cout << "found: " << found << std::endl;
     if (found != std::string::npos) {
@@ -47,4 +51,19 @@ std::string MimeTypes::indentify(const std::string &path) {
     }
 
     return ""; // unknow mime type, browser will try to assume the correct type
+}
+
+bool MimeTypes::is_binary_file(const std::string &mime) {
+    if (mime.find("image/") != std::string::npos)
+        return true;
+    if (mime.find("video/") != std::string::npos)
+        return true;
+    if (mime.find("audio/") != std::string::npos)
+        return true;
+    if (mime.find("pdf") != std::string::npos)
+        return true;
+    // if (mime.find("json") != std::string::npos)
+    //     return true;
+
+    return false;
 }
