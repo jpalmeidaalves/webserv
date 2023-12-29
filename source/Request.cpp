@@ -1,10 +1,24 @@
 #include "../headers/Request.hpp"
 
-Request::Request(const std::string &data) {
+Request::Request() {}
 
+Request::~Request() {}
+
+/* -------------------------------- Disabled -------------------------------- */
+Request &Request::operator=(const Request &rhs) {
+    (void)rhs;
+    return *this;
+}
+Request::Request(const Request &src) { *this = src; }
+
+/* -------------------------------------------------------------------------- */
+/*                                   Methods                                  */
+/* -------------------------------------------------------------------------- */
+
+void Request::parse_request() {
     // std::cout << "data: " << data << std::endl;
     // parse request
-    std::stringstream ss(data);
+    std::stringstream ss(this->_raw);
     std::string line;
 
     // process first line
@@ -20,23 +34,13 @@ Request::Request(const std::string &data) {
     }
 }
 
-Request::~Request() {}
-
-/* -------------------------------- Disabled -------------------------------- */
-Request::Request() {}
-Request &Request::operator=(const Request &rhs) {
-    (void)rhs;
-    return *this;
-}
-Request::Request(const Request &src) { *this = src; }
-
-/* -------------------------------------------------------------------------- */
-/*                                   Methods                                  */
-/* -------------------------------------------------------------------------- */
 std::string Request::getMethod() const { return (this->_method); }
 std::string Request::getUrl() const { return (this->_url); }
 std::string Request::getBody() const { return (this->_body); }
 std::string Request::getHost() const { return (this->_host); }
+std::string Request::getRaw() const { return (this->_raw); }
+
+void Request::append_raw(std::string buf) { this->_raw += buf; }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "Method => " << obj.getMethod() << std::endl;

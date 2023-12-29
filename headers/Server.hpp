@@ -19,6 +19,7 @@ class Server {
     Server(); // disable default constructer
 
   public:
+    Connection *connection;
     Server(int port);
     ~Server();
 

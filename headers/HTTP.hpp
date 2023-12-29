@@ -25,10 +25,13 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 8192 // 8MB
-#define BACKLOG 200     // how many pending connections queue will hold
+#define BUFFERSIZE 8000
+#define BACKLOG 200 // how many pending connections queue will hold
 
-typedef std::map<int, std::string> msgs_map;
+// Connection::Connection() {}
+// Connection::~Connection() {}
+
+// typedef std::map<int, Connection *> inc_connects_t;
 
 class HTTP {
   private:
@@ -37,16 +40,15 @@ class HTTP {
 
     int _epfd; // epoll fd
     std::vector<Server *> _servers;
-    msgs_map _inc_msgs;
+    // inc_connects_t _inc_connects;
 
   public:
     HTTP();
     ~HTTP();
-    int monitor_multiple_fds();
-    int send_response(int &cfd, const Response &response);
+    int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int &cfd, int &epfd, epoll_event &ev);
-    int add_listening_socket_to_poll(struct epoll_event &ev, int listening_socket);
+    int add_listening_socket_to_poll(struct epoll_event &ev, Server *server);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
     int send_header(int &cfd, const Response &response);

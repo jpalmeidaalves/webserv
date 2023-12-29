@@ -30,7 +30,7 @@ HTTP::HTTP() : _epfd(0) {
     if (0 > this->_epfd)
         throw HTTP::FailedToInit();
 
-    this->monitor_multiple_fds();
+    this->handle_connections();
 }
 
 HTTP::~HTTP() {
@@ -44,10 +44,18 @@ HTTP::~HTTP() {
 /*                                   Methods                                  */
 /* -------------------------------------------------------------------------- */
 
-int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int listening_socket) {
-    int ret;                       // store the status of the epoll instance accross the program
-    ev.events = EPOLLIN;           // monitors file descriptors ready to read
-    ev.data.fd = listening_socket; // the fd we are listening on the network
+int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, Server *server) {
+
+    if (!server) {
+        return 1;
+    }
+
+    int ret;             // store the status of the epoll instance accross the program
+    ev.events = EPOLLIN; // monitors file descriptors ready to read
+    // ev.data.fd = listening_socket; // the fd we are listening on the network
+    server->connection = new Connection();
+    ev.data.ptr = server->connection;
+    static_cast<Connection *>(ev.data.ptr)->fd = server->get_sockfd();
 
     /* epoll ctl -> control interface for an epoll file descriptor
                     add, modify, or remove entries in the interest list
@@ -57,7 +65,7 @@ int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int listening_soc
         int fd -> socket file descriptor
     */
 
-    ret = epoll_ctl(this->_epfd, EPOLL_CTL_ADD, listening_socket, &ev);
+    ret = epoll_ctl(this->_epfd, EPOLL_CTL_ADD, server->get_sockfd(), &ev);
     if (ret == -1) {
         print_error("failed add to epoll");
         return 1;
@@ -86,7 +94,9 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
 
     // add to epoll
     ev.events = EPOLLIN | EPOLLOUT;
-    ev.data.fd = cfd;
+    // ev.data.fd = cfd;
+    ev.data.ptr = new Connection();
+    static_cast<Connection *>(ev.data.ptr)->fd = cfd;
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
     if (ret == -1) {
         close(cfd);
@@ -94,13 +104,17 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
         return 1;
     }
 
-    this->_inc_msgs[cfd] = "";
+    // this->_inc_connects[cfd] = ""; // TODO check if necessary
     std::cout << "added success" << std::endl;
     return 0;
 }
 
 int HTTP::close_connection(int &cfd, int &epfd, epoll_event &ev) {
     int ret;
+
+    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+
+    delete conn_ptr;
 
     // Removes cfd from the EPOLL
     ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
@@ -134,44 +148,36 @@ bool HTTP::is_listening_socket(int sockfd) {
 }
 
 int HTTP::read_socket(struct epoll_event &ev) {
-    int cfd = ev.data.fd;
+
+    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+
+    int cfd = conn_ptr->fd;
     char buf[BUFFERSIZE];
     int buflen;
 
     buflen = read(cfd, buf, BUFFERSIZE - 1);
     buf[buflen] = '\0';
 
-    if (buflen == 0 && this->_inc_msgs[cfd].size() == 0) {
+    if (buflen == 0 && conn_ptr->request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
         this->close_connection(cfd, this->_epfd, ev);
-        this->_inc_msgs.erase(cfd);
         return 1;
     }
 
     if (buflen == -1) {
         print_error("failed to read socket");
         if (this->close_connection(cfd, this->_epfd, ev)) {
-            this->_inc_msgs.erase(cfd);
+
             return 1;
         }
     }
 
-    // std::cout << "read OK: " << buf << std::endl; //d
-
-    // char *ptr = buf;
-    // while (*ptr) {
-    //     std::cout << (int)*ptr << std::endl;
-    //     ptr++;
-    // }
-
-    this->_inc_msgs[cfd] += buf;
+    conn_ptr->request.append_raw(buf);
 
     return 0;
 }
-// char buf[BUFFERSIZE];
-// int buflen;
 
-int HTTP::monitor_multiple_fds() {
+int HTTP::handle_connections() {
     struct epoll_event ev;
     /* buffer pointed to by events is used to return information from  the  ready
     list  about  file  descriptors in the interest list that have some events available. */
@@ -180,7 +186,7 @@ int HTTP::monitor_multiple_fds() {
     // add each server to the epoll
     std::vector<Server *>::iterator it;
     for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
-        if (this->add_listening_socket_to_poll(ev, (*it)->get_sockfd()))
+        if (this->add_listening_socket_to_poll(ev, *it))
             return 1;
     }
 
@@ -192,39 +198,45 @@ int HTTP::monitor_multiple_fds() {
             continue;
         }
 
+        std::cout << "epoll_wait completed" << std::endl;
+
         for (int i = 0; i < nfds; i++) {
 
-            if (this->is_listening_socket(evlist[i].data.fd)) {
-                this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
-            } else {
+            Connection *conn_ptr = static_cast<Connection *>(evlist[i].data.ptr);
 
-                // accepted socket
+            std::cout << "epoll cfd: " << conn_ptr->fd << std::endl;
+
+            // TODO add flag to connection indicating listening socket
+            if (this->is_listening_socket(conn_ptr->fd)) {
+                std::cout << "is listening socket" << std::endl;
+                this->accept_and_add_to_poll(ev, this->_epfd, conn_ptr->fd);
+            } else {
+                std::cout << "not listening socket" << std::endl;
+
                 if (evlist[i].events & EPOLLIN) {
                     // Ready for read
-
                     std::cout << " inside EPOLLIN" << std::endl;
 
                     if (this->read_socket(evlist[i]))
                         break;
-
                 } else if (evlist[i].events & EPOLLOUT) {
                     // Ready for write
-                    int cfd = evlist[i].data.fd;
+
+                    // accepted socket
+                    int cfd = conn_ptr->fd; // TODO maybe remove this
+
+                    conn_ptr->request.parse_request();
 
                     // TODO remove DEBUG
-                    if (this->_inc_msgs[cfd].find("\r\n") != std::string::npos) {
-                        std::cout << "Message from Socket\n" << this->_inc_msgs[cfd] << std::endl;
+                    if (conn_ptr->request.getRaw().find("\r\n") != std::string::npos) {
 
-                        Request request(this->_inc_msgs[cfd]);
+                        std::cout << "[Request object]: \n"
+                                  << conn_ptr->request.getRaw() << std::endl;
 
-                        std::cout << "[Request object]: \n" << request << std::endl;
-
-                        std::cout << "MimeType: " << MimeTypes::identify(request.getUrl())
+                        std::cout << "MimeType: " << MimeTypes::identify(conn_ptr->request.getUrl())
                                   << std::endl;
 
                         std::string root_folder = "./www";
-
-                        Response response;
 
                         DIR *dir = opendir(root_folder.c_str());
 
@@ -237,164 +249,78 @@ int HTTP::monitor_multiple_fds() {
                             print_error(strerror(errno));
                         }
 
-                        std::string full_path = root_folder + request.getUrl();
+                        std::string full_path = root_folder + conn_ptr->request.getUrl();
 
                         std::cout << "full_path: " << full_path << std::endl;
 
-                        /* ------------------------------------ s
-                         * ----------------------------------- */
+                        conn_ptr->response.set_status_code("200");
+                        conn_ptr->response.set_content_type(
+                            MimeTypes::identify(conn_ptr->request.getUrl()));
 
-                        // TODO check permission
-
-                        // TODO check for invalid read
-
-                        response.set_status_code("200");
-                        response.set_content_type(MimeTypes::identify(request.getUrl()));
-
-                        struct stat sb;
-                        if (stat(full_path.c_str(), &sb) == -1) {
+                        struct stat struc_st;
+                        if (stat(full_path.c_str(), &struc_st) == -1) {
                             print_error("failed to get file information");
                             // TODO early response
                         }
 
-                        if (MimeTypes::is_binary_file(response.get_content_type())) {
-                            std::cout << "----------- SENT BINARY FILE -----------" << std::endl;
-                            std::ifstream in_file_stream(full_path.c_str(), std::ios::binary);
-                            response.set_content_length((std::size_t)sb.st_size);
+                        conn_ptr->response.set_content_length(struc_st.st_size);
 
-                            if (!in_file_stream.is_open()) {
-                                print_error("Error opening file");
-                                response.set_status_code("403");
-                                // this->send_response(cfd, response);
-                            }
-
-                            std::streampos size;
-                            char *memblock;
-
-                            std::ifstream file(full_path.c_str(),
-                                               std::ios::in | std::ios::binary | std::ios::ate);
-                            if (file.is_open()) {
-                                size = file.tellg();
-                                memblock = new char[size];
-                                file.seekg(0, std::ios::beg);
-                                file.read(memblock, size);
-                                file.close();
-
-                                std::cout << "Memory" << std::endl;
-
-                                this->send_header(cfd, response);
-
-                                if (write(cfd, memblock, response.get_content_length()) == -1) {
-                                    print_error("failed to write");
-                                }
-
-                                // response.set_content_data(memblock);
-
-                                delete[] memblock;
-                            } else {
-                                std::cout << "Unable to open file" << std::endl;
-                                // response.set_content_data('\0');
-                            }
-
-                        } else {
-                            // Not binary file
-                            std::cout << "----------- SENT NORMAL FILE -----------" << std::endl;
-                            // std::ifstream in_file_stream(full_path.c_str());
-
-                            // if (!in_file_stream.is_open()) {
-                            //     print_error("Error opening file");
-                            //     response.set_status_code("403");
-                            //     this->send_response(cfd, response);
-                            // }
-
-                            struct stat struc_st;
-                            if (stat(full_path.c_str(), &struc_st) == -1) {
-                                print_error("failed to get file information");
-                                // TODO early response
-                            }
-
-                            response.set_content_length(struc_st.st_size);
-
-                            int file_fd = open(full_path.c_str(), O_RDONLY);
-                            if (!file_fd) {
-                                print_error("Error opening file");
-                                response.set_status_code("500");
-                                this->send_response(cfd, response);
-                            }
-
-                            // TODO check permission
-                            // TODO check for invalid read
-
-                            int bytes_read = 0;
-                            char buff[BUFFERSIZE];
-
-                            // send header first
-                            this->send_header(cfd, response);
-
-                            // TODO send body
-                            std::cout << "reading file.........." << std::endl;
-                            while (1) {
-                                bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
-                                buff[bytes_read] = '\0';
-                                std::cout << "read " << bytes_read << " bytes" << std::endl;
-                                if (bytes_read == -1) {
-                                    print_error("Failed read file");
-                                    break;
-                                }
-                                if (bytes_read == 0) {
-                                    close(file_fd);
-                                    break;
-                                }
-
-                                if (write(cfd, buff, bytes_read) == -1) {
-                                    print_error("failed to write");
-                                    break;
-                                }
-                            }
-
-                            std::cout << "end reading file.........." << std::endl;
-
-                            std::cout << ">>>>> SIZES <<<<<<" << std::endl;
-                            std::cout << "bytes read: " << response.get_content_length()
-                                      << std::endl;
-                            std::cout << "from stat: " << struc_st.st_size << std::endl;
-                            // std::ostringstream response_data;
-
-                            // std::string line;
-                            // while (std::getline(in_file_stream, line)) {
-                            //     response_data << line << std::endl;
-                            // }
-
-                            // response.set_content_length(response_data.str().size());
-
-                            // this->send_header(cfd, response);
-
-                            // if (write(cfd, response_data.str().c_str(),
-                            //           response_data.str().size()) == -1) {
-                            //     print_error("failed to write");
-                            // }
+                        int file_fd = open(full_path.c_str(), O_RDONLY);
+                        if (!file_fd) {
+                            print_error("Error opening file");
+                            conn_ptr->response.set_status_code("500");
+                            this->send_header(cfd, conn_ptr->response);
                         }
 
-                        // this->send_response(cfd, response);
+                        // TODO check permission
+                        // TODO check for invalid read
 
-                        /* ----------------------------------- ds
-                         * ----------------------------------- */
+                        int bytes_read = 0;
+                        char buff[BUFFERSIZE];
 
-                        // struct stat sT;
-                        // if (stat(full_path.c_str(), &sT) == -1) {
-                        //     print_error("failed to get file information");
-                        //     // TODO early response
-                        // }
+                        // send header first
+                        this->send_header(cfd, conn_ptr->response);
 
-                        /* ----------------------------------- end
-                         * ---------------------------------- */
+                        // TODO send body
+                        std::cout << "reading file.........." << std::endl;
+                        while (1) {
+                            bytes_read = read(file_fd, buff, BUFFERSIZE);
+                            // buff[bytes_read] = '\0';
+                            std::cout << "read " << bytes_read << " bytes" << std::endl;
+                            if (bytes_read == -1) {
+                                print_error("Failed read file");
+                                break;
+                            }
+                            if (bytes_read == 0) {
+                                close(file_fd);
+                                break;
+                            }
+
+                            if (write(cfd, buff, bytes_read) == -1) {
+                                print_error("failed to write");
+                                break;
+                            }
+                        }
+
+                        // std::cout << "end reading file.........." << std::endl;
+                        // std::cout << ">>>>> SIZES <<<<<<" << std::endl;
+                        // std::cout << "bytes read: " << response.get_content_length() <<
+                        // std::endl; std::cout << "from stat: " << struc_st.st_size << std::endl;
 
                         this->close_connection(cfd, this->_epfd, evlist[i]);
-                        this->_inc_msgs.erase(cfd);
+                        // this->_inc_connects.erase(cfd);
                     }
                 }
             }
+            // AQUI
         }
+    }
+
+    // TODO detele connection structs for listening sockets
+
+    std::vector<Server *>::iterator ite;
+    for (ite = this->_servers.begin(); ite != this->_servers.end(); ++ite) {
+        delete (*ite)->connection;
     }
 
     return 0;
@@ -418,41 +344,8 @@ int HTTP::send_header(int &cfd, const Response &response) {
        << "Access-Control-Allow-Credentials: true"
        << "\n\n";
 
-    // response.set_header("Access-Control-Allow-Origin", "*");
-    // response.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    // response.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization,
-    // X-Requested-With"); response.set_header("Access-Control-Allow-Credentials", "true");
-
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
-    return 0;
-}
-
-int HTTP::send_response(int &cfd, const Response &response) {
-
-    // std::string htmlFile = "<!DOCTYPE html><html lang=\"en\"><body><h1> "
-    //                        "HOME </h1><p> Hello from "
-    //                        "your Server :) </p></body></html>";
-    std::ostringstream ss;
-    ss << "HTTP/1.1 " << response.get_status_code() << "\n"
-       << "Content-Type: " << response.get_content_type() << "\n"
-       << "Content-Length: " << response.get_content_length() << "\n\n";
-
-    // if (response.get_content_length()) {
-    //     ss << response.get_content_data();
-    // }
-
-    if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
-        return 1;
-
-    // if (response.get_content_data().size()) {
-    //     if (write(cfd, response.get_content_data().c_str(), response.get_content_length()) ==
-    //     -1)
-    //     {
-    //         return 1;
-    //     }
-    // }
-
     return 0;
 }
 
@@ -463,13 +356,5 @@ int HTTP::send_response(int &cfd, const Response &response) {
 
 Request A |*****************--------------------------------------------------------------]
 Request B |***-----]
-
-*/
-
-/*
-
-Request
-
-[header...]\r\n[body...]\r\n
 
 */
