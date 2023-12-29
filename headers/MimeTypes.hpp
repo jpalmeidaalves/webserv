@@ -1,6 +1,7 @@
 #ifndef MIMETYPES_HPP
 #define MIMETYPES_HPP
 
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <string>
@@ -12,8 +13,7 @@ class MimeTypes {
     static supported_types types;
     static supported_types init_types();
     static std::string identify(const std::string &path);
-    static bool  is_binary_file(const std::string &mime);
-    
+    static bool is_binary_file(const std::string &mime);
 
   private:
     MimeTypes();

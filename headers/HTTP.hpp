@@ -3,30 +3,30 @@
 
 #include "../headers/utils.hpp"
 #include "MimeTypes.hpp"
-#include "StatusCode.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
 #include "Server.hpp"
+#include "StatusCode.hpp"
 #include "colors.hpp"
-#include <fstream>
 #include <cerrno>
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <signal.h>
 #include <sstream>
 #include <string>
 #include <sys/epoll.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h> // close
 #include <vector>
-#include <sys/stat.h>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 1000 // TODO change this
-#define BACKLOG 200 // how many pending connections queue will hold
+#define BUFFERSIZE 8192 // 8MB
+#define BACKLOG 200     // how many pending connections queue will hold
 
 typedef std::map<int, std::string> msgs_map;
 
@@ -43,14 +43,13 @@ class HTTP {
     HTTP();
     ~HTTP();
     int monitor_multiple_fds();
-    int send_response(int &cfd, const Response& response);
+    int send_response(int &cfd, const Response &response);
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int &cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int listening_socket);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
-    int send_header(int &cfd, const Response& response);
-    
+    int send_header(int &cfd, const Response &response);
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();
@@ -61,4 +60,4 @@ class HTTP {
     };
 };
 
-#endif/* HTTP_HPP */
+#endif /* HTTP_HPP */
