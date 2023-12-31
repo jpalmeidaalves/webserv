@@ -15,6 +15,7 @@ struct SServer {
     std::vector<std::string> server_name;
     int client_max_body_size;
     std::string root;
+    bool default_server;
     // std::vector<std::string> index;
 };
 
@@ -23,18 +24,21 @@ class ParserConfFile{
         int fd;
         std::string _path;
         std::vector<SServer> servers;
+        int servers_count;
         ParserConfFile(const ParserConfFile& src);
         ParserConfFile& operator=(const ParserConfFile& src);
         ParserConfFile();
+        std::vector<std::string> tokens;
 
     public:
         ParserConfFile(std::string path);
         ~ParserConfFile();
-        int open_config_file();
-        int extract_data();
+        std::vector<SServer> open_config_file();
+        int extract();
+        std::vector<std::string>::iterator get_serv_data(std::vector<std::string>::iterator it, struct SServer& s);
         
-        void printMembers(std::ostream &out) const;
-        
+        void printMembers(void) const;
+        void print_server_data();
         // template <typename T>
         // void printVector(std::vector<T> v);
       
