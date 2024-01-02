@@ -115,7 +115,7 @@ int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
 
     delete conn_ptr;
-    
+
     // Removes cfd from the EPOLL
     ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
     if (ret == -1) {
@@ -198,7 +198,6 @@ int HTTP::process_directories(struct epoll_event &ev) {
         return 1;
     }
 
-
     // At this point we're dealing with directories
 
     // TODO if dir listing is active, from config file
@@ -213,19 +212,21 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
         std::cout << ">> CONTENT IN THIS FOLDER:" << std::endl;
 
-     
-
         std::map<std::string, struct dir_entry> dir_entries;
         // find items inside folder
         struct dirent *dp;
         while (1) {
-            dp=readdir(dir);
+            dp = readdir(dir);
             if (dp == NULL)
                 break;
 
             dir_entry new_entry;
 
             struct stat struc_st;
+
+            // ignore current dir
+            if (std::string(dp->d_name) == ".")
+                continue;
 
             std::string item_path = full_path + "/" + dp->d_name;
 
@@ -240,7 +241,7 @@ int HTTP::process_directories(struct epoll_event &ev) {
                 new_entry.is_file = false;
 
             } else {
-               new_entry.is_file = true;
+                new_entry.is_file = true;
             }
 
             new_entry.size = 0;
@@ -252,62 +253,44 @@ int HTTP::process_directories(struct epoll_event &ev) {
             //             << ", is_file: " << new_entry.is_file
             //             << ", size: " << new_entry.size
             //             << ", last modified: " << new_entry.last_modified
-            //             << std::endl; 
+            //             << std::endl;
         }
 
         std::stringstream ss;
 
-
         // TODO path is only from the root folder of the site
 
-        ss << "<html><head><title>Index of " << full_path << "/</title></head><body><h1>Index of " << full_path << "</h1><hr><pre>";
-
-        // <a href="file1">file1</a>                                              02-Jan-2024 11:43                   0
-        // <a href="file2">file2</a>                                              02-Jan-2024 11:43                   0
-        // </pre><hr></body>
-        // </html>
-        // ";
-
+        ss << "<html><head><title>Index of " << full_path << "/</title></head><body><h1>Index of "
+           << full_path << "</h1><hr><pre>";
 
         std::map<std::string, struct dir_entry>::iterator it;
         {
-            for (it = dir_entries.begin(); it != dir_entries.end(); it++)
-            {
+            for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
                 if (it->second.is_file == false) {
 
-                    std::string col1 = "<a href=\"" + full_path + "/" + it->first + "\">" + it->first + "/</a>";
-                    // ss << std::left << std::setw(80) << "<a href=\"" << full_path << "/" << it->first << "\">" << it->first << "/</a>"
-                    // <<  std::left << std::setw(24) << "col2"
-                    // << std::right << std::setw(24) << "col3"
-                    // << std::endl;
-                    ss << std::left << std::setw(80) << col1
-                    << std::right << std::setw(40)  << it->second.last_modified
-                    << std::right << std::setw(40) << "-"  << std::endl;
+                    std::string folder_name = it->first + "/";
+
+                    ss << "<a href=\"" << full_path << it->first << "\">" << folder_name << "</a>"
+                       << std::setw(51 - folder_name.size()) << " ";
+
+                    if (it->first == "..") {
+                        ss << "\n";
+                    } else {
+                        ss << it->second.last_modified << " ";
+                        ss << std::right << std::setw(20) << "-\n";
+                    }
                 }
-                   
-                // std::cout << it->first << " " << it->second.last_modified << " " << it->second.size << std::endl;
-            } 
-            for (it = dir_entries.begin(); it != dir_entries.end(); it++)
-            {
+            }
+            for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
                 if (it->second.is_file == true) {
 
-                    std::string col1 = "<a href=\"" + full_path + "/" + it->first + "\">" + it->first + "</a>";
-                    // ss << std::left << std::setw(80) << "<a href=\"" << full_path << "/" << it->first << "\">" << it->first << "/</a>"
-                    // <<  std::left << std::setw(24) << "col2"
-                    // << std::right << std::setw(24) << "col3"
-                    // << std::endl;
-                    ss << std::setw(60) << col1
-                    << std::setw(20)  << it->second.last_modified
-                    << std::setw(20) << it->second.size
-                    << "\n";
+                    ss << "<a href=\"" << full_path << it->first << "\">" << it->first << "</a>"
+                       << std::setw(51 - it->first.size()) << " ";
 
-                    // ss << std::left << "<a href=\"" << full_path + "/" + it->first << "\">" << it->first << "</a>"  << std::setw(50)
-                    // << " " << it->second.last_modified << std::setw(24)
-                    // << " " << std::right << it->second.size << std::setw(24) << std::endl;
+                    ss << it->second.last_modified << " ";
+                    ss << std::right << std::setw(19) << it->second.size << "\n";
                 }
-                
-                // std::cout << it->first << " " << it->second.last_modified << " " << it->second.size << std::endl;
-            }       
+            }
         }
 
         ss << "</pre><hr></body></html>";
@@ -316,18 +299,15 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
         std::cout << ss.str() << std::endl;
 
-
         conn_ptr->response.set_content_length(ss.str().size());
 
         this->send_header(conn_ptr->fd, conn_ptr->response);
 
-
         if (write(conn_ptr->fd, ss.str().c_str(), ss.str().size()) == -1) {
             print_error("failed to write");
         }
-       
     }
-  
+
     if (closedir(dir) == -1)
         print_error(strerror(errno));
     return 1;
@@ -341,11 +321,9 @@ int HTTP::write_socket(struct epoll_event &ev) {
     if (conn_ptr->request.getRaw().find("\r\n") != std::string::npos) {
         conn_ptr->request.parse_request();
 
-        std::cout << "[Request object]: \n"
-                    << conn_ptr->request.getRaw() << std::endl;
+        std::cout << "[Request object]: \n" << conn_ptr->request.getRaw() << std::endl;
 
-        std::cout << "MimeType: " << MimeTypes::identify(conn_ptr->request.getUrl())
-                    << std::endl;
+        std::cout << "MimeType: " << MimeTypes::identify(conn_ptr->request.getUrl()) << std::endl;
 
         std::string root_folder = "./www";
 
@@ -360,8 +338,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
         std::cout << "full_path: " << full_path << std::endl;
 
         conn_ptr->response.set_status_code("200");
-        conn_ptr->response.set_content_type(
-            MimeTypes::identify(conn_ptr->request.getUrl()));
+        conn_ptr->response.set_content_type(MimeTypes::identify(conn_ptr->request.getUrl()));
 
         struct stat struc_st2;
         ft_memset(&struc_st2, 0, sizeof(struc_st2));
@@ -387,8 +364,8 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
         // TODO check permission
 
-        //access
-        // TODO check for invalid read
+        // access
+        //  TODO check for invalid read
 
         int bytes_read = 0;
         char buff[BUFFERSIZE];
@@ -419,8 +396,8 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
         std::cout << "end reading file.........." << std::endl;
         std::cout << ">>>>> SIZES <<<<<<" << std::endl;
-        std::cout << "bytes read: " << conn_ptr->response.get_content_length() <<
-        std::endl; std::cout << "from stat: " << struc_st2.st_size << std::endl;
+        std::cout << "bytes read: " << conn_ptr->response.get_content_length() << std::endl;
+        std::cout << "from stat: " << struc_st2.st_size << std::endl;
 
         this->close_connection(conn_ptr->fd, this->_epfd, ev);
     }
