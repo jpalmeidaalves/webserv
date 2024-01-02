@@ -35,3 +35,10 @@ int is_file(const char* name)
 
     return -1;
 }
+
+std::string get_formated_time(long rawtime, const std::string &format) {
+    char buffer [80];
+
+    strftime (buffer, 80, format.c_str(), gmtime(&rawtime));
+    return (std::string(buffer));
+}

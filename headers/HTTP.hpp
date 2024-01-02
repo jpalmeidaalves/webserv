@@ -23,6 +23,8 @@
 #include <sys/types.h>
 #include <unistd.h> // close
 #include <vector>
+#include <ctime>
+#include <iomanip>
 
 #define MAXEPOLLSIZE SOMAXCONN
 #define BUFFERSIZE 8000
@@ -32,6 +34,12 @@
 // Connection::~Connection() {}
 
 // typedef std::map<int, Connection *> inc_connects_t;
+
+struct dir_entry {
+      bool is_file;
+      long size;
+      std::string last_modified;
+};
 
 class HTTP {
   private:
@@ -64,4 +72,4 @@ class HTTP {
     };
 };
 
-#endif /* HTTP_HPP */
+#endif/* HTTP_HPP */

@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
+#include <ctime>
 
 struct Connection {
     int fd;
@@ -20,6 +21,7 @@ void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
 int is_file(const char* name);
+std::string get_formated_time(long rawtime, const std::string &format);
 
 template <typename T>
 void printVector(std::vector<T> v) {
