@@ -47,11 +47,13 @@ class HTTP {
     ~HTTP();
     int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
-    int close_connection(int &cfd, int &epfd, epoll_event &ev);
+    int close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, Server *server);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
     int send_header(int &cfd, const Response &response);
+    int write_socket(struct epoll_event &ev);
+    int process_directories(struct epoll_event &ev);
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();

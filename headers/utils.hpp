@@ -6,18 +6,20 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
 
 struct Connection {
     int fd;
     Request request;
     Response response;
-    // Connection();
-    // ~Connection();
 };
 
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
+int is_file(const char* name);
 
 template <typename T>
 void printVector(std::vector<T> v) {

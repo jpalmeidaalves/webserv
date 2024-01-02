@@ -9,8 +9,6 @@ class Response {
         std::string _status;
         std::string _content_type;
         std::size_t _content_length;
-        // unsigned char * _content_data;
-        // unsigned char * _content_binary;
 
         Response(const Response &src);
         Response & operator=(const Response &rhs);

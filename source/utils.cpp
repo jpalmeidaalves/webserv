@@ -20,3 +20,18 @@ void	*ft_memset(void *s, int c, std::size_t n)
 		*f++ = c;
 	return (s);
 }
+
+int is_file(const char* name)
+{
+    DIR* directory = opendir(name);
+
+    if(directory != NULL) {
+     closedir(directory);
+     return 0;
+    }
+
+    if(errno == ENOTDIR)
+        return 1;
+
+    return -1;
+}
