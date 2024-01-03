@@ -8,7 +8,9 @@
 #include <errno.h>
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <vector>
 
 struct Connection {
@@ -21,6 +23,7 @@ bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
 int is_file(const char *name);
 std::string get_formated_time(long rawtime, const std::string &format);
+int get_stat_info(int cfd, Request &request, Response &response);
 
 template <typename T>
 void printVector(std::vector<T> v) {

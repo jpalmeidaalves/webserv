@@ -60,6 +60,8 @@ class HTTP {
     int write_socket(struct epoll_event &ev);
     int process_directories(int cfd);
     void list_directory(std::string full_path, DIR *dir, int cfd);
+    void process_requested_file(struct epoll_event &ev);
+    int send_subsequent_write(struct epoll_event &ev);
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();

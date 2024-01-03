@@ -13,6 +13,7 @@ class Request {
     std::string _body;
     std::string _host;
     int _req_file_fd;
+    bool _is_complete;
 
     Request(const Request &src);
     Request &operator=(const Request &rhs);
@@ -26,6 +27,10 @@ class Request {
     std::string getHost() const;
     std::string getRaw() const;
     void parse_request();
+    void setIsComplete();
+    bool getIsComplete() const;
+    int get_requested_fd();
+    void set_req_file_fd(int ffd);
 
     void append_raw(std::string buf);
 };

@@ -279,7 +279,6 @@ int HTTP::process_directories(int cfd) {
     Response &response = this->_active_connects[cfd]->response;
 
     std::string root_folder = "./www";
-
     std::string full_path = root_folder + request.getUrl();
 
     DIR *dir = opendir(full_path.c_str());
@@ -314,46 +313,154 @@ int HTTP::process_directories(int cfd) {
     return 1;
 }
 
-int HTTP::write_socket(struct epoll_event &ev) {
-
+void HTTP::process_requested_file(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
 
+    if (get_stat_info(cfd, request, response)) {
+        response.set_status_code("500");
+        this->send_header(cfd, response);
+        this->close_connection(cfd, this->_epfd, ev);
+        return;
+    }
+
+    // TODO check permission, done for read
+    // std::cout << "--------------------permissions " << response.permissions << std::endl;
+    // std::cout << "--------------------permissions IROTH"
+    // << ((response.permissions & S_IROTH) ? "yes" : "no") << std::endl;
+    if (!(response.permissions & S_IROTH)) {
+        response.set_status_code("403");
+        this->send_header(cfd, response);
+        this->close_connection(cfd, this->_epfd, ev);
+        return;
+    }
+
+    std::string root_folder = "./www";
+    std::string full_path = root_folder + request.getUrl();
+
+    int file_fd = open(full_path.c_str(), O_RDONLY);
+    if (!file_fd) {
+        print_error("Error opening file");
+        response.set_status_code("500");
+        this->send_header(cfd, response);
+        this->close_connection(cfd, this->_epfd, ev);
+        return;
+    }
+
+    response.set_content_type(MimeTypes::identify(request.getUrl()));
+    request.set_req_file_fd(file_fd);
+    std::cout << "requested file fd changed: " << request.get_requested_fd() << std::endl;
+    response.set_status_code("200");
+    this->send_header(cfd, response);
+    // body info will go in another subsequent write
+}
+
+int HTTP::send_subsequent_write(struct epoll_event &ev) {
+    int cfd = ev.data.fd;
+    Request &request = this->_active_connects[cfd]->request;
+    // Response &response = this->_active_connects[cfd]->response;
+
+    int file_fd = request.get_requested_fd();
+
+    int bytes_read = 0;
+    char buff[BUFFERSIZE];
+
+    std::cout << "subsequent write.........." << std::endl;
+
+    bytes_read = read(file_fd, buff, BUFFERSIZE);
+    std::cout << "read " << bytes_read << " bytes" << std::endl;
+    if (bytes_read == -1) {
+        print_error("Failed read file");
+        close(file_fd);
+        this->close_connection(cfd, this->_epfd, ev);
+        return 1;
+    }
+
+    if (bytes_read == 0) {
+        close(file_fd);
+        this->close_connection(cfd, this->_epfd, ev);
+        return 1;
+    }
+
+    if (write(cfd, buff, bytes_read) == -1) {
+        print_error("failed to write");
+        this->close_connection(cfd, this->_epfd, ev);
+        return 1;
+    }
+    return 0;
+}
+
+int HTTP::write_socket(struct epoll_event &ev) {
+
+    int cfd = ev.data.fd;
+    Request &request = this->_active_connects[cfd]->request;
+    // Response &response = this->_active_connects[cfd]->response;
+
     // check if has the complete header
-    if (request.getRaw().find("\r\n") != std::string::npos) {
-        request.parse_request();
+    if (!request.getIsComplete()) {
+        if (request.getRaw().find("\r\n") != std::string::npos)
+            request.setIsComplete();
+    } else {
 
-        std::string root_folder = "./www";
+        // Flow of the function after incomming msg is complete
 
-        if (this->process_directories(cfd)) {
-            this->close_connection(cfd, this->_epfd, ev);
-            return 1;
+        // first time to write
+        std::cout << "requested loop fd: " << request.get_requested_fd() << std::endl;
+        if (!request.get_requested_fd()) {
+            request.parse_request(); // extract header info
+
+            // check if is a file or dir
+            if (is_file(request.getUrl().c_str())) {
+                std::cout << "------- file --------" << std::endl;
+                this->process_requested_file(ev);
+                // send file (must check permissions)
+            } else {
+                std::cout << "------- dir --------" << std::endl;
+                if (this->process_directories(cfd)) {
+                    this->close_connection(cfd, this->_epfd, ev);
+                }
+                // if index file is present
+                // send file (must check permissions)
+                // else
+                // send list dir (must check permissions)
+            }
+
+        } else {
+            // subsequent writes
+            this->send_subsequent_write(ev);
         }
 
-        std::string full_path = root_folder + request.getUrl();
+        // std::string root_folder = "./www";
 
-        response.set_status_code("200");
-        response.set_content_type(MimeTypes::identify(request.getUrl()));
+        // if (this->process_directories(cfd)) {
+        //     this->close_connection(cfd, this->_epfd, ev);
+        //     return 1;
+        // }
 
-        struct stat struc_st2;
-        ft_memset(&struc_st2, 0, sizeof(struc_st2));
-        if (stat(full_path.c_str(), &struc_st2) == -1) {
-            print_error("failed to get file information");
-            // TODO early response
-            response.set_status_code("500");
-            this->send_header(cfd, response);
-            this->close_connection(cfd, this->_epfd, ev);
-            return 1;
-        }
+        // std::string full_path = root_folder + request.getUrl();
 
-        // TODO check permission, done for read
-        if (struc_st2.st_mode & S_IROTH) {
-            response.set_status_code("403");
-            this->send_header(cfd, response);
-            this->close_connection(cfd, this->_epfd, ev);
-            return 1;
-        }
+        // response.set_status_code("200");
+        // response.set_content_type(MimeTypes::identify(request.getUrl()));
+
+        // struct stat struc_st2;
+        // ft_memset(&struc_st2, 0, sizeof(struc_st2));
+        // if (stat(full_path.c_str(), &struc_st2) == -1) {
+        //     print_error("failed to get file information");
+        //     // TODO early response
+        //     response.set_status_code("500");
+        //     this->send_header(cfd, response);
+        //     this->close_connection(cfd, this->_epfd, ev);
+        //     return 1;
+        // }
+
+        // // TODO check permission, done for read
+        // if (struc_st2.st_mode & S_IROTH) {
+        //     response.set_status_code("403");
+        //     this->send_header(cfd, response);
+        //     this->close_connection(cfd, this->_epfd, ev);
+        //     return 1;
+        // }
 
         // access => int access(const char *pathname, int mode);
         // if (access(full_path.c_str(), R_OK) == -1) {
@@ -387,52 +494,52 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
         */
 
-        response.set_content_length(struc_st2.st_size);
+        // response.set_content_length(struc_st2.st_size);
 
-        int file_fd = open(full_path.c_str(), O_RDONLY);
-        if (!file_fd) {
-            print_error("Error opening file");
-            response.set_status_code("500");
-            this->send_header(cfd, response);
-            this->close_connection(cfd, this->_epfd, ev);
-            return 1;
-        }
+        // int file_fd = open(full_path.c_str(), O_RDONLY);
+        // if (!file_fd) {
+        //     print_error("Error opening file");
+        //     response.set_status_code("500");
+        //     this->send_header(cfd, response);
+        //     this->close_connection(cfd, this->_epfd, ev);
+        //     return 1;
+        // }
 
         //  TODO check for invalid read
 
-        int bytes_read = 0;
-        char buff[BUFFERSIZE];
+        // int bytes_read = 0;
+        // char buff[BUFFERSIZE];
 
-        // send header first
-        this->send_header(cfd, response);
+        // // send header first
+        // this->send_header(cfd, response);
 
         // TODO send body
-        std::cout << "reading file.........." << std::endl;
-        while (1) {
-            bytes_read = read(file_fd, buff, BUFFERSIZE);
-            // buff[bytes_read] = '\0';
-            std::cout << "read " << bytes_read << " bytes" << std::endl;
-            if (bytes_read == -1) {
-                print_error("Failed read file");
-                break;
-            }
-            if (bytes_read == 0) {
-                close(file_fd);
-                break;
-            }
+        // std::cout << "reading file.........." << std::endl;
+        // while (1) {
+        //     bytes_read = read(file_fd, buff, BUFFERSIZE);
+        //     // buff[bytes_read] = '\0';
+        //     std::cout << "read " << bytes_read << " bytes" << std::endl;
+        //     if (bytes_read == -1) {
+        //         print_error("Failed read file");
+        //         break;
+        //     }
+        //     if (bytes_read == 0) {
+        //         close(file_fd);
+        //         break;
+        //     }
 
-            if (write(cfd, buff, bytes_read) == -1) {
-                print_error("failed to write");
-                break;
-            }
-        }
+        //     if (write(cfd, buff, bytes_read) == -1) {
+        //         print_error("failed to write");
+        //         break;
+        //     }
+        // }
 
-        std::cout << "end reading file.........." << std::endl;
-        std::cout << ">>>>> SIZES <<<<<<" << std::endl;
-        std::cout << "bytes read: " << response.get_content_length() << std::endl;
-        std::cout << "from stat: " << struc_st2.st_size << std::endl;
+        // std::cout << "end reading file.........." << std::endl;
+        // std::cout << ">>>>> SIZES <<<<<<" << std::endl;
+        // std::cout << "bytes read: " << response.get_content_length() << std::endl;
+        // std::cout << "from stat: " << struc_st2.st_size << std::endl;
 
-        this->close_connection(cfd, this->_epfd, ev);
+        // this->close_connection(cfd, this->_epfd, ev);
     }
 
     return 0;

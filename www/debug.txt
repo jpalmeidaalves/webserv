@@ -1,0 +1,306 @@
+Error: failed to read socket
+closed connection for fd(socket) 6
+==65515== Conditional jump or move depends on uninitialised value(s)
+==65515==    at 0x4849CA9: strlen (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x49C3733: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x10D759: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid read of size 8
+==65515==    at 0x49C2312: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::operator+=(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid read of size 8
+==65515==    at 0x49C2180: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid read of size 8
+==65515==    at 0x49C2184: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc0 is 0 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid read of size 8
+==65515==    at 0x49C2194: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dd0 is 16 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid write of size 8
+==65515==    at 0x49C21B6: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== Invalid write of size 1
+==65515==    at 0x49C21BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e35384 is 452 bytes inside a block of size 453 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x114828: Request::~Request() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x110378: Connection::~Connection() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D205: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x49C09FD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x49C21DF: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+^Ccontrol-c triggered!!
+Error: epoll_wait failed
+==65515== 
+==65515== HEAP SUMMARY:
+==65515==     in use at exit: 0 bytes in 0 blocks
+==65515==   total heap usage: 679 allocs, 679 frees, 273,189 bytes allocated
+==65515== 
+==65515== All heap blocks were freed -- no leaks are possible
+==65515== 
+==65515== Use --track-origins=yes to see where uninitialised values come from
+==65515== ERROR SUMMARY: 7 errors from 7 contexts (suppressed: 0 from 0)
+==65515== 
+==65515== 1 errors in context 1 of 7:
+==65515== Invalid write of size 1
+==65515==    at 0x49C21BD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e35384 is 452 bytes inside a block of size 453 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x114828: Request::~Request() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x110378: Connection::~Connection() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D205: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x49C09FD: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_mutate(unsigned long, unsigned long, char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x49C21DF: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 2 of 7:
+==65515== Invalid write of size 8
+==65515==    at 0x49C21B6: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 3 of 7:
+==65515== Invalid read of size 8
+==65515==    at 0x49C2194: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dd0 is 16 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 4 of 7:
+==65515== Invalid read of size 8
+==65515==    at 0x49C2184: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc0 is 0 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 5 of 7:
+==65515== Invalid read of size 8
+==65515==    at 0x49C2180: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_append(char const*, unsigned long) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 6 of 7:
+==65515== Invalid read of size 8
+==65515==    at 0x49C2312: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::operator+=(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x114DB0: Request::append_raw(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D772: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Address 0x4e34dc8 is 8 bytes inside a block of size 312 free'd
+==65515==    at 0x484683F: operator delete(void*) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D20D: HTTP::close_connection(int, int&, epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10D71A: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515==  Block was alloc'd at
+==65515==    at 0x4843FA3: operator new(unsigned long) (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x10D08C: HTTP::accept_and_add_to_poll(epoll_event&, int&, int) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FAC3: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== 
+==65515== 1 errors in context 7 of 7:
+==65515== Conditional jump or move depends on uninitialised value(s)
+==65515==    at 0x4849CA9: strlen (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==65515==    by 0x49C3733: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&) (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.31)
+==65515==    by 0x10D759: HTTP::read_socket(epoll_event&) (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10FB27: HTTP::handle_connections() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10CBBF: HTTP::HTTP() (in /home/nuno/Documents/webserv/webserv)
+==65515==    by 0x10BC46: main (in /home/nuno/Documents/webserv/webserv)
+==65515== 
+==65515== ERROR SUMMARY: 7 errors from 7 contexts (suppressed: 0 from 0)

@@ -1,6 +1,6 @@
 #include "../headers/Request.hpp"
 
-Request::Request() {}
+Request::Request() : _req_file_fd(0), _is_complete(false) {}
 
 Request::~Request() {}
 
@@ -49,3 +49,11 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "body => " << obj.getBody() << std::endl;
     return out;
 }
+
+int Request::get_requested_fd() { return (this->_req_file_fd); }
+
+void Request::setIsComplete() { this->_is_complete = true; }
+
+bool Request::getIsComplete() const { return this->_is_complete; }
+
+void Request::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
