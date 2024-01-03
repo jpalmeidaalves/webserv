@@ -328,7 +328,7 @@ void HTTP::process_requested_file(struct epoll_event &ev, std::string full_path)
 
     response.set_content_type(MimeTypes::identify(request.getUrl()));
     request.set_req_file_fd(file_fd);
-    std::cout << "requested file fd changed: " << request.get_requested_fd() << std::endl;
+    // std::cout << "requested file fd changed: " << request.get_requested_fd() << std::endl;
     response.set_status_code("200");
     this->send_header(cfd, response);
     // body info will go in another subsequent write
@@ -344,10 +344,10 @@ int HTTP::send_subsequent_write(struct epoll_event &ev) {
     int bytes_read = 0;
     char buff[BUFFERSIZE];
 
-    std::cout << "subsequent write.........." << std::endl;
+    // std::cout << "subsequent write.........." << std::endl;
 
     bytes_read = read(file_fd, buff, BUFFERSIZE);
-    std::cout << "read " << bytes_read << " bytes" << std::endl;
+    // std::cout << "read " << bytes_read << " bytes" << std::endl;
     if (bytes_read == -1) {
         print_error("Failed read file");
         close(file_fd);
@@ -384,18 +384,15 @@ int HTTP::write_socket(struct epoll_event &ev) {
         // Flow of the function after incomming msg is complete
 
         // first time to write
-        std::cout << "requested loop fd: " << request.get_requested_fd() << std::endl;
         if (!request.get_requested_fd()) {
             request.parse_request(); // extract header info
 
             std::string root_folder = "./www";
             std::string full_path = root_folder + request.getUrl();
 
-            std::cout << "[Request Header]" << request.getRaw() << std::endl;
+            // std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
             // check if is a file or dir
-
-            std::cout << "******* is_file: " << full_path << std::endl;
             int isfile = is_file(full_path.c_str());
             if (isfile == -1) {
                 // TODO error checking
@@ -411,15 +408,10 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
                 // if index file is present
                 // TODO must check all index files defined in the configfile
-                std::cout << "@@@@@@@@@@@ " << full_path + "/" + "index.html" << std::endl;
                 if (file_exists(full_path + "/" + "index.html")) {
-                    std::cout << "*************** index present in this dir ***************"
-                              << std::endl;
                     // send file (must check permissions)
                     this->process_requested_file(ev, full_path + "/" + "index.html");
                 } else {
-
-                    std::cout << " _________ inside listing _________" << std::endl;
                     // send list dir (must check permissions)
 
                     // TODO if dir listing is active, from config file
@@ -521,6 +513,13 @@ Request A |*****************----------------------------------------------------
 Request B |***-----]
 
 
+Logger Ex
+
+timestamp [INFO] - incomming connection from x, GET /
+timestamp [INFO] - finish send response to x
+timestamp [INFO] - closed connection for x
+
+timestamp [ERROR] - failed to read
 
 
     printf("File Permissions: \t");
