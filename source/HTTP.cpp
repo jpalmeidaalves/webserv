@@ -188,7 +188,6 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
     if (dir == NULL) {
         print_error(strerror(errno));
-        std::cout << "!!!!checking dir" << std::endl;
         conn_ptr->response.set_status_code("404");
         // is file and shoud continue to the next part
         if (errno == ENOTDIR) {
@@ -203,14 +202,13 @@ int HTTP::process_directories(struct epoll_event &ev) {
     // TODO if dir listing is active, from config file
     bool is_dir_listing = true;
 
+    // TODO we must check the index files in the configfile and show them instead of listing dir
+
     if (!is_dir_listing) {
         conn_ptr->response.set_status_code("403");
         this->send_header(conn_ptr->fd, conn_ptr->response);
     } else {
         conn_ptr->response.set_status_code("200");
-        // TODO show the files in this directory
-
-        std::cout << ">> CONTENT IN THIS FOLDER:" << std::endl;
 
         std::map<std::string, struct dir_entry> dir_entries;
         // find items inside folder
@@ -232,14 +230,12 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
             ft_memset(&struc_st, 0, sizeof(struc_st));
             if (stat(item_path.c_str(), &struc_st) == -1) {
-                std::cout << "!!!!!!!curr item: " << dp->d_name << std::endl;
                 print_error("failed to get file information");
                 break;
             }
 
             if (dp->d_type & DT_DIR) {
                 new_entry.is_file = false;
-
             } else {
                 new_entry.is_file = true;
             }
@@ -248,20 +244,13 @@ int HTTP::process_directories(struct epoll_event &ev) {
             new_entry.last_modified = get_formated_time(struc_st.st_mtim.tv_sec, "%d-%h-%Y %H:%M");
 
             dir_entries[dp->d_name] = new_entry;
-
-            //  std::cout   << "filename: " << dp->d_name
-            //             << ", is_file: " << new_entry.is_file
-            //             << ", size: " << new_entry.size
-            //             << ", last modified: " << new_entry.last_modified
-            //             << std::endl;
         }
 
         std::stringstream ss;
 
-        // TODO path is only from the root folder of the site
-
-        ss << "<html><head><title>Index of " << full_path << "/</title></head><body><h1>Index of "
-           << full_path << "</h1><hr><pre>";
+        ss << "<html><head><title>Index of " << conn_ptr->request.getUrl()
+           << "/</title></head><body><h1>Index of " << conn_ptr->request.getUrl()
+           << "</h1><hr><pre>";
 
         std::map<std::string, struct dir_entry>::iterator it;
         {
@@ -270,9 +259,10 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
                     std::string folder_name = it->first + "/";
 
-                    ss << "<a href=\"" << full_path << it->first << "\">" << folder_name << "</a>"
+                    ss << "<a href=\"" << it->first << "\">" << folder_name << "</a>"
                        << std::setw(51 - folder_name.size()) << " ";
 
+                    // parent folder has no modified date and size
                     if (it->first == "..") {
                         ss << "\n";
                     } else {
@@ -284,7 +274,7 @@ int HTTP::process_directories(struct epoll_event &ev) {
             for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
                 if (it->second.is_file == true) {
 
-                    ss << "<a href=\"" << full_path << it->first << "\">" << it->first << "</a>"
+                    ss << "<a href=\"" << it->first << "\">" << it->first << "</a>"
                        << std::setw(51 - it->first.size()) << " ";
 
                     ss << it->second.last_modified << " ";
@@ -295,12 +285,7 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
         ss << "</pre><hr></body></html>";
 
-        std::cout << "----------------------------------------------BODY" << std::endl;
-
-        std::cout << ss.str() << std::endl;
-
         conn_ptr->response.set_content_length(ss.str().size());
-
         this->send_header(conn_ptr->fd, conn_ptr->response);
 
         if (write(conn_ptr->fd, ss.str().c_str(), ss.str().size()) == -1) {
