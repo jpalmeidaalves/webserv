@@ -4,12 +4,14 @@ bool g_stop = false;
 
 void sighandler(int signum) {
     (void)signum;
+    std::cout << "control-c triggered!!" << std::endl;
     g_stop = true;
 }
 
 HTTP::HTTP() : _epfd(0) {
 
     signal(SIGINT, sighandler);
+    signal(SIGQUIT, sighandler);
 
     Server *srv1 = new Server(8084); // TODO check if other args are required
     if (srv1->create_server()) {
@@ -50,12 +52,9 @@ int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, Server *server) {
         return 1;
     }
 
-    int ret;             // store the status of the epoll instance accross the program
-    ev.events = EPOLLIN; // monitors file descriptors ready to read
-    // ev.data.fd = listening_socket; // the fd we are listening on the network
-    server->connection = new Connection();
-    ev.data.ptr = server->connection;
-    static_cast<Connection *>(ev.data.ptr)->fd = server->get_sockfd();
+    int ret;                           // store the status of the epoll instance accross the program
+    ev.events = EPOLLIN;               // monitors file descriptors ready to read
+    ev.data.fd = server->get_sockfd(); // the fd we are listening on the network
 
     /* epoll ctl -> control interface for an epoll file descriptor
                     add, modify, or remove entries in the interest list
@@ -94,9 +93,8 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
 
     // add to epoll
     ev.events = EPOLLIN | EPOLLOUT;
-    // ev.data.fd = cfd;
-    ev.data.ptr = new Connection();
-    static_cast<Connection *>(ev.data.ptr)->fd = cfd;
+    ev.data.fd = cfd;
+
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
     if (ret == -1) {
         close(cfd);
@@ -104,7 +102,9 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
         return 1;
     }
 
-    // this->_inc_connects[cfd] = ""; // TODO check if necessary
+    // saved to active connections
+    this->_active_connects[cfd] = new Connection();
+
     std::cout << "added success" << std::endl;
     return 0;
 }
@@ -112,9 +112,9 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
 int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     int ret;
 
-    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
-
-    delete conn_ptr;
+    // free and delete from active connections
+    delete this->_active_connects[cfd];
+    this->_active_connects.erase(cfd);
 
     // Removes cfd from the EPOLL
     ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
@@ -149,16 +149,16 @@ bool HTTP::is_listening_socket(int sockfd) {
 
 int HTTP::read_socket(struct epoll_event &ev) {
 
-    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
-
-    int cfd = conn_ptr->fd;
+    int cfd = ev.data.fd;
     char buf[BUFFERSIZE];
     int buflen;
 
     buflen = read(cfd, buf, BUFFERSIZE - 1);
     buf[buflen] = '\0';
 
-    if (buflen == 0 && conn_ptr->request.getRaw().size() == 0) {
+    Request &request = this->_active_connects[cfd]->request;
+
+    if (buflen == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
         this->close_connection(cfd, this->_epfd, ev);
         return 1;
@@ -172,16 +172,19 @@ int HTTP::read_socket(struct epoll_event &ev) {
         }
     }
 
-    conn_ptr->request.append_raw(buf);
+    request.append_raw(buf);
 
     return 0;
 }
 
-void HTTP::list_directory(std::string full_path, DIR *dir, Connection *conn_ptr) {
+void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
     std::map<std::string, struct dir_entry> dir_entries;
     // find items inside folder
     struct dirent *dp;
     bool has_error = false;
+
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
 
     while (1) {
         dp = readdir(dir);
@@ -218,14 +221,13 @@ void HTTP::list_directory(std::string full_path, DIR *dir, Connection *conn_ptr)
     }
 
     if (has_error) {
-        conn_ptr->response.set_status_code("500");
-        this->send_header(conn_ptr->fd, conn_ptr->response);
+        response.set_status_code("500");
+        this->send_header(cfd, response);
     } else {
         std::stringstream ss;
 
-        ss << "<html><head><title>Index of " << conn_ptr->request.getUrl()
-           << "/</title></head><body><h1>Index of " << conn_ptr->request.getUrl()
-           << "</h1><hr><pre>";
+        ss << "<html><head><title>Index of " << request.getUrl()
+           << "/</title></head><body><h1>Index of " << request.getUrl() << "</h1><hr><pre>";
 
         std::map<std::string, struct dir_entry>::iterator it;
         {
@@ -260,33 +262,35 @@ void HTTP::list_directory(std::string full_path, DIR *dir, Connection *conn_ptr)
 
         ss << "</pre><hr></body></html>";
 
-        conn_ptr->response.set_status_code("200");
-        conn_ptr->response.set_content_length(ss.str().size());
-        this->send_header(conn_ptr->fd, conn_ptr->response);
+        response.set_status_code("200");
+        response.set_content_length(ss.str().size());
+        this->send_header(cfd, response);
 
-        if (write(conn_ptr->fd, ss.str().c_str(), ss.str().size()) == -1) {
+        if (send(cfd, ss.str().c_str(), ss.str().size(), MSG_NOSIGNAL) == -1) {
             print_error("failed to write");
         }
     }
 }
 
-int HTTP::process_directories(struct epoll_event &ev) {
-    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+int HTTP::process_directories(int cfd) {
+
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
 
     std::string root_folder = "./www";
 
-    std::string full_path = root_folder + conn_ptr->request.getUrl();
+    std::string full_path = root_folder + request.getUrl();
 
     DIR *dir = opendir(full_path.c_str());
 
     if (dir == NULL) {
         print_error(strerror(errno));
-        conn_ptr->response.set_status_code("404");
+        response.set_status_code("404");
         // is file and shoud continue to the next part
         if (errno == ENOTDIR) {
             return 0;
         }
-        this->send_header(conn_ptr->fd, conn_ptr->response);
+        this->send_header(cfd, response);
         return 1;
     }
 
@@ -298,10 +302,10 @@ int HTTP::process_directories(struct epoll_event &ev) {
     // TODO we must check the index files in the configfile and show them instead of listing dir
 
     if (!is_dir_listing) {
-        conn_ptr->response.set_status_code("403");
-        this->send_header(conn_ptr->fd, conn_ptr->response);
+        response.set_status_code("403");
+        this->send_header(cfd, response);
     } else {
-        this->list_directory(full_path, dir, conn_ptr);
+        this->list_directory(full_path, dir, cfd);
     }
 
     if (closedir(dir) == -1)
@@ -311,50 +315,52 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
 int HTTP::write_socket(struct epoll_event &ev) {
 
-    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+    int cfd = ev.data.fd;
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
 
     // check if has the complete header
-    if (conn_ptr->request.getRaw().find("\r\n") != std::string::npos) {
-        conn_ptr->request.parse_request();
+    if (request.getRaw().find("\r\n") != std::string::npos) {
+        request.parse_request();
 
-        std::cout << "[Request object]: \n" << conn_ptr->request.getRaw() << std::endl;
+        std::cout << "[Request object]: \n" << request.getRaw() << std::endl;
 
-        std::cout << "MimeType: " << MimeTypes::identify(conn_ptr->request.getUrl()) << std::endl;
+        std::cout << "MimeType: " << MimeTypes::identify(request.getUrl()) << std::endl;
 
         std::string root_folder = "./www";
 
-        if (this->process_directories(ev)) {
+        if (this->process_directories(cfd)) {
             std::cout << "is directory" << std::endl;
-            this->close_connection(conn_ptr->fd, this->_epfd, ev);
+            this->close_connection(cfd, this->_epfd, ev);
             return 1;
         }
 
-        std::string full_path = root_folder + conn_ptr->request.getUrl();
+        std::string full_path = root_folder + request.getUrl();
 
         std::cout << "full_path: " << full_path << std::endl;
 
-        conn_ptr->response.set_status_code("200");
-        conn_ptr->response.set_content_type(MimeTypes::identify(conn_ptr->request.getUrl()));
+        response.set_status_code("200");
+        response.set_content_type(MimeTypes::identify(request.getUrl()));
 
         struct stat struc_st2;
         ft_memset(&struc_st2, 0, sizeof(struc_st2));
         if (stat(full_path.c_str(), &struc_st2) == -1) {
             print_error("failed to get file information");
             // TODO early response
-            conn_ptr->response.set_status_code("500");
-            this->send_header(conn_ptr->fd, conn_ptr->response);
-            this->close_connection(conn_ptr->fd, this->_epfd, ev);
+            response.set_status_code("500");
+            this->send_header(cfd, response);
+            this->close_connection(cfd, this->_epfd, ev);
             return 1;
         }
 
-        conn_ptr->response.set_content_length(struc_st2.st_size);
+        response.set_content_length(struc_st2.st_size);
 
         int file_fd = open(full_path.c_str(), O_RDONLY);
         if (!file_fd) {
             print_error("Error opening file");
-            conn_ptr->response.set_status_code("500");
-            this->send_header(conn_ptr->fd, conn_ptr->response);
-            this->close_connection(conn_ptr->fd, this->_epfd, ev);
+            response.set_status_code("500");
+            this->send_header(cfd, response);
+            this->close_connection(cfd, this->_epfd, ev);
             return 1;
         }
 
@@ -367,7 +373,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
         char buff[BUFFERSIZE];
 
         // send header first
-        this->send_header(conn_ptr->fd, conn_ptr->response);
+        this->send_header(cfd, response);
 
         // TODO send body
         std::cout << "reading file.........." << std::endl;
@@ -384,7 +390,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
                 break;
             }
 
-            if (write(conn_ptr->fd, buff, bytes_read) == -1) {
+            if (write(cfd, buff, bytes_read) == -1) {
                 print_error("failed to write");
                 break;
             }
@@ -392,10 +398,10 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
         std::cout << "end reading file.........." << std::endl;
         std::cout << ">>>>> SIZES <<<<<<" << std::endl;
-        std::cout << "bytes read: " << conn_ptr->response.get_content_length() << std::endl;
+        std::cout << "bytes read: " << response.get_content_length() << std::endl;
         std::cout << "from stat: " << struc_st2.st_size << std::endl;
 
-        this->close_connection(conn_ptr->fd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epfd, ev);
     }
 
     return 0;
@@ -422,40 +428,32 @@ int HTTP::handle_connections() {
             continue;
         }
 
-        // std::cout << "epoll_wait completed" << std::endl;
-
         for (int i = 0; i < nfds; i++) {
 
-            Connection *conn_ptr = static_cast<Connection *>(evlist[i].data.ptr);
-
-            // std::cout << "epoll cfd: " << conn_ptr->fd << std::endl;
-
             // TODO add flag to connection indicating listening socket
-            if (this->is_listening_socket(conn_ptr->fd)) {
-                // std::cout << "is listening socket" << std::endl;
-                this->accept_and_add_to_poll(ev, this->_epfd, conn_ptr->fd);
+            if (this->is_listening_socket(evlist[i].data.fd)) {
+                this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
             } else {
                 // std::cout << "not listening socket" << std::endl;
 
                 if (evlist[i].events & EPOLLIN) {
                     // Ready for read
-                    std::cout << " inside EPOLLIN" << std::endl;
+                    // std::cout << " inside EPOLLIN" << std::endl;
 
                     if (this->read_socket(evlist[i]))
                         break; // TODO check this
                 } else if (evlist[i].events & EPOLLOUT) {
                     // Ready for write
-
                     this->write_socket(evlist[i]);
                 }
             }
         }
     }
 
-    // TODO detele connection structs for listening sockets
-    std::vector<Server *>::iterator ite;
-    for (ite = this->_servers.begin(); ite != this->_servers.end(); ++ite) {
-        delete (*ite)->connection;
+    // TODO free active connections
+    connects_map::iterator ite;
+    for (ite = this->_active_connects.begin(); ite != this->_active_connects.end(); ++ite) {
+        delete (*ite).second;
     }
 
     return 0;

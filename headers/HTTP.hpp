@@ -30,10 +30,7 @@
 #define BUFFERSIZE 8000
 #define BACKLOG 200 // how many pending connections queue will hold
 
-// Connection::Connection() {}
-// Connection::~Connection() {}
-
-// typedef std::map<int, Connection *> inc_connects_t;
+typedef std::map<int, Connection *> connects_map;
 
 struct dir_entry {
     bool is_file;
@@ -48,7 +45,7 @@ class HTTP {
 
     int _epfd; // epoll fd
     std::vector<Server *> _servers;
-    // inc_connects_t _inc_connects;
+    connects_map _active_connects;
 
   public:
     HTTP();
@@ -61,8 +58,8 @@ class HTTP {
     int read_socket(struct epoll_event &ev);
     int send_header(int &cfd, const Response &response);
     int write_socket(struct epoll_event &ev);
-    int process_directories(struct epoll_event &ev);
-    void list_directory(std::string full_path, DIR *dir, Connection *conn_ptr);
+    int process_directories(int cfd);
+    void list_directory(std::string full_path, DIR *dir, int cfd);
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();
