@@ -470,14 +470,11 @@ int HTTP::send_header(int &cfd, const Response &response) {
     ss << "HTTP/1.1 " << response.get_status_code() << "\n"
        << "Content-Type: " << response.get_content_type() << "\n"
        << "Content-Length: " << response.get_content_length() << "\n"
-       << "Access-Control-Allow-Origin: *"
-       << "\n"
-       << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS"
-       << "\n"
-       << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With"
-       << "\n"
-       << "Access-Control-Allow-Credentials: true"
-       << "\n\n";
+       << "Access-Control-Allow-Origin: *\n"
+       << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
+       << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"
+       << "Access-Control-Allow-Credentials: true\n"
+       << "\n";
 
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
