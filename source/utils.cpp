@@ -21,15 +21,14 @@ void *ft_memset(void *s, int c, std::size_t n) {
 int is_file(const char *name) {
     DIR *directory = opendir(name);
 
-    if (directory != NULL) {
-        closedir(directory);
-        return 0;
+    if (directory == NULL) {
+        if (errno == ENOTDIR)
+            return 1;
+        return -1;
     }
 
-    if (errno == ENOTDIR)
-        return 1;
-
-    return -1;
+    closedir(directory);
+    return 0;
 }
 
 std::string get_formated_time(long rawtime, const std::string &format) {
@@ -59,3 +58,5 @@ int get_stat_info(int cfd, Request &request, Response &response) {
 
     return 0;
 }
+
+int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }

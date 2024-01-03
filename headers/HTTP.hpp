@@ -36,6 +36,7 @@ struct dir_entry {
     bool is_file;
     long size;
     std::string last_modified;
+    std::string href;
 };
 
 class HTTP {
@@ -59,8 +60,8 @@ class HTTP {
     int send_header(int &cfd, const Response &response);
     int write_socket(struct epoll_event &ev);
     int process_directories(int cfd);
-    void list_directory(std::string full_path, DIR *dir, int cfd);
-    void process_requested_file(struct epoll_event &ev);
+    void list_directory(std::string full_path, struct epoll_event &ev);
+    void process_requested_file(struct epoll_event &ev, std::string full_path);
     int send_subsequent_write(struct epoll_event &ev);
 
     class FailedToInit : public std::exception {

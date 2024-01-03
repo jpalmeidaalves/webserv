@@ -177,14 +177,31 @@ int HTTP::read_socket(struct epoll_event &ev) {
     return 0;
 }
 
-void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
+void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
     std::map<std::string, struct dir_entry> dir_entries;
     // find items inside folder
     struct dirent *dp;
     bool has_error = false;
 
+    int cfd = ev.data.fd;
+
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
+
+    // remove trailing slash /
+    if ((full_path.at(full_path.size() - 1)) == '/') {
+        full_path.erase(full_path.end() - 1);
+    }
+
+    DIR *dir = opendir(full_path.c_str());
+
+    if (dir == NULL) {
+        print_error(strerror(errno));
+        response.set_status_code("404");
+        this->send_header(cfd, response);
+        this->close_connection(cfd, this->_epfd, ev);
+        return;
+    }
 
     while (1) {
         dp = readdir(dir);
@@ -200,6 +217,18 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
             continue;
 
         std::string item_path = full_path + "/" + dp->d_name;
+
+        std::string href = item_path.substr(5);
+
+        /*
+        ~~~~~~ ./www/downloads/..
+        ~~~~~~ ./www/downloads/file1
+        ~~~~~~ ./www/downloads/file2
+        ~~~~~~ ./www/downloads/file3
+        */
+
+        // std::cout << "~~~~~~ " << item_path << std::endl;
+        // std::cout << "~~~~~~link " << href << std::endl;
 
         ft_memset(&struc_st, 0, sizeof(struc_st));
         if (stat(item_path.c_str(), &struc_st) == -1) {
@@ -217,6 +246,7 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
 
         new_entry.size = 0;
         new_entry.last_modified = get_formated_time(struc_st.st_mtim.tv_sec, "%d-%h-%Y %H:%M");
+        new_entry.href = href;
 
         dir_entries[dp->d_name] = new_entry;
     }
@@ -237,7 +267,7 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
 
                     std::string folder_name = it->first + "/";
 
-                    ss << "<a href=\"" << it->first << "\">" << folder_name << "</a>"
+                    ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
                        << std::setw(51 - folder_name.size()) << " ";
 
                     // parent folder has no modified date and size
@@ -252,7 +282,7 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
             for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
                 if (it->second.is_file == true) {
 
-                    ss << "<a href=\"" << it->first << "\">" << it->first << "</a>"
+                    ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
                        << std::setw(51 - it->first.size()) << " ";
 
                     ss << it->second.last_modified << " ";
@@ -271,49 +301,51 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
             print_error("failed to write");
         }
     }
+
+    this->close_connection(cfd, this->_epfd, ev);
 }
 
-int HTTP::process_directories(int cfd) {
+// int HTTP::process_directories(int cfd) {
 
-    Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
+//     Request &request = this->_active_connects[cfd]->request;
+//     Response &response = this->_active_connects[cfd]->response;
 
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
+//     std::string root_folder = "./www";
+//     std::string full_path = root_folder + request.getUrl();
 
-    DIR *dir = opendir(full_path.c_str());
+//     DIR *dir = opendir(full_path.c_str());
 
-    if (dir == NULL) {
-        print_error(strerror(errno));
-        response.set_status_code("404");
-        // is file and shoud continue to the next part
-        if (errno == ENOTDIR) {
-            return 0;
-        }
-        this->send_header(cfd, response);
-        return 1;
-    }
+//     if (dir == NULL) {
+//         print_error(strerror(errno));
+//         response.set_status_code("404");
+//         // is file and shoud continue to the next part
+//         if (errno == ENOTDIR) {
+//             return 0;
+//         }
+//         this->send_header(cfd, response);
+//         return 1;
+//     }
 
-    // At this point we're dealing with directories
+//     // At this point we're dealing with directories
 
-    // TODO if dir listing is active, from config file
-    bool is_dir_listing = true;
+//     // TODO if dir listing is active, from config file
+//     bool is_dir_listing = true;
 
-    // TODO we must check the index files in the configfile and show them instead of listing dir
+//     // TODO we must check the index files in the configfile and show them instead of listing dir
 
-    if (!is_dir_listing) {
-        response.set_status_code("403");
-        this->send_header(cfd, response);
-    } else {
-        this->list_directory(full_path, dir, cfd);
-    }
+//     if (!is_dir_listing) {
+//         response.set_status_code("403");
+//         this->send_header(cfd, response);
+//     } else {
+//         this->list_directory(full_path, dir, cfd);
+//     }
 
-    if (closedir(dir) == -1)
-        print_error(strerror(errno));
-    return 1;
-}
+//     if (closedir(dir) == -1)
+//         print_error(strerror(errno));
+//     return 1;
+// }
 
-void HTTP::process_requested_file(struct epoll_event &ev) {
+void HTTP::process_requested_file(struct epoll_event &ev, std::string full_path) {
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
@@ -326,18 +358,12 @@ void HTTP::process_requested_file(struct epoll_event &ev) {
     }
 
     // TODO check permission, done for read
-    // std::cout << "--------------------permissions " << response.permissions << std::endl;
-    // std::cout << "--------------------permissions IROTH"
-    // << ((response.permissions & S_IROTH) ? "yes" : "no") << std::endl;
     if (!(response.permissions & S_IROTH)) {
         response.set_status_code("403");
         this->send_header(cfd, response);
         this->close_connection(cfd, this->_epfd, ev);
         return;
     }
-
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
 
     int file_fd = open(full_path.c_str(), O_RDONLY);
     if (!file_fd) {
@@ -395,7 +421,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
-    // Response &response = this->_active_connects[cfd]->response;
+    Response &response = this->_active_connects[cfd]->response;
 
     // check if has the complete header
     if (!request.getIsComplete()) {
@@ -410,20 +436,57 @@ int HTTP::write_socket(struct epoll_event &ev) {
         if (!request.get_requested_fd()) {
             request.parse_request(); // extract header info
 
+            std::string root_folder = "./www";
+            std::string full_path = root_folder + request.getUrl();
+
+            std::cout << "[Request Header]" << request.getRaw() << std::endl;
+
             // check if is a file or dir
-            if (is_file(request.getUrl().c_str())) {
+
+            std::cout << "******* is_file: " << full_path << std::endl;
+            int isfile = is_file(full_path.c_str());
+            if (isfile == -1) {
+                // TODO error checking
+                print_error("failed to check if is a dir");
+                response.set_status_code("500");
+                this->close_connection(cfd, this->_epfd, ev);
+            } else if (isfile == 1) {
                 std::cout << "------- file --------" << std::endl;
-                this->process_requested_file(ev);
+                this->process_requested_file(ev, full_path);
                 // send file (must check permissions)
             } else {
                 std::cout << "------- dir --------" << std::endl;
-                if (this->process_directories(cfd)) {
-                    this->close_connection(cfd, this->_epfd, ev);
-                }
+                // if (this->process_directories(cfd)) {
+                // this->close_connection(cfd, this->_epfd, ev);
+                // }
+
                 // if index file is present
-                // send file (must check permissions)
-                // else
-                // send list dir (must check permissions)
+                // TODO must check all index files defined in the configfile
+                std::cout << "@@@@@@@@@@@ " << full_path + "/" + "index.html" << std::endl;
+                if (file_exists(full_path + "/" + "index.html")) {
+                    std::cout << "*************** index present in this dir ***************"
+                              << std::endl;
+                    // send file (must check permissions)
+                    this->process_requested_file(ev, full_path + "/" + "index.html");
+                } else {
+
+                    std::cout << " _________ inside listing _________" << std::endl;
+                    // send list dir (must check permissions)
+
+                    // TODO if dir listing is active, from config file
+                    bool is_dir_listing = true;
+
+                    // TODO we must check the index files in the configfile and show them instead of
+                    // listing dir
+
+                    if (!is_dir_listing) {
+                        response.set_status_code("403");
+                        this->send_header(cfd, response);
+                        this->close_connection(cfd, this->_epfd, ev);
+                    } else {
+                        this->list_directory(full_path, ev);
+                    }
+                }
             }
 
         } else {
