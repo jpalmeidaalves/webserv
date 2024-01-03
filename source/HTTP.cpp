@@ -177,75 +177,50 @@ int HTTP::read_socket(struct epoll_event &ev) {
     return 0;
 }
 
-int HTTP::process_directories(struct epoll_event &ev) {
-    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+void HTTP::list_directory(std::string full_path, DIR *dir, Connection *conn_ptr) {
+    std::map<std::string, struct dir_entry> dir_entries;
+    // find items inside folder
+    struct dirent *dp;
+    bool has_error = false;
 
-    std::string root_folder = "./www";
+    while (1) {
+        dp = readdir(dir);
+        if (dp == NULL)
+            break;
 
-    std::string full_path = root_folder + conn_ptr->request.getUrl();
+        dir_entry new_entry;
 
-    DIR *dir = opendir(full_path.c_str());
+        struct stat struc_st;
 
-    if (dir == NULL) {
-        print_error(strerror(errno));
-        conn_ptr->response.set_status_code("404");
-        // is file and shoud continue to the next part
-        if (errno == ENOTDIR) {
-            return 0;
+        // ignore current dir
+        if (std::string(dp->d_name) == ".")
+            continue;
+
+        std::string item_path = full_path + "/" + dp->d_name;
+
+        ft_memset(&struc_st, 0, sizeof(struc_st));
+        if (stat(item_path.c_str(), &struc_st) == -1) {
+            print_error("failed to get file information");
+            has_error = true;
+            break;
         }
-        this->send_header(conn_ptr->fd, conn_ptr->response);
-        return 1;
+
+        if (dp->d_type & DT_DIR) {
+            new_entry.is_file = false;
+        } else {
+            new_entry.is_file = true;
+        }
+
+        new_entry.size = 0;
+        new_entry.last_modified = get_formated_time(struc_st.st_mtim.tv_sec, "%d-%h-%Y %H:%M");
+
+        dir_entries[dp->d_name] = new_entry;
     }
 
-    // At this point we're dealing with directories
-
-    // TODO if dir listing is active, from config file
-    bool is_dir_listing = true;
-
-    // TODO we must check the index files in the configfile and show them instead of listing dir
-
-    if (!is_dir_listing) {
-        conn_ptr->response.set_status_code("403");
+    if (has_error) {
+        conn_ptr->response.set_status_code("500");
         this->send_header(conn_ptr->fd, conn_ptr->response);
     } else {
-        conn_ptr->response.set_status_code("200");
-
-        std::map<std::string, struct dir_entry> dir_entries;
-        // find items inside folder
-        struct dirent *dp;
-        while (1) {
-            dp = readdir(dir);
-            if (dp == NULL)
-                break;
-
-            dir_entry new_entry;
-
-            struct stat struc_st;
-
-            // ignore current dir
-            if (std::string(dp->d_name) == ".")
-                continue;
-
-            std::string item_path = full_path + "/" + dp->d_name;
-
-            ft_memset(&struc_st, 0, sizeof(struc_st));
-            if (stat(item_path.c_str(), &struc_st) == -1) {
-                print_error("failed to get file information");
-                break;
-            }
-
-            if (dp->d_type & DT_DIR) {
-                new_entry.is_file = false;
-            } else {
-                new_entry.is_file = true;
-            }
-
-            new_entry.size = 0;
-            new_entry.last_modified = get_formated_time(struc_st.st_mtim.tv_sec, "%d-%h-%Y %H:%M");
-
-            dir_entries[dp->d_name] = new_entry;
-        }
-
         std::stringstream ss;
 
         ss << "<html><head><title>Index of " << conn_ptr->request.getUrl()
@@ -285,12 +260,48 @@ int HTTP::process_directories(struct epoll_event &ev) {
 
         ss << "</pre><hr></body></html>";
 
+        conn_ptr->response.set_status_code("200");
         conn_ptr->response.set_content_length(ss.str().size());
         this->send_header(conn_ptr->fd, conn_ptr->response);
 
         if (write(conn_ptr->fd, ss.str().c_str(), ss.str().size()) == -1) {
             print_error("failed to write");
         }
+    }
+}
+
+int HTTP::process_directories(struct epoll_event &ev) {
+    Connection *conn_ptr = static_cast<Connection *>(ev.data.ptr);
+
+    std::string root_folder = "./www";
+
+    std::string full_path = root_folder + conn_ptr->request.getUrl();
+
+    DIR *dir = opendir(full_path.c_str());
+
+    if (dir == NULL) {
+        print_error(strerror(errno));
+        conn_ptr->response.set_status_code("404");
+        // is file and shoud continue to the next part
+        if (errno == ENOTDIR) {
+            return 0;
+        }
+        this->send_header(conn_ptr->fd, conn_ptr->response);
+        return 1;
+    }
+
+    // At this point we're dealing with directories
+
+    // TODO if dir listing is active, from config file
+    bool is_dir_listing = true;
+
+    // TODO we must check the index files in the configfile and show them instead of listing dir
+
+    if (!is_dir_listing) {
+        conn_ptr->response.set_status_code("403");
+        this->send_header(conn_ptr->fd, conn_ptr->response);
+    } else {
+        this->list_directory(full_path, dir, conn_ptr);
     }
 
     if (closedir(dir) == -1)

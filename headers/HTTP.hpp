@@ -10,9 +10,11 @@
 #include "colors.hpp"
 #include <cerrno>
 #include <cstring>
+#include <ctime>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <signal.h>
@@ -23,8 +25,6 @@
 #include <sys/types.h>
 #include <unistd.h> // close
 #include <vector>
-#include <ctime>
-#include <iomanip>
 
 #define MAXEPOLLSIZE SOMAXCONN
 #define BUFFERSIZE 8000
@@ -36,9 +36,9 @@
 // typedef std::map<int, Connection *> inc_connects_t;
 
 struct dir_entry {
-      bool is_file;
-      long size;
-      std::string last_modified;
+    bool is_file;
+    long size;
+    std::string last_modified;
 };
 
 class HTTP {
@@ -62,6 +62,7 @@ class HTTP {
     int send_header(int &cfd, const Response &response);
     int write_socket(struct epoll_event &ev);
     int process_directories(struct epoll_event &ev);
+    void list_directory(std::string full_path, DIR *dir, Connection *conn_ptr);
 
     class FailedToInit : public std::exception {
         virtual const char *what() const throw();
@@ -72,4 +73,4 @@ class HTTP {
     };
 };
 
-#endif/* HTTP_HPP */
+#endif /* HTTP_HPP */
