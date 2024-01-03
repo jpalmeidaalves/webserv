@@ -220,16 +220,6 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
 
         std::string href = item_path.substr(5);
 
-        /*
-        ~~~~~~ ./www/downloads/..
-        ~~~~~~ ./www/downloads/file1
-        ~~~~~~ ./www/downloads/file2
-        ~~~~~~ ./www/downloads/file3
-        */
-
-        // std::cout << "~~~~~~ " << item_path << std::endl;
-        // std::cout << "~~~~~~link " << href << std::endl;
-
         ft_memset(&struc_st, 0, sizeof(struc_st));
         if (stat(item_path.c_str(), &struc_st) == -1) {
             print_error("failed to get file information");
@@ -306,46 +296,6 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
 
     this->close_connection(cfd, this->_epfd, ev);
 }
-
-// int HTTP::process_directories(int cfd) {
-
-//     Request &request = this->_active_connects[cfd]->request;
-//     Response &response = this->_active_connects[cfd]->response;
-
-//     std::string root_folder = "./www";
-//     std::string full_path = root_folder + request.getUrl();
-
-//     DIR *dir = opendir(full_path.c_str());
-
-//     if (dir == NULL) {
-//         print_error(strerror(errno));
-//         response.set_status_code("404");
-//         // is file and shoud continue to the next part
-//         if (errno == ENOTDIR) {
-//             return 0;
-//         }
-//         this->send_header(cfd, response);
-//         return 1;
-//     }
-
-//     // At this point we're dealing with directories
-
-//     // TODO if dir listing is active, from config file
-//     bool is_dir_listing = true;
-
-//     // TODO we must check the index files in the configfile and show them instead of listing dir
-
-//     if (!is_dir_listing) {
-//         response.set_status_code("403");
-//         this->send_header(cfd, response);
-//     } else {
-//         this->list_directory(full_path, dir, cfd);
-//     }
-
-//     if (closedir(dir) == -1)
-//         print_error(strerror(errno));
-//     return 1;
-// }
 
 void HTTP::process_requested_file(struct epoll_event &ev, std::string full_path) {
     int cfd = ev.data.fd;
@@ -458,9 +408,6 @@ int HTTP::write_socket(struct epoll_event &ev) {
                 // send file (must check permissions)
             } else {
                 std::cout << "------- dir --------" << std::endl;
-                // if (this->process_directories(cfd)) {
-                // this->close_connection(cfd, this->_epfd, ev);
-                // }
 
                 // if index file is present
                 // TODO must check all index files defined in the configfile
@@ -495,116 +442,6 @@ int HTTP::write_socket(struct epoll_event &ev) {
             // subsequent writes
             this->send_subsequent_write(ev);
         }
-
-        // std::string root_folder = "./www";
-
-        // if (this->process_directories(cfd)) {
-        //     this->close_connection(cfd, this->_epfd, ev);
-        //     return 1;
-        // }
-
-        // std::string full_path = root_folder + request.getUrl();
-
-        // response.set_status_code("200");
-        // response.set_content_type(MimeTypes::identify(request.getUrl()));
-
-        // struct stat struc_st2;
-        // ft_memset(&struc_st2, 0, sizeof(struc_st2));
-        // if (stat(full_path.c_str(), &struc_st2) == -1) {
-        //     print_error("failed to get file information");
-        //     // TODO early response
-        //     response.set_status_code("500");
-        //     this->send_header(cfd, response);
-        //     this->close_connection(cfd, this->_epfd, ev);
-        //     return 1;
-        // }
-
-        // // TODO check permission, done for read
-        // if (struc_st2.st_mode & S_IROTH) {
-        //     response.set_status_code("403");
-        //     this->send_header(cfd, response);
-        //     this->close_connection(cfd, this->_epfd, ev);
-        //     return 1;
-        // }
-
-        // access => int access(const char *pathname, int mode);
-        // if (access(full_path.c_str(), R_OK) == -1) {
-        //     response.set_status_code("403");
-        //     return 1;
-        // }
-
-        /*
-
-        printf("File Permissions: \t");
-        printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
-        printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
-        printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
-        printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
-        printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
-        printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
-        printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
-        printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
-        printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
-        printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
-        printf("\n\n");
-
-
-        -rw-rw-r-- 1 nuno nuno 101M dez 29 15:25 chrome.deb
-        -rw-rw-r-- 1 nuno nuno  232 dez 28 20:02 data.json
-        drwxrwx--- 4 nuno nuno 4,0K jan  3 15:41 demo // 403 error
-        -rw-rw-r-- 1 nuno nuno  16K jan  2 15:01 favicon.ico
-        -rw-rw-r-- 1 nuno nuno 2,0G dez 29 16:42 file.gz
-        -rw-rw-r-- 1 nuno nuno  599 jan  2 15:07 index.html
-        -rw-rw-r-- 1 nuno nuno  955 dez 28 20:05 script.js
-
-        */
-
-        // response.set_content_length(struc_st2.st_size);
-
-        // int file_fd = open(full_path.c_str(), O_RDONLY);
-        // if (!file_fd) {
-        //     print_error("Error opening file");
-        //     response.set_status_code("500");
-        //     this->send_header(cfd, response);
-        //     this->close_connection(cfd, this->_epfd, ev);
-        //     return 1;
-        // }
-
-        //  TODO check for invalid read
-
-        // int bytes_read = 0;
-        // char buff[BUFFERSIZE];
-
-        // // send header first
-        // this->send_header(cfd, response);
-
-        // TODO send body
-        // std::cout << "reading file.........." << std::endl;
-        // while (1) {
-        //     bytes_read = read(file_fd, buff, BUFFERSIZE);
-        //     // buff[bytes_read] = '\0';
-        //     std::cout << "read " << bytes_read << " bytes" << std::endl;
-        //     if (bytes_read == -1) {
-        //         print_error("Failed read file");
-        //         break;
-        //     }
-        //     if (bytes_read == 0) {
-        //         close(file_fd);
-        //         break;
-        //     }
-
-        //     if (write(cfd, buff, bytes_read) == -1) {
-        //         print_error("failed to write");
-        //         break;
-        //     }
-        // }
-
-        // std::cout << "end reading file.........." << std::endl;
-        // std::cout << ">>>>> SIZES <<<<<<" << std::endl;
-        // std::cout << "bytes read: " << response.get_content_length() << std::endl;
-        // std::cout << "from stat: " << struc_st2.st_size << std::endl;
-
-        // this->close_connection(cfd, this->_epfd, ev);
     }
 
     return 0;
@@ -682,5 +519,22 @@ int HTTP::send_header(int &cfd, const Response &response) {
 
 Request A |*****************--------------------------------------------------------------]
 Request B |***-----]
+
+
+
+
+    printf("File Permissions: \t");
+    printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+    printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+    printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+    printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
+    printf("\n\n");
+
 
 */
