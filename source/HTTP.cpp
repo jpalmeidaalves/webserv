@@ -251,6 +251,8 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
         dir_entries[dp->d_name] = new_entry;
     }
 
+    closedir(dir);
+
     if (has_error) {
         response.set_status_code("500");
         this->send_header(cfd, response);
