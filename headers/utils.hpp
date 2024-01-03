@@ -3,16 +3,15 @@
 
 #include "Request.hpp"
 #include "Response.hpp"
-#include <iostream>
-#include <string>
-#include <vector>
-#include <sys/types.h>
+#include <ctime>
 #include <dirent.h>
 #include <errno.h>
-#include <ctime>
+#include <iostream>
+#include <string>
+#include <sys/types.h>
+#include <vector>
 
 struct Connection {
-    int fd;
     Request request;
     Response response;
 };
@@ -20,7 +19,7 @@ struct Connection {
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
-int is_file(const char* name);
+int is_file(const char *name);
 std::string get_formated_time(long rawtime, const std::string &format);
 
 template <typename T>

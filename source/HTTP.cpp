@@ -204,6 +204,7 @@ void HTTP::list_directory(std::string full_path, DIR *dir, int cfd) {
         ft_memset(&struc_st, 0, sizeof(struc_st));
         if (stat(item_path.c_str(), &struc_st) == -1) {
             print_error("failed to get file information");
+
             has_error = true;
             break;
         }
@@ -323,21 +324,14 @@ int HTTP::write_socket(struct epoll_event &ev) {
     if (request.getRaw().find("\r\n") != std::string::npos) {
         request.parse_request();
 
-        std::cout << "[Request object]: \n" << request.getRaw() << std::endl;
-
-        std::cout << "MimeType: " << MimeTypes::identify(request.getUrl()) << std::endl;
-
         std::string root_folder = "./www";
 
         if (this->process_directories(cfd)) {
-            std::cout << "is directory" << std::endl;
             this->close_connection(cfd, this->_epfd, ev);
             return 1;
         }
 
         std::string full_path = root_folder + request.getUrl();
-
-        std::cout << "full_path: " << full_path << std::endl;
 
         response.set_status_code("200");
         response.set_content_type(MimeTypes::identify(request.getUrl()));
@@ -353,6 +347,46 @@ int HTTP::write_socket(struct epoll_event &ev) {
             return 1;
         }
 
+        // TODO check permission, done for read
+        if (struc_st2.st_mode & S_IROTH) {
+            response.set_status_code("403");
+            this->send_header(cfd, response);
+            this->close_connection(cfd, this->_epfd, ev);
+            return 1;
+        }
+
+        // access => int access(const char *pathname, int mode);
+        // if (access(full_path.c_str(), R_OK) == -1) {
+        //     response.set_status_code("403");
+        //     return 1;
+        // }
+
+        /*
+
+        printf("File Permissions: \t");
+        printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+        printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+        printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+        printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+        printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+        printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+        printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+        printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+        printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+        printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
+        printf("\n\n");
+
+
+        -rw-rw-r-- 1 nuno nuno 101M dez 29 15:25 chrome.deb
+        -rw-rw-r-- 1 nuno nuno  232 dez 28 20:02 data.json
+        drwxrwx--- 4 nuno nuno 4,0K jan  3 15:41 demo // 403 error
+        -rw-rw-r-- 1 nuno nuno  16K jan  2 15:01 favicon.ico
+        -rw-rw-r-- 1 nuno nuno 2,0G dez 29 16:42 file.gz
+        -rw-rw-r-- 1 nuno nuno  599 jan  2 15:07 index.html
+        -rw-rw-r-- 1 nuno nuno  955 dez 28 20:05 script.js
+
+        */
+
         response.set_content_length(struc_st2.st_size);
 
         int file_fd = open(full_path.c_str(), O_RDONLY);
@@ -364,9 +398,6 @@ int HTTP::write_socket(struct epoll_event &ev) {
             return 1;
         }
 
-        // TODO check permission
-
-        // access
         //  TODO check for invalid read
 
         int bytes_read = 0;
@@ -429,17 +460,11 @@ int HTTP::handle_connections() {
         }
 
         for (int i = 0; i < nfds; i++) {
-
-            // TODO add flag to connection indicating listening socket
             if (this->is_listening_socket(evlist[i].data.fd)) {
                 this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
             } else {
-                // std::cout << "not listening socket" << std::endl;
-
                 if (evlist[i].events & EPOLLIN) {
                     // Ready for read
-                    // std::cout << " inside EPOLLIN" << std::endl;
-
                     if (this->read_socket(evlist[i]))
                         break; // TODO check this
                 } else if (evlist[i].events & EPOLLOUT) {
@@ -450,12 +475,11 @@ int HTTP::handle_connections() {
         }
     }
 
-    // TODO free active connections
+    // Free data from active connections
     connects_map::iterator ite;
     for (ite = this->_active_connects.begin(); ite != this->_active_connects.end(); ++ite) {
         delete (*ite).second;
     }
-
     return 0;
 }
 
