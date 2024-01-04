@@ -178,3 +178,23 @@ ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
     (void)src;
     return *this;
 }
+
+std::vector<std::string> ParserConfFile::get_unique_addresses() {
+    std::vector<SServer>::iterator it;
+
+    std::vector<std::string> res;
+
+    for (it = this->servers.begin(); it != this->servers.end(); it++) {
+        std::string myaddr = it->host + ":" + it->port;
+
+        std::vector<std::string>::iterator it2;
+        for (it2 = res.begin(); it2 != res.end(); it2++) {
+            if (*it2 == myaddr)
+                break;
+        }
+        if (it2 == res.end())
+            res.push_back(myaddr);
+    }
+
+    return res;
+}

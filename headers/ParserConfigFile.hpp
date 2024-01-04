@@ -2,6 +2,7 @@
 #define PARSERCONFIGFILE_HPP
 
 #include "utils.hpp"
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -33,6 +34,7 @@ class ParserConfFile {
     ~ParserConfFile();
     int open_config_file();
     int extract();
+    std::vector<std::string> get_unique_addresses();
     std::vector<std::string>::iterator get_serv_data(std::vector<std::string>::iterator it,
                                                      struct SServer &s);
 

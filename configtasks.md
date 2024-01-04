@@ -159,7 +159,7 @@ Bound Addresses (vector)
 
 3) after epoll_wait
 
-- sockfd (changed)
+- sockfd (changed) (inside accept_and_add_to_poll)
 
     a) get details about sockfd (getsockname); ✅
     b) iterater over server and find server matching ip and port;
@@ -168,7 +168,7 @@ Bound Addresses (vector)
 
 
 4) add server pointer
-Incomming Connections
+Incomming Connections (new Connection())
 Request &
 Response &
 Server *
