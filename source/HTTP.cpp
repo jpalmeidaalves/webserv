@@ -105,6 +105,11 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     // saved to active connections
     this->_active_connects[cfd] = new Connection();
 
+    // get_port_host_from_sockfd(cfd);
+    this->_active_connects[cfd]->host_port = get_port_host_from_sockfd(cfd);
+
+    std::cout << "converted host_port: " << this->_active_connects[cfd]->host_port << std::endl;
+
     std::cout << "added success" << std::endl;
     return 0;
 }

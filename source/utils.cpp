@@ -59,4 +59,39 @@ int get_stat_info(int cfd, Request &request, Response &response) {
     return 0;
 }
 
+std::string convert_uint32_to_str(uint32_t nb) {
+    std::stringstream ss;
+    ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.'
+       << (nb & 0xFF);
+
+    return (ss.str().c_str());
+}
+
+std::string get_port_host_from_sockfd(int sockfd) {
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(sockaddr_in);
+
+    ft_memset(&addr, 0, sizeof(sockaddr_in));
+
+    if (getsockname(sockfd, (struct sockaddr *)&addr, &addrlen) == -1) {
+        print_error(strerror(errno));
+        return ("");
+    }
+
+    std::stringstream res;
+    res << convert_uint32_to_str(ntohl(addr.sin_addr.s_addr)) << ":" << ntohs(addr.sin_port);
+
+    return (res.str());
+}
+
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
+
+// struct sockaddr_in {
+//     sa_family_t sin_family;  /* AF_INET */
+//     in_port_t sin_port;      /* Port number */
+//     struct in_addr sin_addr; /* IPv4 address */
+// };
+
+// struct in_addr {
+//     in_addr_t s_addr;
+// };

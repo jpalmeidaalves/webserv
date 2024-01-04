@@ -7,6 +7,7 @@ SRC = ./source/main.cpp\
 		./source/Request.cpp\
 		./source/Response.cpp\
 		./source/MimeTypes.cpp\
+		./source/ParserConfigFile.cpp\
 		
 
 OBJS = ${SRC:.cpp=.o}
