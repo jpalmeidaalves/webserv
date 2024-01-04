@@ -50,6 +50,8 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
     return out;
 }
 
+void Request::setUrl(std::string url) { this->_url = url; }
+
 int Request::get_requested_fd() { return (this->_req_file_fd); }
 
 void Request::setIsComplete() { this->_is_complete = true; }

@@ -289,6 +289,8 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
         response.set_content_length(ss.str().size());
         this->send_header(cfd, response);
 
+        // TODO maybe change all writes to send and read to recv
+        // https://stackoverflow.com/questions/21687695/getting-sigpipe-with-non-blocking-sockets-is-this-normal
         if (send(cfd, ss.str().c_str(), ss.str().size(), MSG_NOSIGNAL) == -1) {
             print_error("failed to write");
         }
@@ -297,10 +299,13 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
     this->close_connection(cfd, this->_epfd, ev);
 }
 
-void HTTP::process_requested_file(struct epoll_event &ev, std::string full_path) {
+void HTTP::process_requested_file(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
+
+    std::string root_folder = "./www";
+    std::string full_path = root_folder + request.getUrl();
 
     if (get_stat_info(cfd, request, response)) {
         response.set_status_code("500");
@@ -326,10 +331,10 @@ void HTTP::process_requested_file(struct epoll_event &ev, std::string full_path)
         return;
     }
 
-    response.set_content_type(MimeTypes::identify(request.getUrl()));
+    response.set_status_code("200");
+    response.set_content_type(MimeTypes::identify(full_path));
     request.set_req_file_fd(file_fd);
     // std::cout << "requested file fd changed: " << request.get_requested_fd() << std::endl;
-    response.set_status_code("200");
     this->send_header(cfd, response);
     // body info will go in another subsequent write
 }
@@ -401,7 +406,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
                 this->close_connection(cfd, this->_epfd, ev);
             } else if (isfile == 1) {
                 std::cout << "------- file --------" << std::endl;
-                this->process_requested_file(ev, full_path);
+                this->process_requested_file(ev);
                 // send file (must check permissions)
             } else {
                 std::cout << "------- dir --------" << std::endl;
@@ -410,7 +415,8 @@ int HTTP::write_socket(struct epoll_event &ev) {
                 // TODO must check all index files defined in the configfile
                 if (file_exists(full_path + "/" + "index.html")) {
                     // send file (must check permissions)
-                    this->process_requested_file(ev, full_path + "/" + "index.html");
+                    request.setUrl(request.getUrl() + "/" + "index.html"); // update url
+                    this->process_requested_file(ev);
                 } else {
                     // send list dir (must check permissions)
 

@@ -26,6 +26,7 @@ class Request {
     std::string getBody() const;
     std::string getHost() const;
     std::string getRaw() const;
+    void setUrl(std::string url);
     void parse_request();
     void setIsComplete();
     bool getIsComplete() const;
