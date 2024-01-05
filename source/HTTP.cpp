@@ -28,39 +28,31 @@ HTTP::HTTP() : _epfd(0) {
     // this->_servers.push_back(srv2);
 
     // // create new epoll instance
-    // this->_epfd = epoll_create(MAXEPOLLSIZE);
-    // if (0 > this->_epfd)
-    //     throw HTTP::FailedToInit();
 
     // this->handle_connections();
 }
 
 HTTP::~HTTP() {
-    std::vector<Server *>::iterator it;
-    for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
-        delete *it;
-    }
+    // std::vector<int>::iterator it;
+    // for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
+    //     delete *it;
+    // }
 }
 
 /* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
 /* -------------------------------------------------------------------------- */
 
-int HTTP::open_listening_sockets(std::vector<struct ip_port> addresses) {
-    std::vector<struct ip_port>::iterator it;
+int HTTP::open_listening_sockets(std::vector<struct sockaddr_in> addresses) {
+    std::vector<struct sockaddr_in>::iterator it;
 
     for (it = addresses.begin(); it != addresses.end(); ++it) {
-        std::cout << "will listen to: " << it->ip << ":" << it->port << std::endl;
 
-        struct sockaddr_in address;
-        unsigned long address_len = sizeof(address);
+        std::cout << "try to listening on " << BOLDGREEN
+                  << convert_uint32_to_str(ntohl(it->sin_addr.s_addr)) << ":" << ntohs(it->sin_port)
+                  << RESET << std::endl;
 
-        ft_memset(&(address), 0, address_len);
-
-        // Define address struct
-        address.sin_family = AF_INET;
-        address.sin_port = htons(ft_stoi(it->port)); // host to network short
-        address.sin_addr.s_addr = ft_stoi(it->ip);   // ip
+        unsigned long address_len = sizeof(*it);
 
         int curr_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -73,7 +65,7 @@ int HTTP::open_listening_sockets(std::vector<struct ip_port> addresses) {
         if ((setsockopt(curr_sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))) != 0)
             return 1;
 
-        if (bind(curr_sockfd, (struct sockaddr *)&address, address_len) < 0) {
+        if (bind(curr_sockfd, (struct sockaddr *)&*it, address_len) < 0) {
             print_error("Failed to bind socket to the address");
             return 1;
         }
@@ -84,22 +76,22 @@ int HTTP::open_listening_sockets(std::vector<struct ip_port> addresses) {
         }
 
         // show message
-        std::cout << "Server listening on " << BOLDGREEN << it->ip << ":" << it->port << RESET
-                  << ", sockfd: " << curr_sockfd << std::endl;
+        std::cout << "Server listening on " << BOLDGREEN
+                  << convert_uint32_to_str(ntohl(it->sin_addr.s_addr)) << ":" << ntohs(it->sin_port)
+                  << RESET << ", sockfd: " << curr_sockfd << std::endl;
+
+        this->_listening_sockets.push_back(curr_sockfd);
     }
 
     return 0;
 }
 
-int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, Server *server) {
+int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int sockfd) {
 
-    if (!server) {
-        return 1;
-    }
-
-    int ret;                           // store the status of the epoll instance accross the program
-    ev.events = EPOLLIN;               // monitors file descriptors ready to read
-    ev.data.fd = server->get_sockfd(); // the fd we are listening on the network
+    std::cout << "adding listening socket " << sockfd << " to epoll" << std::endl;
+    int ret;             // store the stat us of the epoll instance accross the program
+    ev.events = EPOLLIN; // monitors file descriptors ready to read
+    ev.data.fd = sockfd; // the fd we are listening on the network
 
     /* epoll ctl -> control interface for an epoll file descriptor
                     add, modify, or remove entries in the interest list
@@ -109,7 +101,7 @@ int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, Server *server) {
         int fd -> socket file descriptor
     */
 
-    ret = epoll_ctl(this->_epfd, EPOLL_CTL_ADD, server->get_sockfd(), &ev);
+    ret = epoll_ctl(this->_epfd, EPOLL_CTL_ADD, sockfd, &ev);
     if (ret == -1) {
         print_error("failed add to epoll");
         return 1;
@@ -187,10 +179,10 @@ int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 }
 
 bool HTTP::is_listening_socket(int sockfd) {
-    std::vector<Server *>::iterator it;
+    std::vector<int>::iterator it;
 
-    for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
-        if ((*it)->get_sockfd() == sockfd) {
+    for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
+        if (*it == sockfd) {
             return true;
         }
     }
@@ -496,14 +488,19 @@ int HTTP::write_socket(struct epoll_event &ev) {
 }
 
 int HTTP::handle_connections() {
+
+    this->_epfd = epoll_create(MAXEPOLLSIZE);
+    if (this->_epfd == -1)
+        return 1;
+
     struct epoll_event ev;
     /* buffer pointed to by events is used to return information from  the  ready
     list  about  file  descriptors in the interest list that have some events available. */
     struct epoll_event evlist[MAXEPOLLSIZE];
 
     // add each server to the epoll
-    std::vector<Server *>::iterator it;
-    for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
+    std::vector<int>::iterator it;
+    for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
         if (this->add_listening_socket_to_poll(ev, *it))
             return 1;
     }

@@ -12,6 +12,8 @@
 struct SServer {
     std::string host;
     std::string port;
+    uint16_t sin_port;
+    uint32_t s_addr;
     std::vector<std::string> server_names_vector;
     int client_max_body_size;
     std::string root;
@@ -34,7 +36,7 @@ class ParserConfFile {
     ~ParserConfFile();
     int open_config_file();
     int extract();
-    std::vector<struct ip_port> get_unique_addresses();
+    std::vector<struct sockaddr_in> get_unique_addresses();
     std::vector<std::string>::iterator get_serv_data(std::vector<std::string>::iterator it,
                                                      struct SServer &s);
 

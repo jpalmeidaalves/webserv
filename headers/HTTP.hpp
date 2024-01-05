@@ -53,11 +53,11 @@ class HTTP {
   public:
     HTTP();
     ~HTTP();
-    int open_listening_sockets(std::vector<struct ip_port> addresses);
+    int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
     int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int cfd, int &epfd, epoll_event &ev);
-    int add_listening_socket_to_poll(struct epoll_event &ev, Server *server);
+    int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
     int send_header(int &cfd, const Response &response);

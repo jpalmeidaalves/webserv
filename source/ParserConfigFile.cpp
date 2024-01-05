@@ -84,12 +84,17 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SSer
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
+                    s.sin_port = htons(ft_stoi(*it));
                     s.host = "127.0.0.1";
-                } else {
-                    if (pos != 0) {
+                    s.s_addr = htonl(convert_str_to_uint32("127.0.0.1"));
+                } else {            // has ':'
+                    if (pos != 0) { //"127.0.0.1:80"
+                        // TODO must error
                         s.host = (*it).substr(0, pos);
+                        s.s_addr = htonl(convert_str_to_uint32(s.host));
                     }
                     s.port = (*it).substr(pos + 1);
+                    s.sin_port = htons(ft_stoi(s.port));
                 }
 
             } else if (*it == "root") {
@@ -115,6 +120,8 @@ void init_server(SServer &s) {
     // s.server_names_vector.push_back("");
     s.client_max_body_size = 0;
     s.root = "";
+    s.s_addr = 0;
+    s.sin_port = 0;
 }
 
 int ParserConfFile::extract() {
@@ -179,18 +186,23 @@ ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
     return *this;
 }
 
-std::vector<struct ip_port> ParserConfFile::get_unique_addresses() {
-    std::vector<struct ip_port> uniques;
+std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
+    std::vector<struct sockaddr_in> uniques;
 
     std::vector<SServer>::iterator it;
     for (it = this->servers.begin(); it != this->servers.end(); it++) {
-        struct ip_port curr;
-        curr.ip = it->host;
-        curr.port = it->port;
+        struct sockaddr_in curr;
 
-        std::vector<struct ip_port>::iterator it2;
+        ft_memset(&(curr), 0, sizeof(curr));
+
+        // Define curr struct
+        curr.sin_family = AF_INET;
+        curr.sin_port = it->sin_port;      // host to network short
+        curr.sin_addr.s_addr = it->s_addr; // ip
+
+        std::vector<struct sockaddr_in>::iterator it2;
         for (it2 = uniques.begin(); it2 != uniques.end(); it2++) {
-            if (it2->ip == curr.ip && it2->port == curr.port)
+            if (it2->sin_addr.s_addr == curr.sin_addr.s_addr && it2->sin_port == curr.sin_port)
                 break;
         }
 

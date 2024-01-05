@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
     config_file.printMembers();
 
-    std::vector<struct ip_port> unique_addrs = config_file.get_unique_addresses();
+    std::vector<struct sockaddr_in> unique_addrs = config_file.get_unique_addresses();
 
     // printVector(unique_addrs);
 
@@ -27,7 +27,8 @@ int main(int argc, char **argv) {
     try {
         HTTP http;
         http.open_listening_sockets(unique_addrs);
-        return 1;
+        http.handle_connections();
+        // return 1;
     } catch (const std::exception &e) {
         print_error(e.what());
     }
