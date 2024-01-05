@@ -23,11 +23,6 @@ struct Connection {
     std::string host_port;
 };
 
-struct ip_port {
-    std::string ip;
-    std::string port;
-};
-
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);

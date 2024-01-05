@@ -99,24 +99,6 @@ uint32_t convert_str_to_uint32(const std::string &str) {
     return result;
 }
 
-// uint32_t convert_str_to_uint32(std::string str) {
-//     std::stringstream ss(str);
-//     uint32_t nb;
-
-//     std::string tmp;
-
-//     while (std::getline(ss, tmp, '.')) {
-//         std::cout << tmp << std::endl;
-//     }
-
-//     ss >> ((nb << 24) & 0xFF);
-
-//     ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.'
-//        << (nb & 0xFF);
-
-//     return (nb);
-// }
-
 std::string get_port_host_from_sockfd(int sockfd) {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(sockaddr_in);
@@ -135,13 +117,3 @@ std::string get_port_host_from_sockfd(int sockfd) {
 }
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
-
-// struct sockaddr_in {
-//     sa_family_t sin_family;  /* AF_INET */
-//     in_port_t sin_port;      /* Port number */
-//     struct in_addr sin_addr; /* IPv4 address */
-// };
-
-// struct in_addr {
-//     in_addr_t s_addr;
-// };

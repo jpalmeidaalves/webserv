@@ -1,4 +1,5 @@
 #include "../headers/ParserConfigFile.hpp"
+#include "../headers/Server.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                          Constructors & Destructor                          */
@@ -57,10 +58,10 @@ int ParserConfFile::open_config_file() {
     return 0;
 }
 
-std::vector<SServer> &ParserConfFile::get_servers() { return (this->servers); }
+std::vector<Server> &ParserConfFile::get_servers() { return (this->servers); }
 
 std::vector<std::string>::iterator
-ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SServer &s) {
+ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) {
     int brackets_count = 0;
     ++it;
     if (*it == "{") {
@@ -114,16 +115,6 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SSer
     return it;
 }
 
-void init_server(SServer &s) {
-    s.host = "";
-    s.port = "";
-    // s.server_names_vector.push_back("");
-    s.client_max_body_size = 0;
-    s.root = "";
-    s.s_addr = 0;
-    s.sin_port = 0;
-}
-
 int ParserConfFile::extract() {
     std::vector<std::string>::iterator it;
     bool inside_http = false;
@@ -139,8 +130,7 @@ int ParserConfFile::extract() {
         if (*it == "}")
             brackets_count--;
         if (*it == "server" && inside_http) {
-            SServer s;
-            init_server(s);
+            Server s;
             it = get_serv_data(it, s);
             servers_count++;
             servers.push_back(s);
@@ -156,8 +146,8 @@ int ParserConfFile::extract() {
 void ParserConfFile::print_server_data() {}
 
 void ParserConfFile::printMembers(void) const {
-    std::vector<SServer> tmp = servers;
-    std::vector<SServer>::iterator ite;
+    std::vector<Server> tmp = servers;
+    std::vector<Server>::iterator ite;
 
     for (ite = tmp.begin(); ite != tmp.end(); ite++) {
         std::cout << "----------------------------------------------------------" << std::endl;
@@ -177,10 +167,6 @@ std::ostream &operator<<(std::ostream &out, const ParserConfFile &obj) {
     return (out);
 }
 
-const char *ParserConfFile::FailedToOpenConfFile::what() const throw() {
-    return ("Failed to open Configuration file");
-}
-
 ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
     (void)src;
     return *this;
@@ -189,7 +175,7 @@ ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
 std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
     std::vector<struct sockaddr_in> uniques;
 
-    std::vector<SServer>::iterator it;
+    std::vector<Server>::iterator it;
     for (it = this->servers.begin(); it != this->servers.end(); it++) {
         struct sockaddr_in curr;
 
