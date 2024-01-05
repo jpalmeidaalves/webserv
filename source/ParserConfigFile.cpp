@@ -1,4 +1,5 @@
 #include "../headers/ParserConfigFile.hpp"
+#include "../headers/Server.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                          Constructors & Destructor                          */
@@ -8,6 +9,11 @@ ParserConfFile::ParserConfFile(std::string path) : _path(path) { servers_count =
 ParserConfFile::~ParserConfFile() {}
 ParserConfFile::ParserConfFile() {}
 ParserConfFile::ParserConfFile(const ParserConfFile &src) { (void)src; }
+
+/* -------------------------------------------------------------------------- */
+/*                              Getters & Setters                             */
+/* -------------------------------------------------------------------------- */
+std::vector<Server> &ParserConfFile::get_servers() { return this->servers; }
 
 /* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
@@ -57,10 +63,10 @@ int ParserConfFile::open_config_file() {
     return 0;
 }
 
-std::vector<SServer> &ParserConfFile::get_servers() { return (this->servers); }
+std::vector<Server> &ParserConfFile::extract_servers_data() { return (this->servers); }
 
 std::vector<std::string>::iterator
-ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SServer &s) {
+ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) {
     int brackets_count = 0;
     ++it;
     if (*it == "{") {
@@ -84,12 +90,17 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SSer
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
+                    s.sin_port = htons(ft_stoi(*it));
                     s.host = "127.0.0.1";
-                } else {
-                    if (pos != 0) {
+                    s.s_addr = htonl(convert_str_to_uint32("127.0.0.1"));
+                } else {            // has ':'
+                    if (pos != 0) { //"127.0.0.1:80"
+                        // TODO must error
                         s.host = (*it).substr(0, pos);
+                        s.s_addr = htonl(convert_str_to_uint32(s.host));
                     }
                     s.port = (*it).substr(pos + 1);
+                    s.sin_port = htons(ft_stoi(s.port));
                 }
 
             } else if (*it == "root") {
@@ -109,14 +120,6 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, struct SSer
     return it;
 }
 
-void init_server(SServer &s) {
-    s.host = "";
-    s.port = "";
-    // s.server_names_vector.push_back("");
-    s.client_max_body_size = 0;
-    s.root = "";
-}
-
 int ParserConfFile::extract() {
     std::vector<std::string>::iterator it;
     bool inside_http = false;
@@ -132,8 +135,7 @@ int ParserConfFile::extract() {
         if (*it == "}")
             brackets_count--;
         if (*it == "server" && inside_http) {
-            SServer s;
-            init_server(s);
+            Server s;
             it = get_serv_data(it, s);
             servers_count++;
             servers.push_back(s);
@@ -149,8 +151,8 @@ int ParserConfFile::extract() {
 void ParserConfFile::print_server_data() {}
 
 void ParserConfFile::printMembers(void) const {
-    std::vector<SServer> tmp = servers;
-    std::vector<SServer>::iterator ite;
+    std::vector<Server> tmp = servers;
+    std::vector<Server>::iterator ite;
 
     for (ite = tmp.begin(); ite != tmp.end(); ite++) {
         std::cout << "----------------------------------------------------------" << std::endl;
@@ -170,31 +172,35 @@ std::ostream &operator<<(std::ostream &out, const ParserConfFile &obj) {
     return (out);
 }
 
-const char *ParserConfFile::FailedToOpenConfFile::what() const throw() {
-    return ("Failed to open Configuration file");
-}
-
 ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
     (void)src;
     return *this;
 }
 
-std::vector<std::string> ParserConfFile::get_unique_addresses() {
-    std::vector<SServer>::iterator it;
+std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
+    std::vector<struct sockaddr_in> uniques;
 
-    std::vector<std::string> res;
-
+    std::vector<Server>::iterator it;
     for (it = this->servers.begin(); it != this->servers.end(); it++) {
-        std::string myaddr = it->host + ":" + it->port;
+        struct sockaddr_in curr;
 
-        std::vector<std::string>::iterator it2;
-        for (it2 = res.begin(); it2 != res.end(); it2++) {
-            if (*it2 == myaddr)
+        ft_memset(&(curr), 0, sizeof(curr));
+
+        // Define curr struct
+        curr.sin_family = AF_INET;
+        curr.sin_port = it->sin_port;      // host to network short
+        curr.sin_addr.s_addr = it->s_addr; // ip
+
+        std::vector<struct sockaddr_in>::iterator it2;
+        for (it2 = uniques.begin(); it2 != uniques.end(); it2++) {
+            if (it2->sin_addr.s_addr == curr.sin_addr.s_addr && it2->sin_port == curr.sin_port)
                 break;
         }
-        if (it2 == res.end())
-            res.push_back(myaddr);
+
+        // if it2 is pointing to th end means it didnt found in the uniques
+        if (it2 == uniques.end())
+            uniques.push_back(curr);
     }
 
-    return res;
+    return uniques;
 }

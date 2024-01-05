@@ -15,10 +15,13 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 
 - **epoll (epoll_create, epoll_ctl, epoll_wait)** - handle multiple requests (nonblocking)
 
+- **setsockopt** - get and set options on sockets
+
 - **read** - 
 - **write** - 
 - **close** - 
 - **signal** - 
+- **send** - similar to write
 
 
 ### Known but will not be used
@@ -27,7 +30,6 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 - **fcntl** - can be used to set fd to non-blocking. Maybe only allowed for MAC
 - **select** - handle multiple requests (nonblocking)
 - **poll** - handle multiple requests (nonblocking)
-- **send** - similar to write
 - **recv** - similar to read
 
 
@@ -59,7 +61,6 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 
 - **socketpair** - creates an unnamed pair of connected sockets in the specified domain,
                     of the specified type, and using the  optionally specified  protocol;
-- **setsockopt** - get and set options on sockets
 - **getsockname** - returns the current address to which the socket sockfd is
                     bound, in the buffer pointed to by addr.
 - **getprotobyname** - returns a protoent structure for the entry from the database that

@@ -45,16 +45,20 @@ class HTTP {
     HTTP &operator=(const HTTP &rhs);
 
     int _epfd; // epoll fd
-    std::vector<Server *> _servers;
+    std::vector<int> _listening_sockets;
+
+    std::vector<Server> _servers;
     connects_map _active_connects;
+    HTTP();
 
   public:
-    HTTP();
+    HTTP(std::vector<Server> &servers);
     ~HTTP();
+    int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
     int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int cfd, int &epfd, epoll_event &ev);
-    int add_listening_socket_to_poll(struct epoll_event &ev, Server *server);
+    int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
     bool is_listening_socket(int sockfd);
     int read_socket(struct epoll_event &ev);
     int send_header(int &cfd, const Response &response);
@@ -63,14 +67,6 @@ class HTTP {
     void list_directory(std::string full_path, struct epoll_event &ev);
     void process_requested_file(struct epoll_event &ev);
     int send_subsequent_write(struct epoll_event &ev);
-
-    class FailedToInit : public std::exception {
-        virtual const char *what() const throw();
-    };
-
-    class FailedToCreateServer : public std::exception {
-        virtual const char *what() const throw();
-    };
 };
 
 #endif /* HTTP_HPP */

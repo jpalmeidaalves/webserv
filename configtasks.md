@@ -144,13 +144,13 @@ Host: one.com
 
 1) Get list of servers from config file ✅
 
-Servers
+Servers 
 listen -> std::string "127.0.0.1:8000";
 hosts -> std::vector<std::string> _hosts;
 root -> std::string root;
 ...
 
-2) iterate over listen from each server and call bind and listen (must check if it is already bound)
+2) iterate over listening socks from each server and call bind and listen (must check if it is already bound) ✅
 
 Bound Addresses (vector)
 127.0.0.1:8000
@@ -161,7 +161,7 @@ Bound Addresses (vector)
 
 - sockfd (changed) (inside accept_and_add_to_poll)
 
-    a) get details about sockfd (getsockname); ✅
+    a) get details about ip and port from sockfd (getsockname); ✅
     b) iterater over server and find server matching ip and port;
     c) check if a server has a requested host;
     d) if not use the first server;

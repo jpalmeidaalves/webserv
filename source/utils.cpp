@@ -18,6 +18,19 @@ void *ft_memset(void *s, int c, std::size_t n) {
     return (s);
 }
 
+int ft_stoi(std::string str) {
+    std::stringstream ss(str);
+    int nb = 0;
+    ss >> nb;
+    return nb;
+}
+
+std::string ft_itos(int nb) {
+    std::stringstream ss;
+    ss << nb;
+    return ss.str();
+}
+
 int is_file(const char *name) {
     DIR *directory = opendir(name);
 
@@ -67,7 +80,35 @@ std::string convert_uint32_to_str(uint32_t nb) {
     return (ss.str().c_str());
 }
 
-std::string get_port_host_from_sockfd(int sockfd) {
+uint32_t convert_str_to_uint32(const std::string &str) {
+    std::istringstream iss(str);
+    uint32_t result = 0;
+    unsigned int octet;
+
+    for (int i = 0; i < 4; ++i) {
+        char dot;
+        if (i > 0) {
+            if (!(iss >> dot) || dot != '.') {
+                // Invalid format
+                return 0;
+            }
+        }
+
+        if (!(iss >> octet || octet > 255)) {
+            // Invalid format or out of range
+            return 0;
+        }
+
+        result = (result << 8) | octet;
+    }
+
+    return result;
+}
+
+void get_port_host_from_sockfd(int sockfd, Connection *conn) {
+    if (!conn)
+        return;
+
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(sockaddr_in);
 
@@ -75,23 +116,13 @@ std::string get_port_host_from_sockfd(int sockfd) {
 
     if (getsockname(sockfd, (struct sockaddr *)&addr, &addrlen) == -1) {
         print_error(strerror(errno));
-        return ("");
+        return;
     }
 
-    std::stringstream res;
-    res << convert_uint32_to_str(ntohl(addr.sin_addr.s_addr)) << ":" << ntohs(addr.sin_port);
-
-    return (res.str());
+    conn->s_addr = addr.sin_addr.s_addr;
+    conn->sin_port = addr.sin_port;
+    conn->host = convert_uint32_to_str(ntohl(addr.sin_addr.s_addr));
+    conn->port = ft_itos(ntohs(addr.sin_port));
 }
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
-
-// struct sockaddr_in {
-//     sa_family_t sin_family;  /* AF_INET */
-//     in_port_t sin_port;      /* Port number */
-//     struct in_addr sin_addr; /* IPv4 address */
-// };
-
-// struct in_addr {
-//     in_addr_t s_addr;
-// };

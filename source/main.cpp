@@ -17,17 +17,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    config_file.printMembers();
+    // config_file.printMembers();
 
-    std::vector<std::string> unique_addrs = config_file.get_unique_addresses();
+    std::vector<struct sockaddr_in> unique_addrs = config_file.get_unique_addresses();
 
-    printVector(unique_addrs);
+    // printVector(unique_addrs);
 
-    return 0;
-    try {
-        HTTP http;
-    } catch (const std::exception &e) {
-        print_error(e.what());
-    }
+    // return 0;
+
+    HTTP http(config_file.get_servers());
+    http.open_listening_sockets(unique_addrs);
+    // TODO list of servers to http
+    http.handle_connections();
+
     return (0);
 }

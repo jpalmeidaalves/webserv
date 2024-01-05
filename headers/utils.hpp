@@ -20,7 +20,11 @@
 struct Connection {
     Request request;
     Response response;
-    std::string host_port;
+    // std::string host_port;
+    std::string host;
+    std::string port;
+    uint32_t s_addr;
+    uint16_t sin_port;
 };
 
 void print_error(const std::string &error_msg);
@@ -30,7 +34,11 @@ int is_file(const char *name);
 std::string get_formated_time(long rawtime, const std::string &format);
 int get_stat_info(int cfd, Request &request, Response &response);
 int file_exists(std::string path);
-std::string get_port_host_from_sockfd(int sockfd);
+void get_port_host_from_sockfd(int sockfd, Connection *conn);
+int ft_stoi(std::string str);
+std::string ft_itos(int nb);
+uint32_t convert_str_to_uint32(const std::string &str);
+std::string convert_uint32_to_str(uint32_t nb);
 
 template <typename T>
 void printVector(std::vector<T> v) {

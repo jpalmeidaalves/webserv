@@ -16,15 +16,18 @@ class Server {
     unsigned long _address_len;
     int _sockfd;
 
-    Server(); // disable default constructer
-
   public:
+    Server(); // disable default constructer
     Connection *connection;
-    Server(int port);
     ~Server();
-
-    int create_server();
-    int get_sockfd() const;
+    /* ----- */
+    int client_max_body_size;
+    std::string host;
+    std::string port;
+    uint32_t s_addr;
+    uint16_t sin_port;
+    std::vector<std::string> server_names_vector;
+    std::string root;
 };
 
 #endif /* SERVER_HPP */
