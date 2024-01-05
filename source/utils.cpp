@@ -25,6 +25,12 @@ int ft_stoi(std::string str) {
     return nb;
 }
 
+std::string ft_itos(int nb) {
+    std::stringstream ss;
+    ss << nb;
+    return ss.str();
+}
+
 int is_file(const char *name) {
     DIR *directory = opendir(name);
 
@@ -99,7 +105,10 @@ uint32_t convert_str_to_uint32(const std::string &str) {
     return result;
 }
 
-std::string get_port_host_from_sockfd(int sockfd) {
+void get_port_host_from_sockfd(int sockfd, Connection *conn) {
+    if (!conn)
+        return;
+
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(sockaddr_in);
 
@@ -107,13 +116,13 @@ std::string get_port_host_from_sockfd(int sockfd) {
 
     if (getsockname(sockfd, (struct sockaddr *)&addr, &addrlen) == -1) {
         print_error(strerror(errno));
-        return ("");
+        return;
     }
 
-    std::stringstream res;
-    res << convert_uint32_to_str(ntohl(addr.sin_addr.s_addr)) << ":" << ntohs(addr.sin_port);
-
-    return (res.str());
+    conn->s_addr = addr.sin_addr.s_addr;
+    conn->sin_port = addr.sin_port;
+    conn->host = convert_uint32_to_str(ntohl(addr.sin_addr.s_addr));
+    conn->port = ft_itos(ntohs(addr.sin_port));
 }
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
