@@ -18,6 +18,13 @@ void *ft_memset(void *s, int c, std::size_t n) {
     return (s);
 }
 
+int ft_stoi(std::string str) {
+    std::stringstream ss(str);
+    int nb = 0;
+    ss >> nb;
+    return nb;
+}
+
 int is_file(const char *name) {
     DIR *directory = opendir(name);
 
@@ -66,6 +73,49 @@ std::string convert_uint32_to_str(uint32_t nb) {
 
     return (ss.str().c_str());
 }
+
+uint32_t convert_str_to_uint32(const std::string &str) {
+    std::istringstream iss(str);
+    uint32_t result = 0;
+    unsigned int octet;
+
+    for (int i = 0; i < 4; ++i) {
+        char dot;
+        if (i > 0) {
+            if (!(iss >> dot) || dot != '.') {
+                // Invalid format
+                return 0;
+            }
+        }
+
+        if (!(iss >> octet || octet > 255)) {
+            // Invalid format or out of range
+            return 0;
+        }
+
+        result = (result << 8) | octet;
+    }
+
+    return result;
+}
+
+// uint32_t convert_str_to_uint32(std::string str) {
+//     std::stringstream ss(str);
+//     uint32_t nb;
+
+//     std::string tmp;
+
+//     while (std::getline(ss, tmp, '.')) {
+//         std::cout << tmp << std::endl;
+//     }
+
+//     ss >> ((nb << 24) & 0xFF);
+
+//     ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.'
+//        << (nb & 0xFF);
+
+//     return (nb);
+// }
 
 std::string get_port_host_from_sockfd(int sockfd) {
     struct sockaddr_in addr;

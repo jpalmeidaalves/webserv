@@ -45,12 +45,15 @@ class HTTP {
     HTTP &operator=(const HTTP &rhs);
 
     int _epfd; // epoll fd
+    std::vector<int> _listening_sockets;
+
     std::vector<Server *> _servers;
     connects_map _active_connects;
 
   public:
     HTTP();
     ~HTTP();
+    int open_listening_sockets(std::vector<struct ip_port> addresses);
     int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int cfd, int &epfd, epoll_event &ev);

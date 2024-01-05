@@ -34,7 +34,7 @@ class ParserConfFile {
     ~ParserConfFile();
     int open_config_file();
     int extract();
-    std::vector<std::string> get_unique_addresses();
+    std::vector<struct ip_port> get_unique_addresses();
     std::vector<std::string>::iterator get_serv_data(std::vector<std::string>::iterator it,
                                                      struct SServer &s);
 

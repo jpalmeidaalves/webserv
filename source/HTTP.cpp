@@ -13,26 +13,26 @@ HTTP::HTTP() : _epfd(0) {
     signal(SIGINT, sighandler);
     signal(SIGQUIT, sighandler);
 
-    Server *srv1 = new Server(8084); // TODO check if other args are required
-    if (srv1->create_server()) {
-        delete srv1;
-        throw HTTP::FailedToCreateServer();
-    }
-    this->_servers.push_back(srv1);
+    // Server *srv1 = new Server(8084); // TODO check if other args are required
+    // if (srv1->create_server()) {
+    //     delete srv1;
+    //     throw HTTP::FailedToCreateServer();
+    // }
+    // this->_servers.push_back(srv1);
 
-    Server *srv2 = new Server(8085); // TODO check if other args are required
-    if (srv2->create_server()) {
-        delete srv2;
-        throw HTTP::FailedToCreateServer();
-    }
-    this->_servers.push_back(srv2);
+    // Server *srv2 = new Server(8085); // TODO check if other args are required
+    // if (srv2->create_server()) {
+    //     delete srv2;
+    //     throw HTTP::FailedToCreateServer();
+    // }
+    // this->_servers.push_back(srv2);
 
-    // create new epoll instance
-    this->_epfd = epoll_create(MAXEPOLLSIZE);
-    if (0 > this->_epfd)
-        throw HTTP::FailedToInit();
+    // // create new epoll instance
+    // this->_epfd = epoll_create(MAXEPOLLSIZE);
+    // if (0 > this->_epfd)
+    //     throw HTTP::FailedToInit();
 
-    this->handle_connections();
+    // this->handle_connections();
 }
 
 HTTP::~HTTP() {
@@ -45,6 +45,51 @@ HTTP::~HTTP() {
 /* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
 /* -------------------------------------------------------------------------- */
+
+int HTTP::open_listening_sockets(std::vector<struct ip_port> addresses) {
+    std::vector<struct ip_port>::iterator it;
+
+    for (it = addresses.begin(); it != addresses.end(); ++it) {
+        std::cout << "will listen to: " << it->ip << ":" << it->port << std::endl;
+
+        struct sockaddr_in address;
+        unsigned long address_len = sizeof(address);
+
+        ft_memset(&(address), 0, address_len);
+
+        // Define address struct
+        address.sin_family = AF_INET;
+        address.sin_port = htons(ft_stoi(it->port)); // host to network short
+        address.sin_addr.s_addr = ft_stoi(it->ip);   // ip
+
+        int curr_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+        if (curr_sockfd < 0) {
+            print_error("Failed to create socket");
+            return 1;
+        }
+
+        int optval = 1;
+        if ((setsockopt(curr_sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval))) != 0)
+            return 1;
+
+        if (bind(curr_sockfd, (struct sockaddr *)&address, address_len) < 0) {
+            print_error("Failed to bind socket to the address");
+            return 1;
+        }
+
+        if (listen(curr_sockfd, SOMAXCONN) < 0) {
+            print_error("Failed to listen");
+            return 1;
+        }
+
+        // show message
+        std::cout << "Server listening on " << BOLDGREEN << it->ip << ":" << it->port << RESET
+                  << ", sockfd: " << curr_sockfd << std::endl;
+    }
+
+    return 0;
+}
 
 int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, Server *server) {
 

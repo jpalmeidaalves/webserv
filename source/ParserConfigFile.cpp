@@ -179,22 +179,25 @@ ParserConfFile &ParserConfFile::operator=(const ParserConfFile &src) {
     return *this;
 }
 
-std::vector<std::string> ParserConfFile::get_unique_addresses() {
+std::vector<struct ip_port> ParserConfFile::get_unique_addresses() {
+    std::vector<struct ip_port> uniques;
+
     std::vector<SServer>::iterator it;
-
-    std::vector<std::string> res;
-
     for (it = this->servers.begin(); it != this->servers.end(); it++) {
-        std::string myaddr = it->host + ":" + it->port;
+        struct ip_port curr;
+        curr.ip = it->host;
+        curr.port = it->port;
 
-        std::vector<std::string>::iterator it2;
-        for (it2 = res.begin(); it2 != res.end(); it2++) {
-            if (*it2 == myaddr)
+        std::vector<struct ip_port>::iterator it2;
+        for (it2 = uniques.begin(); it2 != uniques.end(); it2++) {
+            if (it2->ip == curr.ip && it2->port == curr.port)
                 break;
         }
-        if (it2 == res.end())
-            res.push_back(myaddr);
+
+        // if it2 is pointing to th end means it didnt found in the uniques
+        if (it2 == uniques.end())
+            uniques.push_back(curr);
     }
 
-    return res;
+    return uniques;
 }

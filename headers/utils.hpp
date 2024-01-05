@@ -23,6 +23,11 @@ struct Connection {
     std::string host_port;
 };
 
+struct ip_port {
+    std::string ip;
+    std::string port;
+};
+
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
@@ -31,6 +36,9 @@ std::string get_formated_time(long rawtime, const std::string &format);
 int get_stat_info(int cfd, Request &request, Response &response);
 int file_exists(std::string path);
 std::string get_port_host_from_sockfd(int sockfd);
+int ft_stoi(std::string str);
+uint32_t convert_str_to_uint32(const std::string &str);
+std::string convert_uint32_to_str(uint32_t nb);
 
 template <typename T>
 void printVector(std::vector<T> v) {
