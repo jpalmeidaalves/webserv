@@ -404,10 +404,14 @@ int HTTP::write_socket(struct epoll_event &ev) {
         if (!request.get_requested_fd()) {
             request.parse_request(); // extract header info
 
+            std::cout << "[Request Header]" << request.getRaw() << std::endl;
+
+            // TODO redirect to the correct server
+
+            // this->redirect_to_server();
+
             std::string root_folder = "./www";
             std::string full_path = root_folder + request.getUrl();
-
-            // std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
             // check if is a file or dir
             int isfile = is_file(full_path.c_str());
