@@ -11,6 +11,11 @@ ParserConfFile::ParserConfFile() {}
 ParserConfFile::ParserConfFile(const ParserConfFile &src) { (void)src; }
 
 /* -------------------------------------------------------------------------- */
+/*                              Getters & Setters                             */
+/* -------------------------------------------------------------------------- */
+std::vector<Server> &ParserConfFile::get_servers() { return this->servers; }
+
+/* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -58,7 +63,7 @@ int ParserConfFile::open_config_file() {
     return 0;
 }
 
-std::vector<Server> &ParserConfFile::get_servers() { return (this->servers); }
+std::vector<Server> &ParserConfFile::extract_servers_data() { return (this->servers); }
 
 std::vector<std::string>::iterator
 ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) {

@@ -47,11 +47,12 @@ class HTTP {
     int _epfd; // epoll fd
     std::vector<int> _listening_sockets;
 
-    std::vector<Server *> _servers;
+    std::vector<Server> _servers;
     connects_map _active_connects;
+    HTTP();
 
   public:
-    HTTP();
+    HTTP(std::vector<Server> &servers);
     ~HTTP();
     int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
     int handle_connections();

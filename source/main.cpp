@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    config_file.printMembers();
+    // config_file.printMembers();
 
     std::vector<struct sockaddr_in> unique_addrs = config_file.get_unique_addresses();
 
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 
     // return 0;
 
-    HTTP http;
+    HTTP http(config_file.get_servers());
     http.open_listening_sockets(unique_addrs);
     // TODO list of servers to http
     http.handle_connections();

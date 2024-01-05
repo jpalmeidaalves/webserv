@@ -8,8 +8,9 @@ void sighandler(int signum) {
     g_stop = true;
 }
 
-HTTP::HTTP() : _epfd(0) {
+HTTP::HTTP() {}
 
+HTTP::HTTP(std::vector<Server> &servers) : _epfd(0), _servers(servers) {
     signal(SIGINT, sighandler);
     signal(SIGQUIT, sighandler);
 }
