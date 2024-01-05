@@ -144,13 +144,13 @@ Host: one.com
 
 1) Get list of servers from config file ✅
 
-Servers
+Servers 
 listen -> std::string "127.0.0.1:8000";
 hosts -> std::vector<std::string> _hosts;
 root -> std::string root;
 ...
 
-2) iterate over listen from each server and call bind and listen (must check if it is already bound)
+2) iterate over listening socks from each server and call bind and listen (must check if it is already bound) ✅
 
 Bound Addresses (vector)
 127.0.0.1:8000

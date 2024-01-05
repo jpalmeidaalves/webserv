@@ -24,13 +24,11 @@ int main(int argc, char **argv) {
     // printVector(unique_addrs);
 
     // return 0;
-    try {
-        HTTP http;
-        http.open_listening_sockets(unique_addrs);
-        http.handle_connections();
-        // return 1;
-    } catch (const std::exception &e) {
-        print_error(e.what());
-    }
+
+    HTTP http;
+    http.open_listening_sockets(unique_addrs);
+    // TODO list of servers to http
+    http.handle_connections();
+
     return (0);
 }

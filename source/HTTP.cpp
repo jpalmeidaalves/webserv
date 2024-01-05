@@ -12,32 +12,9 @@ HTTP::HTTP() : _epfd(0) {
 
     signal(SIGINT, sighandler);
     signal(SIGQUIT, sighandler);
-
-    // Server *srv1 = new Server(8084); // TODO check if other args are required
-    // if (srv1->create_server()) {
-    //     delete srv1;
-    //     throw HTTP::FailedToCreateServer();
-    // }
-    // this->_servers.push_back(srv1);
-
-    // Server *srv2 = new Server(8085); // TODO check if other args are required
-    // if (srv2->create_server()) {
-    //     delete srv2;
-    //     throw HTTP::FailedToCreateServer();
-    // }
-    // this->_servers.push_back(srv2);
-
-    // // create new epoll instance
-
-    // this->handle_connections();
 }
 
-HTTP::~HTTP() {
-    // std::vector<int>::iterator it;
-    // for (it = this->_servers.begin(); it != this->_servers.end(); ++it) {
-    //     delete *it;
-    // }
-}
+HTTP::~HTTP() {}
 
 /* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
@@ -47,10 +24,6 @@ int HTTP::open_listening_sockets(std::vector<struct sockaddr_in> addresses) {
     std::vector<struct sockaddr_in>::iterator it;
 
     for (it = addresses.begin(); it != addresses.end(); ++it) {
-
-        std::cout << "try to listening on " << BOLDGREEN
-                  << convert_uint32_to_str(ntohl(it->sin_addr.s_addr)) << ":" << ntohs(it->sin_port)
-                  << RESET << std::endl;
 
         unsigned long address_len = sizeof(*it);
 
@@ -88,7 +61,7 @@ int HTTP::open_listening_sockets(std::vector<struct sockaddr_in> addresses) {
 
 int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int sockfd) {
 
-    std::cout << "adding listening socket " << sockfd << " to epoll" << std::endl;
+    // std::cout << "adding listening socket " << sockfd << " to epoll" << std::endl;
     int ret;             // store the stat us of the epoll instance accross the program
     ev.events = EPOLLIN; // monitors file descriptors ready to read
     ev.data.fd = sockfd; // the fd we are listening on the network
@@ -536,10 +509,6 @@ int HTTP::handle_connections() {
     }
     return 0;
 }
-
-const char *HTTP::FailedToInit::what() const throw() { return ("Failed to initialize fd"); }
-
-const char *HTTP::FailedToCreateServer::what() const throw() { return ("Failed to Create Server"); }
 
 int HTTP::send_header(int &cfd, const Response &response) {
     std::ostringstream ss;
