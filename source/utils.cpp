@@ -126,3 +126,14 @@ void get_port_host_from_sockfd(int sockfd, Connection *conn) {
 }
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
+
+bool is_listening_socket(int sockfd, std::vector<int>& _listening_sockets) {
+    std::vector<int>::iterator it;
+
+    for (it = _listening_sockets.begin(); it != _listening_sockets.end(); ++it) {
+        if (*it == sockfd) {
+            return true;
+        }
+    }
+    return false;
+}

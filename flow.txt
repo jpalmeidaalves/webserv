@@ -1,0 +1,25 @@
+1 - Starting program
+    1.1 - Open config file and extract data => class ParserConfigFile
+        a - Create a vector of tokens to be parsed => ParserConfigFile.create_tokens()
+        b - Extract the data from _server token vector and create a 'Server' object for each, creating a
+            vector with unique adresses (ip:port) => ParserConfigFile.extract()
+        c - Get unique addresses (ip:port) and store in a vector of sockaddr_in(IPv4) structs that 
+            contains necessarry data to bind a sokcet  => ParserConfigFile.get_unique_addresses()
+        d - Store all server objects(settings) in '_servers' private member on 'HTTP' 
+            class => ParserConfigFile.get_servers()
+2 - Setup and initialize Servers => class HTTP
+    2.1 - Iterate unique addresses's vector starting each unique (ip:port) server. Add each one
+          to a vector of listening sockets
+        a - socket() - create a socket to be used by each server
+        b - setsockopt() - set a socket to be imediately requested after being used
+        c - bind() - associate a specific local address (IP address and port number) with a socket
+        d - listen() - prepares the socket to accept incoming connections, put it 
+            in a passive listening mode
+        e - push each listening socket to the vector '_listening_sockets'
+    2.2 - Setup the program to monitor multiple file descriptors (sockets) for various events => epoll 
+        a - create an epoll instance using epoll_create that returns a fd to that instance
+        b - iterate over the sockfd vector and add each one to the epoll interest list for
+            reading events => epoll_ctl(this->_epfd, EPOLL_CTL_ADD, sockfd, &ev) (flag EPOLLIN)
+        c - put the epoll instance in wait mode, that is waiting for events(requests) => epoll_wait(), returns
+            the number of fds the epoll instance is monitoring
+3 - 

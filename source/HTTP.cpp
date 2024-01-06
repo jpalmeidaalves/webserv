@@ -121,6 +121,56 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     return 0;
 }
 
+int HTTP::handle_connections() {
+
+    this->_epfd = epoll_create(MAXEPOLLSIZE);
+    if (this->_epfd == -1)
+        return 1;
+
+    struct epoll_event ev;
+    /* buffer pointed to by events is used to return information from  the  ready
+    list  about  file  descriptors in the interest list that have some events available. */
+    struct epoll_event evlist[MAXEPOLLSIZE];
+
+    // add each server to the epoll
+    std::vector<int>::iterator it;
+    for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
+        if (this->add_listening_socket_to_poll(ev, *it))
+            return 1;
+    }
+
+    while (!g_stop) {
+        // epoll
+        int nfds = epoll_wait(this->_epfd, evlist, MAXEPOLLSIZE, -1);
+        if (nfds == -1) {
+            print_error("epoll_wait failed");
+            continue;
+        }
+
+        for (int i = 0; i < nfds; i++) {
+            if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
+                this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
+            } else {
+                if (evlist[i].events & EPOLLIN) {
+                    // Ready for read
+                    if (this->read_socket(evlist[i]))
+                        break; // TODO check this
+                } else if (evlist[i].events & EPOLLOUT) {
+                    // Ready for write
+                    this->write_socket(evlist[i]);
+                }
+            }
+        }
+    }
+
+    // Free data from active connections
+    connects_map::iterator ite;
+    for (ite = this->_active_connects.begin(); ite != this->_active_connects.end(); ++ite) {
+        delete (*ite).second;
+    }
+    return 0;
+}
+
 int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     int ret;
 
@@ -146,17 +196,6 @@ int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     }
 
     return 0;
-}
-
-bool HTTP::is_listening_socket(int sockfd) {
-    std::vector<int>::iterator it;
-
-    for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
-        if (*it == sockfd) {
-            return true;
-        }
-    }
-    return false;
 }
 
 int HTTP::read_socket(struct epoll_event &ev) {
@@ -461,55 +500,7 @@ int HTTP::write_socket(struct epoll_event &ev) {
     return 0;
 }
 
-int HTTP::handle_connections() {
 
-    this->_epfd = epoll_create(MAXEPOLLSIZE);
-    if (this->_epfd == -1)
-        return 1;
-
-    struct epoll_event ev;
-    /* buffer pointed to by events is used to return information from  the  ready
-    list  about  file  descriptors in the interest list that have some events available. */
-    struct epoll_event evlist[MAXEPOLLSIZE];
-
-    // add each server to the epoll
-    std::vector<int>::iterator it;
-    for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
-        if (this->add_listening_socket_to_poll(ev, *it))
-            return 1;
-    }
-
-    while (!g_stop) {
-        // epoll
-        int nfds = epoll_wait(this->_epfd, evlist, MAXEPOLLSIZE, -1);
-        if (nfds == -1) {
-            print_error("epoll_wait failed");
-            continue;
-        }
-
-        for (int i = 0; i < nfds; i++) {
-            if (this->is_listening_socket(evlist[i].data.fd)) {
-                this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
-            } else {
-                if (evlist[i].events & EPOLLIN) {
-                    // Ready for read
-                    if (this->read_socket(evlist[i]))
-                        break; // TODO check this
-                } else if (evlist[i].events & EPOLLOUT) {
-                    // Ready for write
-                    this->write_socket(evlist[i]);
-                }
-            }
-        }
-    }
-
-    // Free data from active connections
-    connects_map::iterator ite;
-    for (ite = this->_active_connects.begin(); ite != this->_active_connects.end(); ++ite) {
-        delete (*ite).second;
-    }
-    return 0;
-}
 
 int HTTP::send_header(int &cfd, const Response &response) {
     std::ostringstream ss;
