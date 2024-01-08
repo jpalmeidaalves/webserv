@@ -201,7 +201,6 @@ int HTTP::read_socket(struct epoll_event &ev) {
     request.append_raw(buf);
 
     if (std::string(buf).find("\r\n") != std::string::npos) {
-        request.setIsComplete();
         request.parse_request(); // extract header info
 
         if (request.getMethod() == "GET") {
