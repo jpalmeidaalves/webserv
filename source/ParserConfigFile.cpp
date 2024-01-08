@@ -53,7 +53,7 @@ int ParserConfFile::open_config_file() {
         }
     }
     // printVector(this->tokens);
-    if (this->extract()) {
+    if (this->extract_server()) {
         std::cerr << "Error: Config File Invalid Sintax" << std::endl;
     }
     // printVector(tokens);
@@ -85,8 +85,6 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
                 }
             } else if (*it == "listen") {
                 ++it;
-                // 127.0.0.1:8085
-                // :8084
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
@@ -94,11 +92,8 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
                     s.host = "127.0.0.1";
                     s.s_addr = htonl(convert_str_to_uint32("127.0.0.1"));
                 } else {            // has ':'
-                    if (pos != 0) { //"127.0.0.1:80"
-                        // TODO must error
-                        s.host = (*it).substr(0, pos);
-                        s.s_addr = htonl(convert_str_to_uint32(s.host));
-                    }
+                    s.host = (*it).substr(0, pos);
+                    s.s_addr = htonl(convert_str_to_uint32(s.host));
                     s.port = (*it).substr(pos + 1);
                     s.sin_port = htons(ft_stoi(s.port));
                 }
@@ -120,7 +115,7 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
     return it;
 }
 
-int ParserConfFile::extract() {
+int ParserConfFile::extract_server() {
     std::vector<std::string>::iterator it;
     bool inside_http = false;
     int brackets_count = 0;
@@ -132,8 +127,10 @@ int ParserConfFile::extract() {
         }
         if (*it == "{")
             brackets_count++;
-        if (*it == "}")
+        else if (*it == "}")
             brackets_count--;
+        if (brackets_count == 0)
+            inside_http = false;
         if (*it == "server" && inside_http) {
             Server s;
             it = get_serv_data(it, s);
@@ -141,8 +138,6 @@ int ParserConfFile::extract() {
             servers.push_back(s);
         } else
             it++;
-        if (brackets_count == 0)
-            inside_http = false;
         if (brackets_count < 0)
             return 1;
     }
@@ -197,7 +192,7 @@ std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
                 break;
         }
 
-        // if it2 is pointing to th end means it didnt found in the uniques
+        // if it2 is pointing to the end means it didnt found in the uniques
         if (it2 == uniques.end())
             uniques.push_back(curr);
     }

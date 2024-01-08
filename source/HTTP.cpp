@@ -10,7 +10,7 @@ void sighandler(int signum) {
 
 HTTP::HTTP() {}
 
-HTTP::HTTP(std::vector<Server> &servers) : _epfd(0), _servers(servers) {
+HTTP::HTTP(std::vector<Server> &servers) : _epoll_fd(0), _servers(servers) {
     signal(SIGINT, sighandler);
     signal(SIGQUIT, sighandler);
 }
@@ -75,7 +75,7 @@ int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int sockfd) {
         int fd -> socket file descriptor
     */
 
-    ret = epoll_ctl(this->_epfd, EPOLL_CTL_ADD, sockfd, &ev);
+    ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, sockfd, &ev);
     if (ret == -1) {
         print_error("failed add to epoll");
         return 1;
@@ -93,63 +93,63 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     /* extracts the first connection request on the queue of pending connections for
         the listening socket, sockfd, creates a new connected socket, and returns a
         new file descriptor referring to that socket. */
-    int cfd = accept(sockfd, (struct sockaddr *)&cur_sockin, &socklen);
-    if (cfd == -1) {
+    int accepted_fd = accept(sockfd, (struct sockaddr *)&cur_sockin, &socklen);
+    if (accepted_fd == -1) {
         print_error("failed to accept connection");
         return 1;
     }
 
     std::cout << "accepted connection in listing socket: " << sockfd
-              << " for incoming socket: " << cfd << std::endl;
+              << " for incoming socket: " << accepted_fd << std::endl;
 
-    // add to epoll
+    // add to epoll modifiyng the flags to allow read and write operations
     ev.events = EPOLLIN | EPOLLOUT;
-    ev.data.fd = cfd;
+    ev.data.fd = accepted_fd;
 
-    ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cfd, &ev);
+    ret = epoll_ctl(epfd, EPOLL_CTL_ADD, accepted_fd, &ev);
     if (ret == -1) {
-        close(cfd);
+        close(accepted_fd);
         print_error("failed epoll_ctl");
         return 1;
     }
 
-    // saved to active connections
-    this->_active_connects[cfd] = new Connection();
-
-    get_port_host_from_sockfd(cfd, this->_active_connects[cfd]);
+    // create a key with accepted_fd, whose value is a struct Connection
+    this->_active_connects[accepted_fd] = new Connection();
+    // extract the ip number and port from accepted socket, store in Connecetion struct
+    get_port_host_from_sockfd(accepted_fd, this->_active_connects[accepted_fd]);
 
     return 0;
 }
 
 int HTTP::handle_connections() {
 
-    this->_epfd = epoll_create(MAXEPOLLSIZE);
-    if (this->_epfd == -1)
+    this->_epoll_fd = epoll_create(MAXEPOLLSIZE);
+    if (this->_epoll_fd == -1)
         return 1;
 
     struct epoll_event ev;
     /* buffer pointed to by events is used to return information from  the  ready
-    list  about  file  descriptors in the interest list that have some events available. */
+    list, about file descriptors in the interest list that have some events available. */
     struct epoll_event evlist[MAXEPOLLSIZE];
 
-    // add each server to the epoll
+    // add each sockfd to the epoll list of listening sockets
     std::vector<int>::iterator it;
     for (it = this->_listening_sockets.begin(); it != this->_listening_sockets.end(); ++it) {
         if (this->add_listening_socket_to_poll(ev, *it))
             return 1;
     }
-
+    // program is hanging, waiting for events
     while (!g_stop) {
-        // epoll
-        int nfds = epoll_wait(this->_epfd, evlist, MAXEPOLLSIZE, -1);
+        // put the epoll instance waiting for events(requests) until a fd delivers an event
+        int nfds = epoll_wait(this->_epoll_fd, evlist, MAXEPOLLSIZE, -1);
         if (nfds == -1) {
             print_error("epoll_wait failed");
             continue;
         }
-
+        // 
         for (int i = 0; i < nfds; i++) {
             if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
-                this->accept_and_add_to_poll(ev, this->_epfd, evlist[i].data.fd);
+                this->accept_and_add_to_poll(ev, this->_epoll_fd, evlist[i].data.fd);
             } else {
                 if (evlist[i].events & EPOLLIN) {
                     // Ready for read
@@ -171,33 +171,7 @@ int HTTP::handle_connections() {
     return 0;
 }
 
-int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
-    int ret;
-
-    // free and delete from active connections
-    delete this->_active_connects[cfd];
-    this->_active_connects.erase(cfd);
-
-    // Removes cfd from the EPOLL
-    ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
-    if (ret == -1) {
-        std::cerr << "fd: " << cfd << std::endl;
-        print_error(strerror(errno));
-        close(cfd);
-        return 1;
-    }
-
-    std::cout << "closed connection for fd(socket) " << cfd << std::endl;
-
-    // close fd
-    if (close(cfd) == -1) {
-        print_error("failed to close fd");
-        return 1;
-    }
-
-    return 0;
-}
-
+// when a readable event is detected on a socket
 int HTTP::read_socket(struct epoll_event &ev) {
 
     int cfd = ev.data.fd;
@@ -211,13 +185,12 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     if (buflen == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
     }
-
     if (buflen == -1) {
         print_error("failed to read socket");
-        if (this->close_connection(cfd, this->_epfd, ev)) {
+        if (this->close_connection(cfd, this->_epoll_fd, ev)) {
 
             return 1;
         }
@@ -227,6 +200,82 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     return 0;
 }
+// when a writable event is detected on a socket
+int HTTP::write_socket(struct epoll_event &ev) {
+
+    int cfd = ev.data.fd;
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
+
+    // check if has the complete header
+    if (!request.getIsComplete()) {
+        if (request.getRaw().find("\r\n") != std::string::npos)
+            request.setIsComplete();
+    } else {
+
+        // Flow of the function after incomming msg is complete
+
+        // first time to write
+        if (!request.get_requested_fd()) {
+            request.parse_request(); // extract header info
+            
+            std::cout << "[Request Header]" << request.getRaw() << std::endl;
+        
+            // TODO redirect to the correct server
+
+            // this->redirect_to_server();
+            // TODO implement root folder based on server
+            std::string root_folder = "./www";
+            std::string full_path = root_folder + request.getUrl();
+
+            // check if is a file or dir
+            int isfile = is_file(full_path.c_str());
+            if (isfile == -1) {
+                // TODO error checking
+                print_error("failed to check if is a dir");
+                response.set_status_code("500");
+                this->close_connection(cfd, this->_epoll_fd, ev);
+            } else if (isfile == 1) {
+                std::cout << "------- file --------" << std::endl;
+                this->process_requested_file(ev);
+                // send file (must check permissions)
+            } else {
+                std::cout << "------- dir --------" << std::endl;
+
+                // if index file is present
+                // TODO must check all index files defined in the configfile
+                if (file_exists(full_path + "/" + "index.html")) {
+                    // send file (must check permissions)
+                    request.setUrl(request.getUrl() + "/" + "index.html"); // update url
+                    this->process_requested_file(ev);
+                } else {
+                    // send list dir (must check permissions)
+
+                    // TODO if dir listing is active, from config file
+                    bool is_dir_listing = true;
+
+                    // TODO we must check the index files in the configfile and show them instead of
+                    // listing dir
+
+                    if (!is_dir_listing) {
+                        response.set_status_code("403");
+                        this->send_header(cfd, response);
+                        this->close_connection(cfd, this->_epoll_fd, ev);
+                    } else {
+                        this->list_directory(full_path, ev);
+                    }
+                }
+            }
+
+        } else {
+            // subsequent writes
+            this->send_subsequent_write(ev);
+        }
+    }
+
+    return 0;
+}
+
 
 void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
     std::map<std::string, struct dir_entry> dir_entries;
@@ -250,7 +299,7 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
         print_error(strerror(errno));
         response.set_status_code("404");
         this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
@@ -347,7 +396,7 @@ void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
         }
     }
 
-    this->close_connection(cfd, this->_epfd, ev);
+    this->close_connection(cfd, this->_epoll_fd, ev);
 }
 
 void HTTP::process_requested_file(struct epoll_event &ev) {
@@ -361,7 +410,7 @@ void HTTP::process_requested_file(struct epoll_event &ev) {
     if (get_stat_info(cfd, request, response)) {
         response.set_status_code("500");
         this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
@@ -369,7 +418,7 @@ void HTTP::process_requested_file(struct epoll_event &ev) {
     if (!(response.permissions & S_IROTH)) {
         response.set_status_code("403");
         this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
@@ -378,7 +427,7 @@ void HTTP::process_requested_file(struct epoll_event &ev) {
         print_error("Error opening file");
         response.set_status_code("500");
         this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
@@ -394,7 +443,6 @@ int HTTP::send_subsequent_write(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
     // Response &response = this->_active_connects[cfd]->response;
-
     int file_fd = request.get_requested_fd();
 
     int bytes_read = 0;
@@ -407,98 +455,24 @@ int HTTP::send_subsequent_write(struct epoll_event &ev) {
     if (bytes_read == -1) {
         print_error("Failed read file");
         close(file_fd);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
     }
 
     if (bytes_read == 0) {
         close(file_fd);
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
     }
 
     if (write(cfd, buff, bytes_read) == -1) {
         print_error("failed to write");
-        this->close_connection(cfd, this->_epfd, ev);
+        this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
     }
     return 0;
 }
 
-int HTTP::write_socket(struct epoll_event &ev) {
-
-    int cfd = ev.data.fd;
-    Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
-
-    // check if has the complete header
-    if (!request.getIsComplete()) {
-        if (request.getRaw().find("\r\n") != std::string::npos)
-            request.setIsComplete();
-    } else {
-
-        // Flow of the function after incomming msg is complete
-
-        // first time to write
-        if (!request.get_requested_fd()) {
-            request.parse_request(); // extract header info
-
-            std::cout << "[Request Header]" << request.getRaw() << std::endl;
-
-            // TODO redirect to the correct server
-
-            // this->redirect_to_server();
-
-            std::string root_folder = "./www";
-            std::string full_path = root_folder + request.getUrl();
-
-            // check if is a file or dir
-            int isfile = is_file(full_path.c_str());
-            if (isfile == -1) {
-                // TODO error checking
-                print_error("failed to check if is a dir");
-                response.set_status_code("500");
-                this->close_connection(cfd, this->_epfd, ev);
-            } else if (isfile == 1) {
-                std::cout << "------- file --------" << std::endl;
-                this->process_requested_file(ev);
-                // send file (must check permissions)
-            } else {
-                std::cout << "------- dir --------" << std::endl;
-
-                // if index file is present
-                // TODO must check all index files defined in the configfile
-                if (file_exists(full_path + "/" + "index.html")) {
-                    // send file (must check permissions)
-                    request.setUrl(request.getUrl() + "/" + "index.html"); // update url
-                    this->process_requested_file(ev);
-                } else {
-                    // send list dir (must check permissions)
-
-                    // TODO if dir listing is active, from config file
-                    bool is_dir_listing = true;
-
-                    // TODO we must check the index files in the configfile and show them instead of
-                    // listing dir
-
-                    if (!is_dir_listing) {
-                        response.set_status_code("403");
-                        this->send_header(cfd, response);
-                        this->close_connection(cfd, this->_epfd, ev);
-                    } else {
-                        this->list_directory(full_path, ev);
-                    }
-                }
-            }
-
-        } else {
-            // subsequent writes
-            this->send_subsequent_write(ev);
-        }
-    }
-
-    return 0;
-}
 
 
 
@@ -515,6 +489,33 @@ int HTTP::send_header(int &cfd, const Response &response) {
 
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;
+    return 0;
+}
+
+int HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
+    int ret;
+
+    // free and delete from active connections
+    delete this->_active_connects[cfd];
+    this->_active_connects.erase(cfd);
+
+    // Removes cfd from the EPOLL
+    ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cfd, &ev);
+    if (ret == -1) {
+        std::cerr << "fd: " << cfd << std::endl;
+        print_error(strerror(errno));
+        close(cfd);
+        return 1;
+    }
+
+    std::cout << "closed connection for fd(socket) " << cfd << std::endl;
+
+    // close fd
+    if (close(cfd) == -1) {
+        print_error("failed to close fd");
+        return 1;
+    }
+
     return 0;
 }
 

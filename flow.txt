@@ -17,9 +17,22 @@
             in a passive listening mode
         e - push each listening socket to the vector '_listening_sockets'
     2.2 - Setup the program to monitor multiple file descriptors (sockets) for various events => epoll 
-        a - create an epoll instance using epoll_create that returns a fd to that instance
+        a - create an epoll instance using epoll_create that returns a fd(_epfd) to that instance
         b - iterate over the sockfd vector and add each one to the epoll interest list for
             reading events => epoll_ctl(this->_epfd, EPOLL_CTL_ADD, sockfd, &ev) (flag EPOLLIN)
         c - put the epoll instance in wait mode, that is waiting for events(requests) => epoll_wait(), returns
             the number of fds the epoll instance is monitoring
-3 - 
+        d - when a request for connection is received and the socket is in the interest list, the request
+            is accepted and added to de interest list for reading and writing now => accept_and_add_to_poll()
+        e - extract ip and port related to each socket and store in a struct => get_port_host_from_sockfd()
+3 - Proccess the requests and send responses. At this point, diverse events will be processed simultenously,
+    even so, the program will be able accpet more requests becasue of non-blocking nature of epoll system call 
+    When a event is detected on a socket, the right method will be called => handle_connections()
+    3.1 - read events => read_socket() 
+        reads data from the socket and appends it to the raw data of the corresponding Request object.
+    3.2 - write events => write_socket()
+        if the complete header has been received
+        a - parses the request header to extract information and based on the type of request, it determines
+            whether to serve a file, list a directory, or ... //TODO continue diferent reponses
+        b - If serving a file, it opens the file and sends the appropriate headers => process_requested_file(ev)
+        c - If its a directory, generates an HTML page listing the contents of a directory and sends it to the client.

@@ -113,7 +113,7 @@ void get_port_host_from_sockfd(int sockfd, Connection *conn) {
     socklen_t addrlen = sizeof(sockaddr_in);
 
     ft_memset(&addr, 0, sizeof(sockaddr_in));
-
+    // recovers the data and stores in addr structure
     if (getsockname(sockfd, (struct sockaddr *)&addr, &addrlen) == -1) {
         print_error(strerror(errno));
         return;

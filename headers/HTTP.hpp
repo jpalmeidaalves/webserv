@@ -44,7 +44,7 @@ class HTTP {
     HTTP(const HTTP &src);
     HTTP &operator=(const HTTP &rhs);
 
-    int _epfd; // epoll fd
+    int _epoll_fd; // epoll fd
     std::vector<int> _listening_sockets;
 
     std::vector<Server> _servers;
