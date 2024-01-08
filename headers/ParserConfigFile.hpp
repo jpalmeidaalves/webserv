@@ -38,4 +38,4 @@ class ParserConfFile {
 };
 std::ostream &operator<<(std::ostream &out, const Server &obj);
 
-#endif /* PARSERCONFIGFILE_HPP */
+#endif/* PARSERCONFIGFILE_HPP */

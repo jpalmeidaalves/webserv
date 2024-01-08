@@ -8,6 +8,9 @@
 #include <string>
 #include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <unistd.h>     // close
+#include <vector>
+
+struct Connection;
 
 class Server {
 
@@ -30,4 +33,4 @@ class Server {
     std::string root;
 };
 
-#endif /* SERVER_HPP */
+#endif/* SERVER_HPP */

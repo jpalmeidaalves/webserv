@@ -4,6 +4,8 @@
 #include <string>
 #include <sys/types.h>
 
+class HTTP;
+
 class Response {
   private:
     std::string _version;
@@ -19,6 +21,8 @@ class Response {
     ~Response();
 
     bool isdir;
+    std::string dir_data;
+    bool _sent_header;
     mode_t permissions;
     std::string last_modified;
     void set_status_code(std::string code);
@@ -32,4 +36,4 @@ class Response {
     std::size_t get_content_length() const;
 };
 
-#endif /* RESPONSE_HPP */
+#endif/* RESPONSE_HPP */

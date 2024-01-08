@@ -4,6 +4,12 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <sys/types.h>
+#include <dirent.h>
+
+// class HTTP;
+class Connection;
+class Response;
 
 class Request {
   private:
@@ -32,9 +38,13 @@ class Request {
     bool getIsComplete() const;
     int get_requested_fd();
     void set_req_file_fd(int ffd);
+    int process_request(int epoll_fd, struct epoll_event &ev, Connection *conn);
+    void process_requested_file(struct epoll_event &ev, Connection *conn);
+    int list_directory(std::string full_path, Connection *conn);
+
 
     void append_raw(std::string buf);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 
-#endif /* REQUEST_HPP */
+#endif/* REQUEST_HPP */

@@ -1,7 +1,7 @@
 #ifndef HTTP_HPP
 #define HTTP_HPP
 
-#include "../headers/utils.hpp"
+
 #include "MimeTypes.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
@@ -29,6 +29,9 @@
 #define MAXEPOLLSIZE SOMAXCONN
 #define BUFFERSIZE 8000
 #define BACKLOG 200 // how many pending connections queue will hold
+
+struct Connection;
+class Server;
 
 typedef std::map<int, Connection *> connects_map;
 
@@ -60,12 +63,8 @@ class HTTP {
     int close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
     int read_socket(struct epoll_event &ev);
-    int send_header(int &cfd, const Response &response);
+    int send_header(int &cfd, Response &response);
     int write_socket(struct epoll_event &ev);
-    int process_directories(int cfd);
-    void list_directory(std::string full_path, struct epoll_event &ev);
-    void process_requested_file(struct epoll_event &ev);
-    int send_subsequent_write(struct epoll_event &ev);
 };
 
-#endif /* HTTP_HPP */
+#endif/* HTTP_HPP */

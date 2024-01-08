@@ -1,8 +1,6 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "Request.hpp"
-#include "Response.hpp"
 #include <ctime>
 #include <dirent.h>
 #include <errno.h>
@@ -16,16 +14,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
+// #include "Request.hpp"
+// #include "Response.hpp"
 
-struct Connection {
-    Request request;
-    Response response;
-    // std::string host_port;
-    std::string host;
-    std::string port;
-    uint32_t s_addr;
-    uint16_t sin_port;
-};
+struct Connection;
+class Request;
+class Response;
 
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
@@ -49,4 +43,4 @@ void printVector(std::vector<T> v) {
     std::cout << "size: " << v.size();
 }
 
-#endif /* UTILS_HPP */
+#endif/* UTILS_HPP */

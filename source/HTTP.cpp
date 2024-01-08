@@ -1,4 +1,6 @@
 #include "../headers/HTTP.hpp"
+#include "../headers/Connection.hpp"
+#include "../headers/utils.hpp"
 
 bool g_stop = false;
 
@@ -103,7 +105,7 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
               << " for incoming socket: " << accepted_fd << std::endl;
 
     // add to epoll modifiyng the flags to allow read and write operations
-    ev.events = EPOLLIN | EPOLLOUT;
+    ev.events = EPOLLIN;
     ev.data.fd = accepted_fd;
 
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, accepted_fd, &ev);
@@ -153,8 +155,7 @@ int HTTP::handle_connections() {
             } else {
                 if (evlist[i].events & EPOLLIN) {
                     // Ready for read
-                    if (this->read_socket(evlist[i]))
-                        break; // TODO check this
+                    this->read_socket(evlist[i]);
                 } else if (evlist[i].events & EPOLLOUT) {
                     // Ready for write
                     this->write_socket(evlist[i]);
@@ -182,6 +183,7 @@ int HTTP::read_socket(struct epoll_event &ev) {
     buf[buflen] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
 
     if (buflen == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
@@ -198,8 +200,28 @@ int HTTP::read_socket(struct epoll_event &ev) {
 
     request.append_raw(buf);
 
+    if (std::string(buf).find("\r\n") != std::string::npos) {
+        request.setIsComplete();
+        request.parse_request(); // extract header info
+
+        if (request.getMethod() == "GET") {
+            std::cout << "processing GET request" << std::endl;
+            if (request.process_request(this->_epoll_fd, ev, this->_active_connects[cfd]) == -1) {
+                this->send_header(cfd, response);
+                this->close_connection(cfd, this->_epoll_fd, ev);
+            }
+        } else if (request.getMethod() == "POST") {
+            // TODO post => getbody()
+            std::cout << "processing POST request" << std::endl;
+        } else if (request.getMethod() == "DELETE") {
+            // TODO delete
+            std::cout << "processing DELETE request" << std::endl;
+        }
+    }
+
     return 0;
 }
+
 // when a writable event is detected on a socket
 int HTTP::write_socket(struct epoll_event &ev) {
 
@@ -207,251 +229,27 @@ int HTTP::write_socket(struct epoll_event &ev) {
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
 
-    // check if has the complete header
-    if (!request.getIsComplete()) {
-        if (request.getRaw().find("\r\n") != std::string::npos)
-            request.setIsComplete();
-    } else {
-
-        // Flow of the function after incomming msg is complete
-
-        // first time to write
-        if (!request.get_requested_fd()) {
-            request.parse_request(); // extract header info
-            
-            std::cout << "[Request Header]" << request.getRaw() << std::endl;
-        
-            // TODO redirect to the correct server
-
-            // this->redirect_to_server();
-            // TODO implement root folder based on server
-            std::string root_folder = "./www";
-            std::string full_path = root_folder + request.getUrl();
-
-            // check if is a file or dir
-            int isfile = is_file(full_path.c_str());
-            if (isfile == -1) {
-                // TODO error checking
-                print_error("failed to check if is a dir");
-                response.set_status_code("500");
-                this->close_connection(cfd, this->_epoll_fd, ev);
-            } else if (isfile == 1) {
-                std::cout << "------- file --------" << std::endl;
-                this->process_requested_file(ev);
-                // send file (must check permissions)
-            } else {
-                std::cout << "------- dir --------" << std::endl;
-
-                // if index file is present
-                // TODO must check all index files defined in the configfile
-                if (file_exists(full_path + "/" + "index.html")) {
-                    // send file (must check permissions)
-                    request.setUrl(request.getUrl() + "/" + "index.html"); // update url
-                    this->process_requested_file(ev);
-                } else {
-                    // send list dir (must check permissions)
-
-                    // TODO if dir listing is active, from config file
-                    bool is_dir_listing = true;
-
-                    // TODO we must check the index files in the configfile and show them instead of
-                    // listing dir
-
-                    if (!is_dir_listing) {
-                        response.set_status_code("403");
-                        this->send_header(cfd, response);
-                        this->close_connection(cfd, this->_epoll_fd, ev);
-                    } else {
-                        this->list_directory(full_path, ev);
-                    }
-                }
-            }
-
-        } else {
-            // subsequent writes
-            this->send_subsequent_write(ev);
-        }
-    }
-
-    return 0;
-}
-
-
-void HTTP::list_directory(std::string full_path, struct epoll_event &ev) {
-    std::map<std::string, struct dir_entry> dir_entries;
-    // find items inside folder
-    struct dirent *dp;
-    bool has_error = false;
-
-    int cfd = ev.data.fd;
-
-    Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
-
-    // remove trailing slash /
-    if ((full_path.at(full_path.size() - 1)) == '/') {
-        full_path.erase(full_path.end() - 1);
-    }
-
-    DIR *dir = opendir(full_path.c_str());
-
-    if (dir == NULL) {
-        print_error(strerror(errno));
-        response.set_status_code("404");
+    if (!response._sent_header) {
         this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
+    } 
 
-    while (1) {
-        dp = readdir(dir);
-        if (dp == NULL)
-            break;
-
-        dir_entry new_entry;
-
-        struct stat struc_st;
-
-        // ignore current dir
-        if (std::string(dp->d_name) == ".")
-            continue;
-
-        std::string item_path = full_path + "/" + dp->d_name;
-
-        std::string href = item_path.substr(5);
-
-        ft_memset(&struc_st, 0, sizeof(struc_st));
-        if (stat(item_path.c_str(), &struc_st) == -1) {
-            print_error("failed to get file information");
-
-            has_error = true;
-            break;
-        }
-
-        if (dp->d_type & DT_DIR) {
-            new_entry.is_file = false;
-        } else {
-            new_entry.is_file = true;
-        }
-
-        new_entry.size = 0;
-        new_entry.last_modified = get_formated_time(struc_st.st_mtim.tv_sec, "%d-%h-%Y %H:%M");
-        new_entry.href = href;
-
-        dir_entries[dp->d_name] = new_entry;
-    }
-
-    closedir(dir);
-
-    if (has_error) {
-        response.set_status_code("500");
-        this->send_header(cfd, response);
-    } else {
-        std::stringstream ss;
-
-        ss << "<html><head><title>Index of " << request.getUrl()
-           << "/</title></head><body><h1>Index of " << request.getUrl() << "</h1><hr><pre>";
-
-        std::map<std::string, struct dir_entry>::iterator it;
-        {
-            for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-                if (it->second.is_file == false) {
-
-                    std::string folder_name = it->first + "/";
-
-                    ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
-                       << std::setw(51 - folder_name.size()) << " ";
-
-                    // parent folder has no modified date and size
-                    if (it->first == "..") {
-                        ss << "\n";
-                    } else {
-                        ss << it->second.last_modified << " ";
-                        ss << std::right << std::setw(20) << "-\n";
-                    }
-                }
-            }
-            for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-                if (it->second.is_file == true) {
-
-                    ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
-                       << std::setw(51 - it->first.size()) << " ";
-
-                    ss << it->second.last_modified << " ";
-                    ss << std::right << std::setw(19) << it->second.size << "\n";
-                }
-            }
-        }
-
-        ss << "</pre><hr></body></html>";
-
-        response.set_status_code("200");
-        response.set_content_length(ss.str().size());
-        this->send_header(cfd, response);
-
-        // TODO maybe change all writes to send and read to recv
-        // https://stackoverflow.com/questions/21687695/getting-sigpipe-with-non-blocking-sockets-is-this-normal
-        if (send(cfd, ss.str().c_str(), ss.str().size(), MSG_NOSIGNAL) == -1) {
+    if (response.isdir) {
+        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
             print_error("failed to write");
         }
-    }
-
-    this->close_connection(cfd, this->_epoll_fd, ev);
-}
-
-void HTTP::process_requested_file(struct epoll_event &ev) {
-    int cfd = ev.data.fd;
-    Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
-
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
-
-    if (get_stat_info(cfd, request, response)) {
-        response.set_status_code("500");
-        this->send_header(cfd, response);
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
+        return 1;
     }
 
-    // TODO check permission, done for read
-    if (!(response.permissions & S_IROTH)) {
-        response.set_status_code("403");
-        this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
-
-    int file_fd = open(full_path.c_str(), O_RDONLY);
-    if (!file_fd) {
-        print_error("Error opening file");
-        response.set_status_code("500");
-        this->send_header(cfd, response);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
-
-    response.set_status_code("200");
-    response.set_content_type(MimeTypes::identify(full_path));
-    request.set_req_file_fd(file_fd);
-    // std::cout << "requested file fd changed: " << request.get_requested_fd() << std::endl;
-    this->send_header(cfd, response);
-    // body info will go in another subsequent write
-}
-
-int HTTP::send_subsequent_write(struct epoll_event &ev) {
-    int cfd = ev.data.fd;
-    Request &request = this->_active_connects[cfd]->request;
-    // Response &response = this->_active_connects[cfd]->response;
     int file_fd = request.get_requested_fd();
+    if (!file_fd) {
+        this->close_connection(cfd, this->_epoll_fd, ev);
+    }
 
     int bytes_read = 0;
     char buff[BUFFERSIZE];
 
-    // std::cout << "subsequent write.........." << std::endl;
-
     bytes_read = read(file_fd, buff, BUFFERSIZE);
-    // std::cout << "read " << bytes_read << " bytes" << std::endl;
     if (bytes_read == -1) {
         print_error("Failed read file");
         close(file_fd);
@@ -462,7 +260,7 @@ int HTTP::send_subsequent_write(struct epoll_event &ev) {
     if (bytes_read == 0) {
         close(file_fd);
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
+        return 0;
     }
 
     if (write(cfd, buff, bytes_read) == -1) {
@@ -470,13 +268,11 @@ int HTTP::send_subsequent_write(struct epoll_event &ev) {
         this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
     }
+
     return 0;
 }
 
-
-
-
-int HTTP::send_header(int &cfd, const Response &response) {
+int HTTP::send_header(int &cfd, Response &response) {
     std::ostringstream ss;
     ss << "HTTP/1.1 " << response.get_status_code() << "\n"
        << "Content-Type: " << response.get_content_type() << "\n"
@@ -486,6 +282,8 @@ int HTTP::send_header(int &cfd, const Response &response) {
        << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"
        << "Access-Control-Allow-Credentials: true\n"
        << "\n";
+
+    response._sent_header = true;
 
     if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
         return 1;

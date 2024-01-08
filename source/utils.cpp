@@ -1,4 +1,8 @@
 #include "../headers/utils.hpp"
+#include "../headers/Request.hpp"
+#include "../headers/Response.hpp"
+#include "../headers/Connection.hpp"
+
 
 #include <signal.h>
 
