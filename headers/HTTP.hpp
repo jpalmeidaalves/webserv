@@ -62,9 +62,10 @@ class HTTP {
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
-    int read_socket(struct epoll_event &ev);
+    void read_socket(struct epoll_event &ev);
     int send_header(int &cfd, Response &response);
-    int write_socket(struct epoll_event &ev);
+    void write_socket(struct epoll_event &ev);
+    int set_to_write_mode(struct epoll_event &ev);
 };
 
 #endif/* HTTP_HPP */

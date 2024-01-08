@@ -93,25 +93,10 @@ void Request::process_requested_file(struct epoll_event &ev, Connection *conn) {
     request.set_req_file_fd(file_fd);
 }
 
-int Request::process_request(int epoll_fd, struct epoll_event &ev, Connection *conn) {
-    int cfd = ev.data.fd;
+void Request::process_request(struct epoll_event &ev, Connection *conn) {
+    // int cfd = ev.data.fd;
     Request &request = conn->request;
     Response &response = conn->response;
-
-    int ret = 0;
-    ret = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
-    if (ret == -1) {
-        print_error(strerror(errno)); // TODO check this case
-        return 1;
-    }
-
-    ev.events = EPOLLOUT;
-
-    ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, cfd, &ev);
-    if (ret == -1) {
-        print_error("failed epoll_ctl"); // TODO check this case
-        return 1;
-    }
 
     std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
@@ -127,8 +112,7 @@ int Request::process_request(int epoll_fd, struct epoll_event &ev, Connection *c
     if (isfile == -1) {
         // TODO error checking
         print_error("failed to check if is a dir");
-        response.set_status_code("500");
-        return -1;
+        response.set_status_code("404");
         // this->close_connection(cfd, this->_epoll_fd, ev);
     } else if (isfile == 1) {
         std::cout << "------- file --------" << std::endl;
@@ -147,22 +131,19 @@ int Request::process_request(int epoll_fd, struct epoll_event &ev, Connection *c
             // send list dir (must check permissions)
 
             // TODO if dir listing is active, from config file
-            bool is_dir_listing = true;
+            bool is_dir_listing = true; // TODO now
 
             // TODO we must check the index files in the configfile and show them instead of
             // listing dir
 
             if (!is_dir_listing) {
                 response.set_status_code("403");
-                return -1;
             } else {
                 response.isdir = true;
-                if (this->list_directory(full_path, conn) == -1)
-                    return -1;
+                this->list_directory(full_path, conn);
             }
         }
     }
-    return 0;
 }
 
 int Request::list_directory(std::string full_path, Connection *conn) {
@@ -183,9 +164,10 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     DIR *dir = opendir(full_path.c_str());
 
+
     if (dir == NULL) {
         print_error(strerror(errno));
-        response.set_status_code("404");
+        response.set_status_code("500");
         // this->send_header(cfd, response);
         // this->close_connection(cfd, this->_epoll_fd, ev);
         return -1;

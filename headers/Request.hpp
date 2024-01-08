@@ -35,7 +35,7 @@ class Request {
     void parse_request();
     int get_requested_fd();
     void set_req_file_fd(int ffd);
-    int process_request(int epoll_fd, struct epoll_event &ev, Connection *conn);
+    void process_request(struct epoll_event &ev, Connection *conn);
     void process_requested_file(struct epoll_event &ev, Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
 

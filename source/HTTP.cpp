@@ -172,8 +172,28 @@ int HTTP::handle_connections() {
     return 0;
 }
 
+int HTTP::set_to_write_mode(struct epoll_event &ev) {
+    int cfd = ev.data.fd;
+    int ret = 0;
+    ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
+    if (ret == -1) {
+        print_error(strerror(errno)); // TODO check this case
+        return ret;
+    }
+
+    ev.events = EPOLLOUT;
+
+    ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, cfd, &ev);
+    if (ret == -1) {
+        print_error("failed epoll_ctl"); // TODO check this case
+        return ret;
+    }
+
+    return 0;
+}
+
 // when a readable event is detected on a socket
-int HTTP::read_socket(struct epoll_event &ev) {
+void HTTP::read_socket(struct epoll_event &ev) {
 
     int cfd = ev.data.fd;
     char buf[BUFFERSIZE];
@@ -183,18 +203,17 @@ int HTTP::read_socket(struct epoll_event &ev) {
     buf[buflen] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
+    // Response &response = this->_active_connects[cfd]->response;
 
     if (buflen == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
+        return;
     }
     if (buflen == -1) {
         print_error("failed to read socket");
         if (this->close_connection(cfd, this->_epoll_fd, ev)) {
-
-            return 1;
+            return;
         }
     }
 
@@ -204,11 +223,13 @@ int HTTP::read_socket(struct epoll_event &ev) {
         request.parse_request(); // extract header info
 
         if (request.getMethod() == "GET") {
-            std::cout << "processing GET request" << std::endl;
-            if (request.process_request(this->_epoll_fd, ev, this->_active_connects[cfd]) == -1) {
-                this->send_header(cfd, response);
+            if (set_to_write_mode(ev) == -1) {
                 this->close_connection(cfd, this->_epoll_fd, ev);
+                return;
             }
+
+            std::cout << "processing GET request" << std::endl;
+            request.process_request(ev, this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
             // TODO post => getbody()
             std::cout << "processing POST request" << std::endl;
@@ -217,12 +238,10 @@ int HTTP::read_socket(struct epoll_event &ev) {
             std::cout << "processing DELETE request" << std::endl;
         }
     }
-
-    return 0;
 }
 
 // when a writable event is detected on a socket
-int HTTP::write_socket(struct epoll_event &ev) {
+void HTTP::write_socket(struct epoll_event &ev) {
 
     int cfd = ev.data.fd;
     Request &request = this->_active_connects[cfd]->request;
@@ -230,19 +249,24 @@ int HTTP::write_socket(struct epoll_event &ev) {
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
+        std::cout << "@ header sent" << std::endl;
+        return;
     } 
 
     if (response.isdir) {
         if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
             print_error("failed to write");
         }
+        std::cout << "@ dir sent" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
+        return;
     }
 
     int file_fd = request.get_requested_fd();
     if (!file_fd) {
+        std::cout << "@ no requested fd" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
     }
 
     int bytes_read = 0;
@@ -253,22 +277,19 @@ int HTTP::write_socket(struct epoll_event &ev) {
         print_error("Failed read file");
         close(file_fd);
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
+        return;
     }
 
     if (bytes_read == 0) {
         close(file_fd);
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 0;
+        return;
     }
 
     if (write(cfd, buff, bytes_read) == -1) {
         print_error("failed to write");
         this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
     }
-
-    return 0;
 }
 
 int HTTP::send_header(int &cfd, Response &response) {
