@@ -279,7 +279,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
             }
 
             std::cout << "processing GET request" << std::endl;
-            request.process_request(ev, this->_active_connects[cfd]);
+            request.process_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
             // TODO post => getbody()
             std::cout << "processing POST request" << std::endl;

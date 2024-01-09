@@ -54,12 +54,8 @@ std::string get_formated_time(long rawtime, const std::string &format) {
     return (std::string(buffer));
 }
 
-int get_stat_info(int cfd, Request &request, Response &response) {
+int get_stat_info(std::string full_path, Response &response) {
     struct stat struc_st;
-    (void)cfd; // TODO remove
-
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
 
     ft_memset(&struc_st, 0, sizeof(struc_st));
     if (stat(full_path.c_str(), &struc_st) == -1) {

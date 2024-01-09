@@ -28,7 +28,7 @@ bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
 file_types get_file_type(const char *name);
 std::string get_formated_time(long rawtime, const std::string &format);
-int get_stat_info(int cfd, Request &request, Response &response);
+int get_stat_info(std::string full_path, Response &response);
 int file_exists(std::string path);
 void get_port_host_from_sockfd(int sockfd, Connection *conn);
 int ft_stoi(std::string str);

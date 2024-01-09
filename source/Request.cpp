@@ -62,15 +62,13 @@ int Request::get_requested_fd() { return (this->_req_file_fd); }
 
 void Request::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
 
-void Request::process_requested_file(struct epoll_event &ev, Connection *conn) {
-    int cfd = ev.data.fd;
+void Request::process_requested_file(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
+    std::string full_path = conn->server->root + request.getUrl();
 
-    if (get_stat_info(cfd, request, response)) {
+    if (get_stat_info(full_path, response)) {
         response.set_status_code("500");
         return;
     }
@@ -93,7 +91,7 @@ void Request::process_requested_file(struct epoll_event &ev, Connection *conn) {
     request.set_req_file_fd(file_fd);
 }
 
-void Request::process_request(struct epoll_event &ev, Connection *conn) {
+void Request::process_request(Connection *conn) {
     // int cfd = ev.data.fd;
     Request &request = conn->request;
     Response &response = conn->response;
@@ -101,8 +99,7 @@ void Request::process_request(struct epoll_event &ev, Connection *conn) {
     // std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
     // TODO implement root folder based on server
-    std::string root_folder = "./www";
-    std::string full_path = root_folder + request.getUrl();
+    std::string full_path = conn->server->root + request.getUrl();
 
     // check if is a file or dir
     file_types curr_type = get_file_type(full_path.c_str());
@@ -112,7 +109,7 @@ void Request::process_request(struct epoll_event &ev, Connection *conn) {
         response.set_status_code("404");
     } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
-        this->process_requested_file(ev, conn);
+        this->process_requested_file(conn);
     } else if (curr_type == TYPE_DIR) {
         std::cout << "------- dir --------" << std::endl;
 
@@ -121,7 +118,7 @@ void Request::process_request(struct epoll_event &ev, Connection *conn) {
         if (file_exists(full_path + "/" + "index.html")) {
             // send file (must check permissions)
             request.setUrl(request.getUrl() + "/" + "index.html"); // update url
-            this->process_requested_file(ev, conn);
+            this->process_requested_file(conn);
         } else {
             // send list dir (must check permissions)
 
