@@ -51,6 +51,7 @@
         "cerrno": "cpp",
         "fstream": "cpp",
         "ctime": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "set": "cpp"
     }
 }

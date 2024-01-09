@@ -5,6 +5,7 @@
 #include "colors.hpp"
 
 #include <arpa/inet.h> // htons, htonl
+#include <map>
 #include <string>
 #include <sys/socket.h> // socket, bind, struct sockaddr_in
 #include <unistd.h>     // close
@@ -31,6 +32,8 @@ class Server {
     uint16_t sin_port;
     std::vector<std::string> server_names;
     std::string root;
+    std::string get_error_page(std::string error_code);
+    std::multimap<std::string, std::string> error_pages;
 };
 
-#endif/* SERVER_HPP */
+#endif /* SERVER_HPP */

@@ -55,6 +55,7 @@ int ParserConfFile::open_config_file() {
     // printVector(this->tokens);
     if (this->extract_server()) {
         std::cerr << "Error: Config File Invalid Sintax" << std::endl;
+        return 1;
     }
     // printVector(tokens);
     // exit(0);
@@ -65,8 +66,7 @@ int ParserConfFile::open_config_file() {
 
 std::vector<Server> &ParserConfFile::extract_servers_data() { return (this->servers); }
 
-std::vector<std::string>::iterator
-ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) {
+int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server &s) {
     int brackets_count = 0;
     ++it;
     if (*it == "{") {
@@ -83,6 +83,35 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
                     s.server_names.push_back(*it);
                     ++it;
                 }
+            } else if (*it == "error_page") {
+                ++it;
+
+                // error_page 404 custom.html;
+                std::vector<std::string> temp;
+                while (*it != ";") {
+                    temp.push_back(*it);
+                    ++it;
+                }
+
+                if (temp.size() < 2) {
+                    print_error("invalid error_page");
+                    return 1;
+                }
+
+                // get the last word
+                std::string error_file_path = temp.back();
+                // remove from the vector
+                temp.pop_back();
+
+                // iterate and push to multimap
+                std::vector<std::string>::iterator it2;
+                for (it2 = temp.begin(); it2 != temp.end(); it2++) {
+                    std::pair<std::string, std::string> curr_pair;
+                    curr_pair.first = *it2;
+                    curr_pair.second = error_file_path;
+                    s.error_pages.insert(curr_pair);
+                }
+
             } else if (*it == "listen") {
                 ++it;
                 std::size_t pos = (*it).find(':');
@@ -110,9 +139,9 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
         }
     } else {
         std::cerr << "Invalid syntax" << std::endl;
-        return it;
+        return 1;
     }
-    return it;
+    return 0;
 }
 
 int ParserConfFile::extract_server() {
@@ -133,7 +162,8 @@ int ParserConfFile::extract_server() {
             inside_http = false;
         if (*it == "server" && inside_http) {
             Server s;
-            it = get_serv_data(it, s);
+            if (get_serv_data(it, s))
+                return 1;
             servers_count++;
             servers.push_back(s);
         } else

@@ -39,7 +39,7 @@ Valid:
 
 Note: to check this, if ':' is present must have a valid ip on the left and a valid port on the right
 
-## [❌] Setup the server_names or not.
+## [✅] Setup the server_names or not.
 ```bash
 ...
 server {
@@ -58,7 +58,7 @@ server {
 ```
 
 
-## [❌] The first server for a host:port will be the default for this host:port (that means it will answer to all the requests that don’t belong to an other server).
+## [✅] The first server for a host:port will be the default for this host:port (that means it will answer to all the requests that don’t belong to an other server).
 ```bash
 ...
 server {

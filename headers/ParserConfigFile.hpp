@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,8 +30,7 @@ class ParserConfFile {
     int extract_server();
     std::vector<Server> &get_servers();
     std::vector<struct sockaddr_in> get_unique_addresses();
-    std::vector<std::string>::iterator get_serv_data(std::vector<std::string>::iterator it,
-                                                     Server &s);
+    int get_serv_data(std::vector<std::string>::iterator &it, Server &s);
 
     void printMembers(void) const;
     void print_server_data();
@@ -38,4 +38,4 @@ class ParserConfFile {
 };
 std::ostream &operator<<(std::ostream &out, const Server &obj);
 
-#endif/* PARSERCONFIGFILE_HPP */
+#endif /* PARSERCONFIGFILE_HPP */

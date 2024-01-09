@@ -13,3 +13,14 @@ Server::~Server() {}
 /* -------------------------------------------------------------------------- */
 /*                              Member Functions                              */
 /* -------------------------------------------------------------------------- */
+std::string Server::get_error_page(std::string error_code) {
+    std::multimap<std::string, std::string>::iterator it;
+    for (it = error_pages.begin(); it != error_pages.end(); it++) {
+        if (it->first == error_code) {
+            return it->second;
+        }
+    }
+
+    // TODO send the default error page
+    return "";
+}
