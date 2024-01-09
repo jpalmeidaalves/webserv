@@ -1,8 +1,7 @@
 #include "../headers/utils.hpp"
+#include "../headers/Connection.hpp"
 #include "../headers/Request.hpp"
 #include "../headers/Response.hpp"
-#include "../headers/Connection.hpp"
-
 
 #include <signal.h>
 
@@ -35,17 +34,17 @@ std::string ft_itos(int nb) {
     return ss.str();
 }
 
-int is_file(const char *name) {
+file_types get_file_type(const char *name) {
     DIR *directory = opendir(name);
 
     if (directory == NULL) {
         if (errno == ENOTDIR)
-            return 1;
-        return -1;
+            return TYPE_FILE;
+        return TYPE_UNKOWN;
     }
 
     closedir(directory);
-    return 0;
+    return TYPE_DIR;
 }
 
 std::string get_formated_time(long rawtime, const std::string &format) {
@@ -131,7 +130,7 @@ void get_port_host_from_sockfd(int sockfd, Connection *conn) {
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
 
-bool is_listening_socket(int sockfd, std::vector<int>& _listening_sockets) {
+bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets) {
     std::vector<int>::iterator it;
 
     for (it = _listening_sockets.begin(); it != _listening_sockets.end(); ++it) {

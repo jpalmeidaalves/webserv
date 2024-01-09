@@ -148,7 +148,7 @@ int HTTP::handle_connections() {
             print_error("epoll_wait failed");
             continue;
         }
-        // 
+        //
         for (int i = 0; i < nfds; i++) {
             if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
                 this->accept_and_add_to_poll(ev, this->_epoll_fd, evlist[i].data.fd);
@@ -199,11 +199,10 @@ void HTTP::read_socket(struct epoll_event &ev) {
     char buf[BUFFERSIZE];
     int buflen;
 
-    buflen = read(cfd, buf, BUFFERSIZE - 1);
+    buflen = read(cfd, buf, BUFFERSIZE - 1); // TODO maybe change to recv to handle SIGPIPE
     buf[buflen] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
-    // Response &response = this->_active_connects[cfd]->response;
 
     if (buflen == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
@@ -249,22 +248,20 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
-        std::cout << "@ header sent" << std::endl;
         return;
-    } 
+    }
 
     if (response.isdir) {
-        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
+        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) ==
+            -1) {
             print_error("failed to write");
         }
-        std::cout << "@ dir sent" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
     int file_fd = request.get_requested_fd();
     if (!file_fd) {
-        std::cout << "@ no requested fd" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
@@ -286,7 +283,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    if (write(cfd, buff, bytes_read) == -1) {
+    if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
         print_error("failed to write");
         this->close_connection(cfd, this->_epoll_fd, ev);
     }

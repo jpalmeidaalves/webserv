@@ -17,6 +17,8 @@
 // #include "Request.hpp"
 // #include "Response.hpp"
 
+typedef enum file_types_t { TYPE_FILE, TYPE_DIR, TYPE_UNKOWN } file_types;
+
 struct Connection;
 class Request;
 class Response;
@@ -24,7 +26,7 @@ class Response;
 void print_error(const std::string &error_msg);
 bool has_suffix(const std::string &str, const std::string &suffix);
 void *ft_memset(void *s, int c, std::size_t n);
-int is_file(const char *name);
+file_types get_file_type(const char *name);
 std::string get_formated_time(long rawtime, const std::string &format);
 int get_stat_info(int cfd, Request &request, Response &response);
 int file_exists(std::string path);
@@ -33,8 +35,7 @@ int ft_stoi(std::string str);
 std::string ft_itos(int nb);
 uint32_t convert_str_to_uint32(const std::string &str);
 std::string convert_uint32_to_str(uint32_t nb);
-bool is_listening_socket(int sockfd, std::vector<int>& _listening_sockets);
-
+bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets);
 
 template <typename T>
 void printVector(std::vector<T> v) {
@@ -43,4 +44,4 @@ void printVector(std::vector<T> v) {
     std::cout << "size: " << v.size();
 }
 
-#endif/* UTILS_HPP */
+#endif /* UTILS_HPP */

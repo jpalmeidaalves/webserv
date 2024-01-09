@@ -18,10 +18,9 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 - **setsockopt** - get and set options on sockets
 
 - **read** - 
-- **write** - 
 - **close** - 
 - **signal** - 
-- **send** - similar to write
+- **send** - similar to write, can handle SIGPIP
 
 
 ### Known but will not be used
@@ -31,6 +30,7 @@ https://www.youtube.com/watch?v=XXfdzwEsxFk
 - **select** - handle multiple requests (nonblocking)
 - **poll** - handle multiple requests (nonblocking)
 - **recv** - similar to read
+- **write** - 
 
 
 ### Unsed

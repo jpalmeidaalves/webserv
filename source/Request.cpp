@@ -1,10 +1,9 @@
-#include "../headers/utils.hpp"
 #include "../headers/Request.hpp"
-#include "../headers/Response.hpp"
-#include "../headers/MimeTypes.hpp"
 #include "../headers/Connection.hpp"
 #include "../headers/HTTP.hpp"
-
+#include "../headers/MimeTypes.hpp"
+#include "../headers/Response.hpp"
+#include "../headers/utils.hpp"
 
 Request::Request() : _req_file_fd(0) {}
 
@@ -108,17 +107,15 @@ void Request::process_request(struct epoll_event &ev, Connection *conn) {
     std::string full_path = root_folder + request.getUrl();
 
     // check if is a file or dir
-    int isfile = is_file(full_path.c_str());
-    if (isfile == -1) {
-        // TODO error checking
+    file_types curr_type = get_file_type(full_path.c_str());
+
+    if (curr_type == TYPE_UNKOWN) {
         print_error("failed to check if is a dir");
         response.set_status_code("404");
-        // this->close_connection(cfd, this->_epoll_fd, ev);
-    } else if (isfile == 1) {
+    } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
         this->process_requested_file(ev, conn);
-        // send file (must check permissions)
-    } else {
+    } else if (curr_type == TYPE_DIR) {
         std::cout << "------- dir --------" << std::endl;
 
         // if index file is present
@@ -152,8 +149,6 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     struct dirent *dp;
     bool has_error = false;
 
-    // int cfd = ev.data.fd;
-
     Request &request = conn->request;
     Response &response = conn->response;
 
@@ -164,12 +159,9 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     DIR *dir = opendir(full_path.c_str());
 
-
     if (dir == NULL) {
         print_error(strerror(errno));
         response.set_status_code("500");
-        // this->send_header(cfd, response);
-        // this->close_connection(cfd, this->_epoll_fd, ev);
         return -1;
     }
 
@@ -218,11 +210,10 @@ int Request::list_directory(std::string full_path, Connection *conn) {
         return -1;
     }
 
-
     std::stringstream ss;
 
     ss << "<html><head><title>Index of " << request.getUrl()
-        << "/</title></head><body><h1>Index of " << request.getUrl() << "</h1><hr><pre>";
+       << "/</title></head><body><h1>Index of " << request.getUrl() << "</h1><hr><pre>";
 
     std::map<std::string, struct dir_entry>::iterator it;
     {
@@ -232,7 +223,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
                 std::string folder_name = it->first + "/";
 
                 ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
-                    << std::setw(51 - folder_name.size()) << " ";
+                   << std::setw(51 - folder_name.size()) << " ";
 
                 // parent folder has no modified date and size
                 if (it->first == "..") {
@@ -247,7 +238,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
             if (it->second.is_file == true) {
 
                 ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
-                    << std::setw(51 - it->first.size()) << " ";
+                   << std::setw(51 - it->first.size()) << " ";
 
                 ss << it->second.last_modified << " ";
                 ss << std::right << std::setw(19) << it->second.size << "\n";
@@ -263,13 +254,12 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     response.dir_data = ss.str();
 
     return 0;
-    // this->send_header(cfd, response);
 
     // TODO maybe change all writes to send and read to recv
     // https://stackoverflow.com/questions/21687695/getting-sigpipe-with-non-blocking-sockets-is-this-normal
     // if (send(cfd, ss.str().c_str(), ss.str().size(), MSG_NOSIGNAL) == -1) {
     //     print_error("failed to write");
     // }
-   
+
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
