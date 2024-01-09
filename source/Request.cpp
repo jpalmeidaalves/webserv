@@ -5,7 +5,7 @@
 #include "../headers/Response.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _req_file_fd(0) {}
+Request::Request() {}
 
 Request::~Request() {}
 
@@ -58,10 +58,6 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
-int Request::get_requested_fd() { return (this->_req_file_fd); }
-
-void Request::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
-
 void Request::process_requested_file(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
@@ -69,26 +65,26 @@ void Request::process_requested_file(Connection *conn) {
     std::string full_path = conn->server->root + request.getUrl();
 
     if (get_stat_info(full_path, response)) {
-        response.set_status_code("500");
+        response.set_status_code("500", conn->server);
         return;
     }
 
     // TODO check permission, done for read
     if (!(response.permissions & S_IROTH)) {
-        response.set_status_code("403");
+        response.set_status_code("403", conn->server);
         return;
     }
 
     int file_fd = open(full_path.c_str(), O_RDONLY);
     if (!file_fd) {
         print_error("Error opening file");
-        response.set_status_code("500");
+        response.set_status_code("500", conn->server);
         return;
     }
 
-    response.set_status_code("200");
+    // response.set_status_code("200");
     response.set_content_type(MimeTypes::identify(full_path));
-    request.set_req_file_fd(file_fd);
+    response.set_req_file_fd(file_fd);
 }
 
 void Request::process_request(Connection *conn) {
@@ -106,7 +102,7 @@ void Request::process_request(Connection *conn) {
 
     if (curr_type == TYPE_UNKOWN) {
         print_error("failed to check if is a dir");
-        response.set_status_code("404");
+        response.set_status_code("404", conn->server);
     } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn);
@@ -129,7 +125,7 @@ void Request::process_request(Connection *conn) {
             // listing dir
 
             if (!is_dir_listing) {
-                response.set_status_code("403");
+                response.set_status_code("403", conn->server);
             } else {
                 response.isdir = true;
                 this->list_directory(full_path, conn);
@@ -156,7 +152,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     if (dir == NULL) {
         print_error(strerror(errno));
-        response.set_status_code("500");
+        response.set_status_code("500", conn->server);
         return -1;
     }
 
@@ -201,7 +197,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     closedir(dir);
 
     if (has_error) {
-        response.set_status_code("500");
+        response.set_status_code("500", conn->server);
         return -1;
     }
 
@@ -243,7 +239,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     ss << "</pre><hr></body></html>";
 
-    response.set_status_code("200");
+    response.set_status_code("200", conn->server);
     response.set_content_length(ss.str().size());
 
     response.dir_data = ss.str();

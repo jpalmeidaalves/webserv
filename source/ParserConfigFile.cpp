@@ -103,13 +103,13 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 // remove from the vector
                 temp.pop_back();
 
-                // iterate and push to multimap
+                // we're dealing with something like this
+                // temp = [500, 502, 503]
+                // error_file_path = "404.html"
+
                 std::vector<std::string>::iterator it2;
                 for (it2 = temp.begin(); it2 != temp.end(); it2++) {
-                    std::pair<std::string, std::string> curr_pair;
-                    curr_pair.first = *it2;
-                    curr_pair.second = error_file_path;
-                    s.error_pages.insert(curr_pair);
+                    s.update_error_page(*it2, error_file_path);
                 }
 
             } else if (*it == "listen") {

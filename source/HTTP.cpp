@@ -274,6 +274,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
         if (request.getMethod() == "GET") {
             if (set_to_write_mode(ev) == -1) {
+                print_error("failed to set write mode in incomming socket");
                 this->close_connection(cfd, this->_epoll_fd, ev);
                 return;
             }
@@ -294,8 +295,14 @@ void HTTP::read_socket(struct epoll_event &ev) {
 void HTTP::write_socket(struct epoll_event &ev) {
 
     int cfd = ev.data.fd;
-    Request &request = this->_active_connects[cfd]->request;
+    // Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
+
+    // if is an error code
+    if (response.get_status_code() == "500" && !response.get_requested_fd()) {
+        // set the requested_file_fd to the error page
+        // and update content-length in the header
+    }
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
@@ -311,7 +318,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    int file_fd = request.get_requested_fd();
+    int file_fd = response.get_requested_fd();
     if (!file_fd) {
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;

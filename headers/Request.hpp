@@ -18,7 +18,6 @@ class Request {
     std::string _url;
     std::string _body;
     std::string _host;
-    int _req_file_fd;
 
     Request(const Request &src);
     Request &operator=(const Request &rhs);
@@ -33,8 +32,6 @@ class Request {
     std::string getRaw() const;
     void setUrl(std::string url);
     void parse_request();
-    int get_requested_fd();
-    void set_req_file_fd(int ffd);
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);

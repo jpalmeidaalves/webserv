@@ -19,6 +19,8 @@ class Server {
     struct sockaddr_in _address;
     unsigned long _address_len;
     int _sockfd;
+    std::map<std::string, std::string> _error_pages;
+    std::map<std::string, std::string> _default_error_pages;
 
   public:
     Server(); // disable default constructer
@@ -33,7 +35,9 @@ class Server {
     std::vector<std::string> server_names;
     std::string root;
     std::string get_error_page(std::string error_code);
-    std::multimap<std::string, std::string> error_pages;
+    void update_error_page(std::string error_code, std::string path);
+    std::string get_default_error_page(std::string code);
+    // std::multimap<std::string, std::string> error_pages;
 };
 
 #endif /* SERVER_HPP */
