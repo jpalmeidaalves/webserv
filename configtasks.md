@@ -94,7 +94,7 @@ curl eg: `curl -X GET http://127.0.0.1:8000 -H "Host: third"`
 Notice that the page we'll get is the page from the first server because we have no host by that name.
 
 
-## [❌] Setup default error pages.
+## [✅❌] Setup default error pages.
 ```bash
 ...
 server {
@@ -173,17 +173,17 @@ Bound Addresses (vector)
 127.0.0.1:8001
 
 
-3) after epoll_wait
+3) after epoll_wait✅
 
 - sockfd (changed) (inside accept_and_add_to_poll)
 
     a) get details about ip and port from sockfd (getsockname); ✅
-    b) iterater over server and find server matching ip and port;
-    c) check if a server has a requested host;
-    d) if not use the first server;
+    b) iterater over server and find server matching ip and port; ✅
+    c) check if a server has a requested host; ✅
+    d) if not use the first server; ✅
 
 
-4) add server pointer
+4) add server pointer ✅
 Incomming Connections (new Connection())
 Request &
 Response &
