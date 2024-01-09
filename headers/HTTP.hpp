@@ -1,7 +1,6 @@
 #ifndef HTTP_HPP
 #define HTTP_HPP
 
-
 #include "MimeTypes.hpp"
 #include "Request.hpp"
 #include "Response.hpp"
@@ -66,6 +65,7 @@ class HTTP {
     int send_header(int &cfd, Response &response);
     void write_socket(struct epoll_event &ev);
     int set_to_write_mode(struct epoll_event &ev);
+    void redirect_to_server(Connection *conn);
 };
 
-#endif/* HTTP_HPP */
+#endif /* HTTP_HPP */

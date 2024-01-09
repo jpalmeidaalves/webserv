@@ -80,7 +80,7 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
             else if (*it == "server_name") {
                 ++it;
                 while (*it != ";") {
-                    s.server_names_vector.push_back(*it);
+                    s.server_names.push_back(*it);
                     ++it;
                 }
             } else if (*it == "listen") {
@@ -91,7 +91,7 @@ ParserConfFile::get_serv_data(std::vector<std::string>::iterator it, Server &s) 
                     s.sin_port = htons(ft_stoi(*it));
                     s.host = "127.0.0.1";
                     s.s_addr = htonl(convert_str_to_uint32("127.0.0.1"));
-                } else {            // has ':'
+                } else { // has ':'
                     s.host = (*it).substr(0, pos);
                     s.s_addr = htonl(convert_str_to_uint32(s.host));
                     s.port = (*it).substr(pos + 1);
@@ -153,9 +153,9 @@ void ParserConfFile::printMembers(void) const {
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "Host: " << ite->host << std::endl;
         std::cout << "Port: " << ite->port << std::endl;
-        // std::cout << "test first: " << ite->server_names_vector[0] << std::endl;
+        // std::cout << "test first: " << ite->server_names[0] << std::endl;
         std::cout << "Server name: " << std::endl;
-        printVector(ite->server_names_vector);
+        printVector(ite->server_names);
         std::cout << std::endl;
         std::cout << "Max body size: " << ite->client_max_body_size << std::endl;
         std::cout << "Root: " << ite->root << std::endl;

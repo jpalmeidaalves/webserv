@@ -140,3 +140,20 @@ bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets) {
     }
     return false;
 }
+// void print_nonprintables(std::string str) {
+//     for (char c : str) {
+//         if (!isprint(static_cast<unsigned char>(c))) {
+//             // Print the non-printable character as its ASCII code
+//             std::cout << static_cast<int>(c) << " ";
+//         }
+//     }
+//     std::cout << std::endl;
+// }
+void remove_char_from_string(std::string &str, char to_remove) {
+    for (std::string::iterator it = str.begin(); it != str.end(); ++it) {
+        if (*it == to_remove) {
+            str.erase(it);
+            --it;
+        }
+    }
+}

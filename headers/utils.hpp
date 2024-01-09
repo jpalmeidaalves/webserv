@@ -36,6 +36,7 @@ std::string ft_itos(int nb);
 uint32_t convert_str_to_uint32(const std::string &str);
 std::string convert_uint32_to_str(uint32_t nb);
 bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets);
+void remove_char_from_string(std::string &str, char to_remove);
 
 template <typename T>
 void printVector(std::vector<T> v) {

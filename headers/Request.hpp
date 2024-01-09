@@ -1,11 +1,11 @@
 #ifndef REQUEST_HPP
 #define REQUEST_HPP
 
+#include <dirent.h>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <sys/types.h>
-#include <dirent.h>
 
 // class HTTP;
 class Connection;
@@ -39,9 +39,8 @@ class Request {
     void process_requested_file(struct epoll_event &ev, Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
 
-
     void append_raw(std::string buf);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 
-#endif/* REQUEST_HPP */
+#endif /* REQUEST_HPP */

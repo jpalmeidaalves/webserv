@@ -36,6 +36,7 @@ void Request::parse_request() {
     // std::cout << line << std::endl;
     if (line.find("Host:") == 0) {
         this->_host = line.substr(line.find(" ") + 1);
+        remove_char_from_string(this->_host, '\r');
     }
 }
 
@@ -97,10 +98,7 @@ void Request::process_request(struct epoll_event &ev, Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    std::cout << "[Request Header]" << request.getRaw() << std::endl;
-
-    // TODO redirect to the correct server
-    // this->redirect_to_server();
+    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
     // TODO implement root folder based on server
     std::string root_folder = "./www";

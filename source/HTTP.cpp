@@ -192,6 +192,52 @@ int HTTP::set_to_write_mode(struct epoll_event &ev) {
     return 0;
 }
 
+void HTTP::redirect_to_server(Connection *conn) {
+    std::cout << "redirect to server" << std::endl;
+
+    std::cout << "host " << conn->host << std::endl;
+    std::cout << "port " << conn->port << std::endl;
+
+    std::cout << "host from header " << conn->request.getHost() << std::endl;
+
+    // char *tmp = (char *)(conn->request.getHost().c_str());
+    // while (*tmp) {
+    //     std::cout << (int)*tmp << std::endl;
+    //     tmp++;
+    // }
+    // std::cout << "end" << std::endl;
+
+    Server *default_server = NULL;
+
+    std::vector<Server>::iterator ite;
+    for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
+        if (ite->host == conn->host && ite->port == conn->port) {
+            // if is the first match and default server is not defined, define it now
+            if (!default_server) {
+                default_server = &(*ite);
+                // std::cout << "default server updated " << std::endl;
+                // printVector(default_server->server_names);
+            }
+            std::cout << std::endl;
+            std::vector<std::string>::iterator it;
+            for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
+                if (*it == conn->request.getHost()) {
+                    // found the correct server name (host from header)
+                    conn->server = &(*ite);
+                    return;
+                }
+            }
+        }
+    }
+
+    // no server name (host from header) found, use the default server
+    conn->server = default_server;
+
+    if (!conn->server) {
+        print_error("FAILED TO REDIRECT TO SERVER");
+    }
+}
+
 // when a readable event is detected on a socket
 void HTTP::read_socket(struct epoll_event &ev) {
 
@@ -220,6 +266,11 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
     if (std::string(buf).find("\r\n") != std::string::npos) {
         request.parse_request(); // extract header info
+
+        this->redirect_to_server(this->_active_connects[cfd]);
+
+        std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
+                  << std::endl;
 
         if (request.getMethod() == "GET") {
             if (set_to_write_mode(ev) == -1) {

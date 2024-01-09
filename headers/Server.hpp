@@ -29,7 +29,7 @@ class Server {
     std::string port;
     uint32_t s_addr;
     uint16_t sin_port;
-    std::vector<std::string> server_names_vector;
+    std::vector<std::string> server_names;
     std::string root;
 };
 
