@@ -13,7 +13,8 @@ class Response;
 
 class Request {
   private:
-    std::string _raw;
+    std::stringstream _raw;
+    std::size_t _rawsize;
     std::string _method;
     std::string _url;
     std::string _body;
@@ -33,7 +34,7 @@ class Request {
     std::string getBody() const;
     std::string getHost() const;
     std::string getRaw() const;
-    bool is_parsed();
+    bool not_parsed();
     void setUrl(std::string url);
     void parse_request();
     void process_request(Connection *conn);
@@ -47,7 +48,7 @@ class Request {
     std::string get_content_body() const;
     std::size_t get_content_length() const;
 
-    void append_raw(std::string buf);
+    void append_raw(const char *buf, size_t len);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 

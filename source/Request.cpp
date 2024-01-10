@@ -5,7 +5,7 @@
 #include "../headers/Response.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0) {}
+Request::Request() : _rawsize(0), _content_length(0) {}
 
 Request::~Request() {}
 
@@ -23,7 +23,7 @@ Request::Request(const Request &src) { *this = src; }
 void Request::parse_request() {
     // std::cout << "data: " << data << std::endl;
     // parse request
-    std::stringstream ss(this->_raw);
+    std::stringstream ss(this->_raw.str());
     std::string line;
 
     // process first line
@@ -60,10 +60,10 @@ std::string Request::getMethod() const { return (this->_method); }
 std::string Request::getUrl() const { return (this->_url); }
 std::string Request::getBody() const { return (this->_body); }
 std::string Request::getHost() const { return (this->_host); }
-std::string Request::getRaw() const { return (this->_raw); }
+std::string Request::getRaw() const { return (this->_raw.str()); }
 
-bool Request::is_parsed() {
-    if (this->_method != "")
+bool Request::not_parsed() {
+    if (this->_method == "")
         return true;
     return false;
 }
@@ -74,7 +74,10 @@ std::size_t Request::get_content_length() const { return (this->_content_length)
 void Request::set_content_type(const std::string type) { this->_content_type = type; }
 void Request::set_content_length(std::size_t length) { this->_content_length = length; }
 
-void Request::append_raw(std::string buf) { this->_raw += buf; }
+void Request::append_raw(const char *buf, size_t len) {
+    this->_raw.write(buf, len);
+    this->_rawsize += len;
+}
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
     out << "Method => " << obj.getMethod() << std::endl;

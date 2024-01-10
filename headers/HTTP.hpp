@@ -7,6 +7,7 @@
 #include "Server.hpp"
 #include "StatusCode.hpp"
 #include "colors.hpp"
+#include <bitset>
 #include <cerrno>
 #include <cstring>
 #include <ctime>
@@ -26,7 +27,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 8000
+#define BUFFERSIZE 80000
 #define BACKLOG 200 // how many pending connections queue will hold
 
 struct Connection;
