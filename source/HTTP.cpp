@@ -265,6 +265,10 @@ void HTTP::read_socket(struct epoll_event &ev) {
     request.append_raw(buf);
 
     if (std::string(buf).find("\r\n") != std::string::npos) {
+
+        std::cout << "[Request Raw]" << std::endl;
+        std::cout << request.getRaw() << std::endl;
+
         request.parse_request(); // extract header info
 
         this->redirect_to_server(this->_active_connects[cfd]);
@@ -297,12 +301,6 @@ void HTTP::write_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     // Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
-
-    // if is an error code
-    if (response.get_status_code() == "500" && !response.get_requested_fd()) {
-        // set the requested_file_fd to the error page
-        // and update content-length in the header
-    }
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
