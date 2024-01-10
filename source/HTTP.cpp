@@ -273,8 +273,8 @@ void HTTP::read_socket(struct epoll_event &ev) {
         // std::cout << "***************" << std::endl;
 
         // print_ascii(request.getRaw().c_str());
-        std::cout << "[Request Raw]" << std::endl;
-        std::cout << request.getRaw() << std::endl;
+        // std::cout << "[Request Raw]" << std::endl;
+        // std::cout << request.getRaw() << std::endl;
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
@@ -285,7 +285,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
         }
 
         if (request.get_content_length() && request.getMethod() == "POST") {
-            std::cout << RED << "inside post test " << RESET << std::endl;
+            // std::cout << RED << "inside post test " << RESET << std::endl;
             // needs to continue to read body until max body size
             // std::cout << "request length: " << request.get_content_length() << std::endl;
             // end_header_pos ate ao fim == request.get_content_length()
@@ -298,8 +298,8 @@ void HTTP::read_socket(struct epoll_event &ev) {
             }
         }
 
-        std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
-                  << std::endl;
+        // std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
+        //           << std::endl;
 
         if (set_to_write_mode(ev) == -1) {
             print_error("failed to set write mode in incomming socket");
@@ -308,14 +308,16 @@ void HTTP::read_socket(struct epoll_event &ev) {
         }
 
         if (request.getMethod() == "GET") {
-            std::cout << "processing GET request" << std::endl;
+            // std::cout << "processing GET request" << std::endl;
             request.process_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
+            // std::cout << "processing POST request" << std::endl;
             request.process_post_request(this->_active_connects[cfd]);
-            std::cout << "processing POST request" << std::endl;
         } else if (request.getMethod() == "DELETE") {
             // TODO delete
-            std::cout << "processing DELETE request" << std::endl;
+            // std::cout << "processing DELETE request" << std::endl;
+        } else {
+            // TODO handle unknow http method
         }
     }
 }

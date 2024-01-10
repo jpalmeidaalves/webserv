@@ -46,6 +46,8 @@ void Response::set_status_code(std::string code, Server *server) {
     // update status code
     this->_status = code;
 
+    // TODO check if is a error code
+
     // check if has custom error page
     if (server->get_error_page(code) != "") {
         this->set_error_page_fd(server->root + server->get_error_page(code));

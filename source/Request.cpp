@@ -164,6 +164,89 @@ void Request::process_request(Connection *conn) {
     }
 }
 
+std::string Request::getline_from_body(std::size_t &bytes_read) {
+    std::stringstream line;
+
+    // stop reading when reach the end of content length
+    while (bytes_read < this->get_content_length()) {
+        char buf[1];
+        this->_raw.read(buf, 1);
+        // TODO if read failed do something
+        bytes_read++;
+        line << buf;
+        if (line.str().find("\r\n") != std::string::npos)
+            break;
+    }
+
+    return line.str();
+}
+
+void Request::upload_files() {
+    std::cout << RED << "WORK TO BE DONE" << RESET << std::endl;
+
+    //  content_type = "multipart/form-data;
+    //  boundary=--------------------------314581073725974381613932"
+
+    std::size_t boundary_pos = this->get_content_type().find("boundary=");
+    std::string boundary = "--" + this->get_content_type().substr(boundary_pos + 9);
+
+    std::cout << "Boundary is: " << boundary << std::endl;
+
+    std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+
+    std::size_t bytes_read = 0;
+
+    // TODO stop reading until reaching this->get_content_length() for binary reading
+
+    // advance the position of the body
+    this->_raw.seekg(body_pos);
+
+    std::cout << "********1 " << getline_from_body(bytes_read) << std::endl;
+    std::cout << "********2 " << getline_from_body(bytes_read) << std::endl;
+    std::cout << "********3 " << getline_from_body(bytes_read) << std::endl;
+    std::cout << "********4 " << getline_from_body(bytes_read) << std::endl;
+    std::cout << "********5 " << getline_from_body(bytes_read) << std::endl;
+
+    // std::string line;
+    // getline(this->_raw, line);
+    // std::cout << "********2 " << std::string(buf) << std::endl;
+    // std::string x;
+    // ss >> x
+
+    // std::stringstream ss{line};
+    // std::string z; // switch later to char
+    // ss >> z;
+    // if (ss.good()) {
+    //     std::cout << "Stream good\n";
+    // } else {
+    //     std::cout << "Not good\n";
+    // }
+
+    //     while (!ss.eof()) {
+    //     if (ss.peek() != '.') {
+    //         ss >> number;
+    //         if (ss.tellg() == -1) {
+    //             std::cout << "Last one: " << number;
+    //         } else {
+    //             std::cout << number;
+    //         }
+    //     } else { ss.get(); }
+    // }
+
+    // skip the header
+
+    // while (this->_raw.read(buf, header_size) != at) {
+    //     /* code */
+    // }
+
+    // std::cout << "[Request Raw]" << std::endl;
+    // std::cout << this->getRaw() << std::endl;
+
+    // response.set_status_code("200", conn->server);
+
+    std::cout << GREEN << "WORK DONE" << RESET << std::endl;
+}
+
 void Request::process_post_request(Connection *conn) {
     // int cfd = ev.data.fd;
     Request &request = conn->request;
@@ -185,14 +268,21 @@ void Request::process_post_request(Connection *conn) {
     } else if (curr_type == TYPE_DIR) {
         std::cout << "------- dir --------" << std::endl;
 
+        // if not multipart form data stop here
+        if (request.get_content_type().find("multipart/form-data") != 0) {
+            response.set_status_code("404", conn->server);
+            return;
+        }
+
         // write permissions for Others
         bool has_write_permision = has_permissions(full_path.c_str(), S_IWOTH);
+
+        // std::cout << "has_perm: " << has_write_permision << std::endl;
 
         if (!has_write_permision) {
             response.set_status_code("403", conn->server);
         } else {
-            // TODO write files
-            response.set_status_code("200", conn->server);
+            this->upload_files();
         }
     }
 }

@@ -48,6 +48,8 @@ class Request {
     std::string get_content_type() const;
     std::string get_content_body() const;
     std::size_t get_content_length() const;
+    void upload_files();
+    std::string getline_from_body(std::size_t &bytes_read);
 
     void append_raw(const char *buf, size_t len);
 };
