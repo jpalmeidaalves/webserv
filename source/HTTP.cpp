@@ -301,17 +301,17 @@ void HTTP::read_socket(struct epoll_event &ev) {
         std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
                   << std::endl;
 
-        if (request.getMethod() == "GET") {
-            if (set_to_write_mode(ev) == -1) {
-                print_error("failed to set write mode in incomming socket");
-                this->close_connection(cfd, this->_epoll_fd, ev);
-                return;
-            }
+        if (set_to_write_mode(ev) == -1) {
+            print_error("failed to set write mode in incomming socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
+            return;
+        }
 
+        if (request.getMethod() == "GET") {
             std::cout << "processing GET request" << std::endl;
             request.process_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
-            // TODO post => getbody()
+            request.process_post_request(this->_active_connects[cfd]);
             std::cout << "processing POST request" << std::endl;
         } else if (request.getMethod() == "DELETE") {
             // TODO delete

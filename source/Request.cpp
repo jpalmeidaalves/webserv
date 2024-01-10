@@ -125,7 +125,6 @@ void Request::process_request(Connection *conn) {
 
     // std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
-    // TODO implement root folder based on server
     std::string full_path = conn->server->root + request.getUrl();
 
     // check if is a file or dir
@@ -161,6 +160,39 @@ void Request::process_request(Connection *conn) {
                 response.isdir = true;
                 this->list_directory(full_path, conn);
             }
+        }
+    }
+}
+
+void Request::process_post_request(Connection *conn) {
+    // int cfd = ev.data.fd;
+    Request &request = conn->request;
+    Response &response = conn->response;
+
+    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
+
+    std::string full_path = conn->server->root + request.getUrl();
+
+    // check if is a file or dir
+    file_types curr_type = get_file_type(full_path.c_str());
+
+    if (curr_type == TYPE_UNKOWN) {
+        print_error("failed to check if is a dir");
+        response.set_status_code("404", conn->server);
+    } else if (curr_type == TYPE_FILE) {
+        std::cout << "------- file -------- must handle TODO" << std::endl;
+        // TODO check if the file is a suported script file (php, python?)
+    } else if (curr_type == TYPE_DIR) {
+        std::cout << "------- dir --------" << std::endl;
+
+        // write permissions for Others
+        bool has_write_permision = has_permissions(full_path.c_str(), S_IWOTH);
+
+        if (!has_write_permision) {
+            response.set_status_code("403", conn->server);
+        } else {
+            // TODO write files
+            response.set_status_code("200", conn->server);
         }
     }
 }

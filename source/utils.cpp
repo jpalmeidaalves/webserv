@@ -71,6 +71,19 @@ int get_stat_info(std::string full_path, Response &response) {
     return 0;
 }
 
+bool has_permissions(std::string full_path, mode_t permissions) {
+    struct stat struc_st;
+
+    ft_memset(&struc_st, 0, sizeof(struc_st));
+    if (stat(full_path.c_str(), &struc_st) == -1) {
+        print_error("failed to get file information");
+        return false;
+    }
+
+    // return true if has the specified permissions
+    return (struc_st.st_mode & permissions);
+}
+
 std::string convert_uint32_to_str(uint32_t nb) {
     std::stringstream ss;
     ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.'

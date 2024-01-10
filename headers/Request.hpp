@@ -40,6 +40,7 @@ class Request {
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
+    void process_post_request(Connection *conn);
 
     void set_content_type(const std::string type);
     void set_content_body(const std::string type);
