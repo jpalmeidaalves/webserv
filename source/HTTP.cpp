@@ -264,14 +264,36 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
     request.append_raw(buf);
 
-    if (std::string(buf).find("\r\n") != std::string::npos) {
+    std::size_t end_header_pos = std::string(request.getRaw()).find("\r\n\r\n");
 
+    if (end_header_pos != std::string::npos) {
+
+        // std::cout << "***************" << std::endl;
         std::cout << "[Request Raw]" << std::endl;
-        std::cout << request.getRaw() << std::endl;
+        // print_ascii(request.getRaw().c_str());
 
-        request.parse_request(); // extract header info
+        // std::cout << "***************" << std::endl;
+        // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
 
-        this->redirect_to_server(this->_active_connects[cfd]);
+        if (!request.is_parsed()) {
+            request.parse_request(); // extract header info
+            this->redirect_to_server(this->_active_connects[cfd]);
+        }
+
+        if (request.get_content_length()) {
+            // needs to continue to read body until max body size
+            std::cout << "request length: " << request.get_content_length() << std::endl;
+            // end_header_pos ate ao fim == request.get_content_length()
+            std::string test = request.getRaw().substr(end_header_pos + 4);
+            std::cout << "body is: " << test << std::endl;
+
+            if (test.size() == request.get_content_length()) {
+                std::cout << "done reading" << std::endl;
+            } else {
+                std::cout << "NOT done reading" << std::endl;
+                return;
+            }
+        }
 
         std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
                   << std::endl;

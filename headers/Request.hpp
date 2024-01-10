@@ -18,6 +18,9 @@ class Request {
     std::string _url;
     std::string _body;
     std::string _host;
+    std::size_t _content_length;
+    std::string _content_type;
+    std::string _content_body;
 
     Request(const Request &src);
     Request &operator=(const Request &rhs);
@@ -30,11 +33,19 @@ class Request {
     std::string getBody() const;
     std::string getHost() const;
     std::string getRaw() const;
+    bool is_parsed();
     void setUrl(std::string url);
     void parse_request();
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
+
+    void set_content_type(const std::string type);
+    void set_content_body(const std::string type);
+    void set_content_length(std::size_t length);
+    std::string get_content_type() const;
+    std::string get_content_body() const;
+    std::size_t get_content_length() const;
 
     void append_raw(std::string buf);
 };

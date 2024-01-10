@@ -153,3 +153,11 @@ void remove_char_from_string(std::string &str, char to_remove) {
         }
     }
 }
+
+void print_ascii(const char *str) {
+    int i = 0;
+    while (str[i]) {
+        std::cout << str[i] << " - " << (int)str[i] << std::endl;
+        i++;
+    }
+}

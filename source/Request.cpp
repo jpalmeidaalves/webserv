@@ -5,7 +5,7 @@
 #include "../headers/Response.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() {}
+Request::Request() : _content_length(0) {}
 
 Request::~Request() {}
 
@@ -31,13 +31,29 @@ void Request::parse_request() {
     getline(ss, this->_url, ' ');
     getline(ss, line); // ignore the rest of the line
 
-    // get host
-    getline(ss, line);
-    // std::cout << line << std::endl;
-    if (line.find("Host:") == 0) {
-        this->_host = line.substr(line.find(" ") + 1);
-        remove_char_from_string(this->_host, '\r');
+    // std::cout << "---------- parsing header -----------" << std::endl;
+
+    while (getline(ss, line)) {
+
+        // has reach the end of the header
+        if (line == "\r")
+            break;
+
+        // std::cout << line << std::endl;
+        // print_ascii(line.c_str());
+
+        if (line.find("Host:") == 0) {
+            remove_char_from_string(line, '\r');
+            this->_host = line.substr(line.find(" ") + 1);
+        } else if (line.find("Content-Length:") == 0) {
+            remove_char_from_string(line, '\r');
+            this->_content_length = ft_stoi(line.substr(line.find(" ") + 1));
+        } else if (line.find("Content-Type: ") == 0) {
+            remove_char_from_string(line, '\r');
+            this->_content_type = line.substr(line.find(" ") + 1);
+        }
     }
+    // std::cout << "---------- end parsing header -----------" << std::endl;
 }
 
 std::string Request::getMethod() const { return (this->_method); }
@@ -45,6 +61,18 @@ std::string Request::getUrl() const { return (this->_url); }
 std::string Request::getBody() const { return (this->_body); }
 std::string Request::getHost() const { return (this->_host); }
 std::string Request::getRaw() const { return (this->_raw); }
+
+bool Request::is_parsed() {
+    if (this->_method != "")
+        return true;
+    return false;
+}
+
+std::string Request::get_content_type() const { return (this->_content_type); }
+std::size_t Request::get_content_length() const { return (this->_content_length); }
+
+void Request::set_content_type(const std::string type) { this->_content_type = type; }
+void Request::set_content_length(std::size_t length) { this->_content_length = length; }
 
 void Request::append_raw(std::string buf) { this->_raw += buf; }
 
