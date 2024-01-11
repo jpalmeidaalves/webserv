@@ -14,7 +14,7 @@ HTTP::HTTP() {}
 
 HTTP::HTTP(std::vector<Server> &servers) : _epoll_fd(0), _servers(servers) {
     signal(SIGINT, sighandler);
-    signal(SIGQUIT, sighandler);
+    // signal(SIGQUIT, sighandler);
 }
 
 HTTP::~HTTP() {}
