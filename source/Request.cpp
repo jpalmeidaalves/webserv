@@ -165,246 +165,6 @@ void Request::process_request(Connection *conn) {
     }
 }
 
-std::string Request::getline_from_body(std::size_t &bytes_read) {
-    std::stringstream line;
-
-    // stop reading when reach the end of content length
-    while (bytes_read < this->get_content_length()) {
-        char buf[1];
-        this->_raw.read(buf, 1);
-        if (this->_raw.fail()) {
-            print_error("Failed to extract line from request body");
-            this->_raw.clear();
-            return line.str();
-        }
-        bytes_read++;
-        line << buf;
-        if (line.str().find("\r\n") != std::string::npos)
-            break;
-    }
-
-    // std::string tmp = line.str();
-    // tmp.erase(tmp.size() - 2); // remove \r\n from string
-
-    return line.str();
-}
-
-std::string Request::extract_filename_from_body(size_t &bytes_read) {
-
-    std::string filename;
-    while (1) {
-        std::string line = getline_from_body(bytes_read);
-        if (line == "\r\n" || line == "")
-            break;
-
-        if (line.find("Content-Disposition:") == 0) {
-            std::string key = "filename=\"";
-            std::size_t pos;
-            pos = line.find(key);
-            if (pos != std::string::npos) {
-                filename = line.substr(pos + key.size());
-                // std::cout << "####filename: " << filename << std::endl;
-                filename = filename.erase(filename.size() - 3); // remove \"\n\r
-                // std::cout << "####final filename: " << filename << std::endl;
-            }
-        }
-
-        // !warning must read all lines until \r\n
-    }
-    return (filename);
-}
-
-std::string Request::upload_single_file(size_t &bytes_read, std::string boundary, Server *server) {
-
-    std::string filename = extract_filename_from_body(bytes_read);
-    if (filename == "") {
-        std::cout << "&&&&1" << std::endl;
-        return "400";
-    }
-
-    std::string upload_folder = server->root + this->getUrl();
-    if (upload_folder.at(upload_folder.size() - 1) != '/')
-        upload_folder += '/';
-    std::string file_path = upload_folder + filename;
-
-    std::cout << "&&&&2" << std::endl;
-
-    std::stringstream ss;
-    // bytes_read = 0;
-    while (bytes_read < this->get_content_length()) { // loop getting single characters
-
-        char buf[1];
-        this->_raw.read(buf, 1);
-        if (this->_raw.fail()) {
-            print_error("Failed to extract line from request body");
-            this->_raw.clear();
-            break;
-        }
-
-        bytes_read++;
-        // std::cout << "bytes_read: " << bytes_read << "/" << this->get_content_length() <<
-        // std::endl;
-
-        ss.write(buf, 1);
-        if (ss.fail()) {
-            std::cout << "failed to write" << std::endl;
-            break;
-        }
-
-        // "----------------------------776653983427372066393762"
-
-        // "isto e o conteudo------------------7766"
-        if (boundary.find(buf[0]) != std::string::npos) {
-            if (ss.str().find(boundary) != std::string::npos) {
-                std::cout << CYAN << "break!" << RESET << std::endl;
-                break;
-            }
-        }
-    }
-
-    std::cout << "&&&&4" << std::endl;
-
-    // std::cout << "+++++++++++++++++++++++++++" << std::endl;
-    // std::cout << "data from first file1: " << std::endl;
-    // std::cout << ss.str() << std::endl;
-    // std::cout << "+++++++++++++++++++++++++++" << std::endl;
-
-    std::size_t total_bytes = bytes_read - boundary.size();
-    std::ofstream ofs(file_path.c_str(), std::ios::binary);
-
-    std::cout << "&&&&5" << std::endl;
-
-    if (ofs.fail()) {
-        std::cout << RED << "FAILED AT 500" << RESET << std::endl;
-        return "500";
-    }
-
-    while (total_bytes) { // loop getting single characters
-        // std::cout << "&&&&6" << std::endl;
-        char buf[1];
-        ss.read(buf, 1);
-        if (ss.fail()) {
-            print_error("Failed to extract line from request body WHAT THE HELL");
-            ss.clear();
-            break;
-        }
-
-        total_bytes--;
-        ofs.write(buf, 1); // binary output
-    }
-    ofs.close();
-    std::cout << "&&&&7" << std::endl;
-    return "201";
-}
-
-std::string Request::upload_files(Server *server) {
-    std::cout << RED << "WORK TO BE DONE" << RESET << std::endl;
-
-    //  content_type = "multipart/form-data;
-    //  boundary=--------------------------314581073725974381613932"
-
-    std::size_t boundary_pos = this->get_content_type().find("boundary=");
-    std::string boundary = "--" + this->get_content_type().substr(boundary_pos + 9);
-
-    std::cout << "Boundary is: " << boundary << std::endl;
-
-    std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
-
-    std::cout << "body_pos " << body_pos << std::endl;
-
-    std::string status_code;
-    std::size_t bytes_read = 0;
-
-    // advance the position of the body
-    this->_raw.seekg(body_pos);
-
-    std::cout << YELLOW << "@@@@@@@@@@@@@@@@" << std::endl;
-
-    // first line must be a boundary line
-    std::string first_line = getline_from_body(bytes_read);
-
-    std::cout << YELLOW << "first line: " << first_line << RESET << std::endl;
-    std::cout << YELLOW << "content length: " << this->get_content_length() << RESET << std::endl;
-
-    print_ascii(first_line.c_str());
-
-    if (first_line != boundary + "\r\n")
-        return "400"; // bad request
-
-    // TODO stop reading until reaching this->get_content_length() for binary reading
-    while (bytes_read < this->get_content_length()) {
-        std::cout << RED << "bytes_read: " << bytes_read << "/" << this->get_content_length()
-                  << RESET << std::endl;
-        status_code = this->upload_single_file(bytes_read, boundary, server);
-        // read 2 bytes and check if are "\r\n" or "--"
-        char buf[2];
-        this->_raw.read(buf, 2);
-        if (this->_raw.fail()) {
-            print_error("error checking 2 character after boundary");
-            break;
-        }
-        bytes_read += 2;
-
-        if (buf[0] == '-' && buf[1] == '-') {
-            std::cout << GREEN << "done uploading files" << RESET << std::endl;
-            break;
-        }
-    }
-
-    std::cout << RED << "at the END bytes_read: " << bytes_read << "/" << this->get_content_length()
-              << RESET << std::endl;
-
-    // std::cout << "[Request Raw]" << std::endl;
-    // std::cout << this->getRaw() << std::endl;
-
-    // response.set_status_code("200", conn->server);
-
-    std::cout << GREEN << "WORK DONE" << RESET << std::endl;
-
-    return status_code;
-}
-
-void Request::process_post_request(Connection *conn) {
-    // int cfd = ev.data.fd;
-    Request &request = conn->request;
-    Response &response = conn->response;
-
-    std::cout << "[Request Header]" << request.getRaw() << std::endl;
-
-    std::string full_path = conn->server->root + request.getUrl();
-
-    // check if is a file or dir
-    file_types curr_type = get_file_type(full_path.c_str());
-
-    if (curr_type == TYPE_UNKOWN) {
-        print_error("failed to check if is a dir");
-        response.set_status_code("404", conn->server);
-    } else if (curr_type == TYPE_FILE) {
-        std::cout << "------- file -------- must handle TODO" << std::endl;
-        // TODO check if the file is a suported script file (php, python?)
-    } else if (curr_type == TYPE_DIR) {
-        std::cout << "------- dir --------" << std::endl;
-
-        // if not multipart form data stop here
-        if (request.get_content_type().find("multipart/form-data") != 0) {
-            response.set_status_code("404", conn->server);
-            return;
-        }
-
-        // write permissions for Others
-        bool has_write_permision = has_permissions(full_path.c_str(), S_IWOTH);
-
-        // std::cout << "has_perm: " << has_write_permision << std::endl;
-
-        if (!has_write_permision) {
-            response.set_status_code("403", conn->server);
-        } else {
-            std::string status = this->upload_files(conn->server);
-            response.set_status_code(status, conn->server);
-        }
-    }
-}
-
 int Request::list_directory(std::string full_path, Connection *conn) {
     std::map<std::string, struct dir_entry> dir_entries;
     // find items inside folder
@@ -525,3 +285,308 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
+
+void Request::process_post_request(Connection *conn, char **envp) {
+    std::cout << "processing POST request" << std::endl;
+
+    if (has_suffix(this->getUrl(), ".php")) {
+        // TODO handle CGI
+        print_error("TODO MUST HANDLE CGI");
+
+        int pipefd[2];
+        pipe(pipefd);
+
+        pid_t pid = fork();
+
+        if (pid == 0) {       // child 1
+            close(pipefd[0]); // close reading end in the child
+
+            dup2(pipefd[1], 1); // send stdout to the pipe
+            dup2(pipefd[1], 2); // send stderr to the pipe
+
+            close(pipefd[1]); // this descriptor is no longer needed
+
+            std::string file_path = conn->server->root + this->getUrl();
+
+            // std::cout << "inside child process" << std::endl;
+
+            // (char *const *)this->_raw.rdbuf()
+            // (char *const *)file_path.c_str()
+            // const char *s = "/usr/bin/php-cgi";
+
+            char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
+            // const char *cmd[3];
+            // ft_memset(&cmd, 0, sizeof(cmd));
+            // cmd[0] = "/bin/ls";
+            // cmd[1] = "-la";
+
+            if (execve(cmd[0], cmd, envp) == -1)
+                perror("execvp ls failed");
+        } else if (pid > 0) { // parent
+            close(pipefd[1]); // close the write end of the pipe in the parent
+
+            std::cout << "result:" << std::endl;
+
+            // dup2(pipefd[0], 0); // set stdin the pipe
+
+            char buffer[1024];
+            ft_memset(&buffer, 0, 1024);
+
+            while (read(pipefd[0], buffer, 1023) != 0) {
+                std::cout << buffer << std::endl;
+            }
+
+            close(pipefd[0]);
+            waitpid(pid, NULL, 0);
+        }
+
+        std::cout << " done cgi " << std::endl;
+
+    } else {
+        conn->response.set_status_code("404", conn->server);
+    }
+}
+
+// std::string Request::getline_from_body(std::size_t &bytes_read) {
+//     std::stringstream line;
+
+//     // stop reading when reach the end of content length
+//     while (bytes_read < this->get_content_length()) {
+//         char buf[1];
+//         this->_raw.read(buf, 1);
+//         if (this->_raw.fail()) {
+//             print_error("Failed to extract line from request body");
+//             this->_raw.clear();
+//             return line.str();
+//         }
+//         bytes_read++;
+//         line << buf;
+//         if (line.str().find("\r\n") != std::string::npos)
+//             break;
+//     }
+
+//     // std::string tmp = line.str();
+//     // tmp.erase(tmp.size() - 2); // remove \r\n from string
+
+//     return line.str();
+// }
+
+// std::string Request::extract_filename_from_body(size_t &bytes_read) {
+
+//     std::string filename;
+//     while (1) {
+//         std::string line = getline_from_body(bytes_read);
+//         if (line == "\r\n" || line == "")
+//             break;
+
+//         if (line.find("Content-Disposition:") == 0) {
+//             std::string key = "filename=\"";
+//             std::size_t pos;
+//             pos = line.find(key);
+//             if (pos != std::string::npos) {
+//                 filename = line.substr(pos + key.size());
+//                 // std::cout << "####filename: " << filename << std::endl;
+//                 filename = filename.erase(filename.size() - 3); // remove \"\n\r
+//                 // std::cout << "####final filename: " << filename << std::endl;
+//             }
+//         }
+
+//         // !warning must read all lines until \r\n
+//     }
+//     return (filename);
+// }
+
+// std::string Request::upload_single_file(size_t &bytes_read, std::string boundary, Server *server)
+// {
+
+//     std::string filename = extract_filename_from_body(bytes_read);
+//     if (filename == "") {
+//         std::cout << "&&&&1" << std::endl;
+//         return "400";
+//     }
+
+//     std::string upload_folder = server->root + this->getUrl();
+//     if (upload_folder.at(upload_folder.size() - 1) != '/')
+//         upload_folder += '/';
+//     std::string file_path = upload_folder + filename;
+
+//     std::cout << "&&&&2" << std::endl;
+
+//     std::stringstream ss;
+//     // bytes_read = 0;
+
+//     // TODO improve this code
+//     while (bytes_read < this->get_content_length()) { // loop getting single characters
+
+//         char buf[186942];
+//         this->_raw.read(buf, 186942);
+//         if (this->_raw.fail()) {
+//             print_error("Failed to extract line from request body");
+//             this->_raw.clear();
+//             break;
+//         }
+
+//         bytes_read++;
+//         // std::cout << "bytes_read: " << bytes_read << "/" << this->get_content_length() <<
+//         // std::endl;
+
+//         ss.write(buf, 186942);
+//         if (ss.fail()) {
+//             std::cout << "failed to write" << std::endl;
+//             break;
+//         }
+
+//         // "----------------------------776653983427372066393762"
+
+//         // "isto e o conteudo------------------7766"
+//         // if (boundary.find(buf[0]) != std::string::npos) {
+//         //     if (ss.str().find(boundary) != std::string::npos) {
+//         //         std::cout << CYAN << "break!" << RESET << std::endl;
+//         //         break;
+//         //     }
+//         // }
+//         getline_from_body(bytes_read); // advance boundary line
+//     }
+
+//     // std::cout << "+++++++++++++++++++++++++++" << std::endl;
+//     // std::cout << "data from first file1: " << std::endl;
+//     // std::cout << ss.str() << std::endl;
+//     // std::cout << "+++++++++++++++++++++++++++" << std::endl;
+
+//     std::size_t total_bytes = bytes_read - boundary.size();
+//     std::ofstream ofs(file_path.c_str(), std::ios::binary);
+
+//     std::cout << "&&&&5" << std::endl;
+
+//     if (ofs.fail()) {
+//         std::cout << RED << "FAILED AT 500" << RESET << std::endl;
+//         return "500";
+//     }
+
+//     while (total_bytes) { // loop getting single characters
+//         // std::cout << "&&&&6" << std::endl;
+//         char buf[1];
+//         ss.read(buf, 1);
+//         if (ss.fail()) {
+//             print_error("Failed to extract line from request body WHAT THE HELL");
+//             ss.clear();
+//             break;
+//         }
+
+//         total_bytes--;
+//         ofs.write(buf, 1); // binary output
+//     }
+//     ofs.close();
+//     std::cout << "&&&&7" << std::endl;
+//     return "201";
+// }
+
+// std::string Request::upload_files(Server *server) {
+//     std::cout << RED << "WORK TO BE DONE" << RESET << std::endl;
+
+//     //  content_type = "multipart/form-data;
+//     //  boundary=--------------------------314581073725974381613932"
+
+//     std::size_t boundary_pos = this->get_content_type().find("boundary=");
+//     std::string boundary = "--" + this->get_content_type().substr(boundary_pos + 9);
+
+//     std::cout << "Boundary is: " << boundary << std::endl;
+
+//     std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+
+//     std::cout << "body_pos " << body_pos << std::endl;
+
+//     std::string status_code;
+//     std::size_t bytes_read = 0;
+
+//     // advance the position of the body
+//     this->_raw.seekg(body_pos);
+
+//     std::cout << YELLOW << "@@@@@@@@@@@@@@@@" << std::endl;
+
+//     // first line must be a boundary line
+//     std::string first_line = getline_from_body(bytes_read);
+
+//     std::cout << YELLOW << "first line: " << first_line << RESET << std::endl;
+//     std::cout << YELLOW << "content length: " << this->get_content_length() << RESET <<
+//     std::endl;
+
+//     print_ascii(first_line.c_str());
+
+//     if (first_line != boundary + "\r\n")
+//         return "400"; // bad request
+
+//     // TODO stop reading until reaching this->get_content_length() for binary reading
+//     while (bytes_read < this->get_content_length()) {
+//         std::cout << RED << "bytes_read: " << bytes_read << "/" << this->get_content_length()
+//                   << RESET << std::endl;
+//         status_code = this->upload_single_file(bytes_read, boundary, server);
+//         // read 2 bytes and check if are "\r\n" or "--"
+//         char buf[2];
+//         this->_raw.read(buf, 2);
+//         if (this->_raw.fail()) {
+//             print_error("error checking 2 character after boundary");
+//             break;
+//         }
+//         bytes_read += 2;
+
+//         if (buf[0] == '-' && buf[1] == '-') {
+//             std::cout << GREEN << "done uploading files" << RESET << std::endl;
+//             break;
+//         }
+//     }
+
+//     std::cout << RED << "at the END bytes_read: " << bytes_read << "/" <<
+//     this->get_content_length()
+//               << RESET << std::endl;
+
+//     // std::cout << "[Request Raw]" << std::endl;
+//     // std::cout << this->getRaw() << std::endl;
+
+//     // response.set_status_code("200", conn->server);
+
+//     std::cout << GREEN << "WORK DONE" << RESET << std::endl;
+
+//     return status_code;
+// }
+
+// void Request::process_post_request(Connection *conn) {
+//     // int cfd = ev.data.fd;
+//     Request &request = conn->request;
+//     Response &response = conn->response;
+
+//     std::cout << "[Request Header]" << request.getRaw() << std::endl;
+
+//     std::string full_path = conn->server->root + request.getUrl();
+
+//     // check if is a file or dir
+//     file_types curr_type = get_file_type(full_path.c_str());
+
+//     if (curr_type == TYPE_UNKOWN) {
+//         print_error("failed to check if is a dir");
+//         response.set_status_code("404", conn->server);
+//     } else if (curr_type == TYPE_FILE) {
+//         std::cout << "------- file -------- must handle TODO" << std::endl;
+//         // TODO check if the file is a suported script file (php, python?)
+//     } else if (curr_type == TYPE_DIR) {
+//         std::cout << "------- dir --------" << std::endl;
+
+//         // if not multipart form data stop here
+//         if (request.get_content_type().find("multipart/form-data") != 0) {
+//             response.set_status_code("404", conn->server);
+//             return;
+//         }
+
+//         // write permissions for Others
+//         bool has_write_permision = has_permissions(full_path.c_str(), S_IWOTH);
+
+//         // std::cout << "has_perm: " << has_write_permision << std::endl;
+
+//         if (!has_write_permision) {
+//             response.set_status_code("403", conn->server);
+//         } else {
+//             std::string status = this->upload_files(conn->server);
+//             response.set_status_code(status, conn->server);
+//         }
+//     }
+// }

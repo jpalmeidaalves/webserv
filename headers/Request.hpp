@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 // class HTTP;
 class Connection;
@@ -41,18 +42,17 @@ class Request {
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
-    void process_post_request(Connection *conn);
 
     void set_content_type(const std::string type);
-    void set_content_body(const std::string type);
     void set_content_length(std::size_t length);
     std::string get_content_type() const;
-    std::string get_content_body() const;
     std::size_t get_content_length() const;
-    std::string upload_files(Server *server);
-    std::string getline_from_body(std::size_t &bytes_read);
-    std::string extract_filename_from_body(size_t &bytes_read);
-    std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
+
+    void process_post_request(Connection *conn, char **envp);
+    // std::string upload_files(Server *server);
+    // std::string getline_from_body(std::size_t &bytes_read);
+    // std::string extract_filename_from_body(size_t &bytes_read);
+    // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
 
     void append_raw(const char *buf, size_t len);
 };

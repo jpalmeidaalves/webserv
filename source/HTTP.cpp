@@ -251,6 +251,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
     // buf[bytes_read] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
+    // Response &response = this->_active_connects[cfd]->response;
 
     if (bytes_read == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
@@ -311,8 +312,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
             // std::cout << "processing GET request" << std::endl;
             request.process_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
-            // std::cout << "processing POST request" << std::endl;
-            request.process_post_request(this->_active_connects[cfd]);
+            request.process_post_request(this->_active_connects[cfd], this->envp);
         } else if (request.getMethod() == "DELETE") {
             // TODO delete
             // std::cout << "processing DELETE request" << std::endl;
