@@ -3,6 +3,7 @@
 #include "../headers/HTTP.hpp"
 #include "../headers/MimeTypes.hpp"
 #include "../headers/Response.hpp"
+#include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
 Request::Request() : _rawsize(0), _content_length(0) {}
@@ -171,17 +172,49 @@ std::string Request::getline_from_body(std::size_t &bytes_read) {
     while (bytes_read < this->get_content_length()) {
         char buf[1];
         this->_raw.read(buf, 1);
-        // TODO if read failed do something
+        if (this->_raw.fail()) {
+            print_error("Failed to extract line from request body");
+            this->_raw.clear();
+            return line.str();
+        }
         bytes_read++;
         line << buf;
         if (line.str().find("\r\n") != std::string::npos)
             break;
     }
 
+    // std::string tmp = line.str();
+    // tmp.erase(tmp.size() - 2); // remove \r\n from string
+
     return line.str();
 }
 
-void Request::upload_files() {
+std::string Request::extract_filename_from_body(size_t &bytes_read) {
+
+    std::string filename;
+    while (1) {
+        std::string line = getline_from_body(bytes_read);
+        if (line == "\r\n" || line == "")
+            break;
+
+        if (line.find("Content-Disposition:") == 0) {
+            std::string key = "filename=\"";
+            std::size_t pos;
+            pos = line.find(key);
+            if (pos != std::string::npos) {
+                filename = line.substr(pos + key.size());
+                // std::cout << "####filename: " << filename << std::endl;
+                filename = filename.erase(filename.size() - 3); // remove \"\n\r
+                // std::cout << "####final filename: " << filename << std::endl;
+            }
+        }
+
+        // !warning must read all lines until \r\n
+    }
+    return (filename);
+}
+
+std::string Request::upload_files(Server *server) {
     std::cout << RED << "WORK TO BE DONE" << RESET << std::endl;
 
     //  content_type = "multipart/form-data;
@@ -201,11 +234,72 @@ void Request::upload_files() {
     // advance the position of the body
     this->_raw.seekg(body_pos);
 
-    std::cout << "********1 " << getline_from_body(bytes_read) << std::endl;
-    std::cout << "********2 " << getline_from_body(bytes_read) << std::endl;
-    std::cout << "********3 " << getline_from_body(bytes_read) << std::endl;
-    std::cout << "********4 " << getline_from_body(bytes_read) << std::endl;
-    std::cout << "********5 " << getline_from_body(bytes_read) << std::endl;
+    // first line must be a boundary line
+    std::string first_line = getline_from_body(bytes_read);
+
+    if (first_line != boundary + "\r\n")
+        return "400"; // bad request
+
+    std::string filename = extract_filename_from_body(bytes_read);
+    if (filename == "")
+        return "400";
+
+    std::string upload_folder = server->root + this->getUrl();
+    // TODO must check if url has sufix /
+
+    // std::cout << "folder to upload: " << upload_folder << std::endl;
+    // std::cout << "filename: " << filename << std::endl;
+
+    // extract binary data from raw until next boundary
+
+    std::stringstream ss;
+    std::size_t bytes_read2 = 0;
+    while (1) { // loop getting single characters
+        char buf[1];
+        this->_raw.read(buf, 1);
+        if (this->_raw.fail()) {
+            print_error("Failed to extract line from request body");
+            this->_raw.clear();
+            break;
+        }
+
+        bytes_read2++;
+        ss.write(buf, 1);
+        // ss << buf;
+
+        // std::cout << "current: " << ss.str() << std::endl;
+
+        if (ss.str().find(boundary) != std::string::npos) {
+            std::cout << "break!" << std::endl;
+            break;
+        }
+    }
+
+    std::cout << "+++++++++++++++++++++++++++" << std::endl;
+    std::cout << "data from first file1: " << std::endl;
+    std::cout << ss.str() << std::endl;
+    std::cout << "+++++++++++++++++++++++++++" << std::endl;
+
+    std::size_t total_bytes = bytes_read2 - boundary.size();
+    std::string file_path = upload_folder + "/" + filename;
+    std::ofstream ofs(file_path.c_str(), std::ios::binary);
+
+    while (total_bytes) { // loop getting single characters
+        char buf[1];
+        ss.read(buf, 1);
+        if (ss.fail()) {
+            print_error("Failed to extract line from request body WHAT THE HELL");
+            ss.clear();
+            break;
+        }
+
+        total_bytes--;
+        ofs.write(buf, 1); // binary output
+    }
+
+    ofs.close();
+
+    // write to file
 
     // std::string line;
     // getline(this->_raw, line);
@@ -245,6 +339,8 @@ void Request::upload_files() {
     // response.set_status_code("200", conn->server);
 
     std::cout << GREEN << "WORK DONE" << RESET << std::endl;
+
+    return "201";
 }
 
 void Request::process_post_request(Connection *conn) {
@@ -252,7 +348,7 @@ void Request::process_post_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
+    std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
     std::string full_path = conn->server->root + request.getUrl();
 
@@ -282,7 +378,8 @@ void Request::process_post_request(Connection *conn) {
         if (!has_write_permision) {
             response.set_status_code("403", conn->server);
         } else {
-            this->upload_files();
+            std::string status = this->upload_files(conn->server);
+            response.set_status_code(status, conn->server);
         }
     }
 }
