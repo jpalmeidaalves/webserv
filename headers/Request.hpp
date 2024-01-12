@@ -7,6 +7,10 @@
 #include <string>
 #include <sys/types.h>
 #include <sys/wait.h>
+#define WRITE_END 1
+#define READ_END 0
+#define STD_IN 1
+#define STD_OUT 0
 
 // class HTTP;
 class Connection;
@@ -19,11 +23,9 @@ class Request {
     std::size_t _rawsize;
     std::string _method;
     std::string _url;
-    std::string _body;
     std::string _host;
     std::size_t _content_length;
     std::string _content_type;
-    std::string _content_body;
 
     Request(const Request &src);
     Request &operator=(const Request &rhs);
@@ -48,9 +50,9 @@ class Request {
     std::string get_content_type() const;
     std::size_t get_content_length() const;
 
-    void process_post_request(Connection *conn, char **envp);
+    void process_post_request(Connection *conn);
     // std::string upload_files(Server *server);
-    // std::string getline_from_body(std::size_t &bytes_read);
+    std::string getline_from_body(std::size_t &bytes_read);
     // std::string extract_filename_from_body(size_t &bytes_read);
     // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
 

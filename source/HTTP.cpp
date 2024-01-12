@@ -267,6 +267,10 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
     request.append_raw(buf, bytes_read);
 
+    /*
+    header\r\n\r\nbody
+    */
+
     std::size_t end_header_pos = std::string(request.getRaw()).find("\r\n\r\n");
 
     if (end_header_pos != std::string::npos) {
@@ -312,7 +316,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
             // std::cout << "processing GET request" << std::endl;
             request.process_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "POST") {
-            request.process_post_request(this->_active_connects[cfd], this->envp);
+            request.process_post_request(this->_active_connects[cfd]);
         } else if (request.getMethod() == "DELETE") {
             // TODO delete
             // std::cout << "processing DELETE request" << std::endl;

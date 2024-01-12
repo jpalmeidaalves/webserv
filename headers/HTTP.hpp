@@ -55,7 +55,6 @@ class HTTP {
     HTTP();
 
   public:
-    char **envp;
     HTTP(std::vector<Server> &servers);
     ~HTTP();
     int open_listening_sockets(std::vector<struct sockaddr_in> addresses);

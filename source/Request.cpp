@@ -59,7 +59,7 @@ void Request::parse_request() {
 
 std::string Request::getMethod() const { return (this->_method); }
 std::string Request::getUrl() const { return (this->_url); }
-std::string Request::getBody() const { return (this->_body); }
+std::string Request::getBody() const { return ""; }
 std::string Request::getHost() const { return (this->_host); }
 std::string Request::getRaw() const { return (this->_raw.str()); }
 
@@ -286,90 +286,144 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
 
-void Request::process_post_request(Connection *conn, char **envp) {
+void Request::process_post_request(Connection *conn) {
     std::cout << "processing POST request" << std::endl;
+
+    // std::cout << "[request]" << std::endl;
+    // std::cout << this->getRaw() << std::endl;
+    // std::cout << "[end request]" << std::endl;
+
+    // std::cout << "============" << std::endl;
+    // std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+
+    // char *all = (char *)this->_raw.rdbuf();
+    // while (1) {
+    //     std::getline(this->_raw, tmp);
+    //     std::cout << "@: " << tmp << std::endl;
+    //     if (tmp == "\r")
+    //         break;
+    // }
+    // char *body = (char *)(this->_raw.str().c_str());
+
+    // char *body = (char *)this->_raw.rdbuf();
+    // body += 10;
+    // std::cout << "body content is: " << body << std::endl;
+    // std::cout << "============" << std::endl << std::endl << std::endl;
 
     if (has_suffix(this->getUrl(), ".php")) {
         // TODO handle CGI
         print_error("TODO MUST HANDLE CGI");
 
-        int pipefd[2];
-        pipe(pipefd);
-
+        int first_pipefd[2];
+        int second_pipefd[2];
+        pipe(first_pipefd);
+        pipe(second_pipefd);
+        std::cout << "*1*" << std::endl;
         pid_t pid = fork();
 
-        if (pid == 0) {       // child 1
-            close(pipefd[0]); // close reading end in the child
+        if (pid == 0) {              // child 1
+            close(first_pipefd[1]);  // close the write end of the first pipe
+            close(second_pipefd[0]); // close reading end in the child
+            std::cerr << "*2*" << std::endl;
 
-            dup2(pipefd[1], 1); // send stdout to the pipe
-            dup2(pipefd[1], 2); // send stderr to the pipe
+            dup2(first_pipefd[0], STDIN_FILENO); // send stdin to the first pipe
 
-            close(pipefd[1]); // this descriptor is no longer needed
+            dup2(second_pipefd[1], 1); // send stdout to the pipe
+            dup2(second_pipefd[1], 2); // send stderr to the pipe
+
+            close(second_pipefd[1]); // this descriptor is no longer needed
+            close(first_pipefd[0]);
 
             std::string file_path = conn->server->root + this->getUrl();
 
-            // std::cout << "inside child process" << std::endl;
-
-            // (char *const *)this->_raw.rdbuf()
-            // (char *const *)file_path.c_str()
-            // const char *s = "/usr/bin/php-cgi";
-
+            (char *)this->_raw.rdbuf();
             char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
-            // const char *cmd[3];
-            // ft_memset(&cmd, 0, sizeof(cmd));
-            // cmd[0] = "/bin/ls";
-            // cmd[1] = "-la";
 
-            if (execve(cmd[0], cmd, envp) == -1)
+            std::string len = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
+            std::string query = "QUERY_STRING=name=testing&age=35&length=" + len;
+
+            char *custom_envp[] = {(char *)"SERVER_PROTOCOL=HTTP/1.1",
+                                   //    (char *)"REMOTE_HOST=127.0.0.1:8084",
+                                   (char *)"REDIRECT_STATUS=200", (char *)"REQUEST_METHOD=POST",
+                                   (char *)"SCRIPT_FILENAME=./www/a/upload.php",
+                                   (char *)"PATH_INFO=./www/a/upload.php", (char *)query.c_str(),
+                                   (char *)len.c_str(),
+                                   (char *)"CONTENT_TYPE=application/x-www-form-urlencoded",
+                                   (char *)"BODY=testing=42", NULL};
+
+            if (execve(cmd[0], cmd, custom_envp) == -1)
                 perror("execvp ls failed");
-        } else if (pid > 0) { // parent
-            close(pipefd[1]); // close the write end of the pipe in the parent
+        } else if (pid > 0) {        // parent
+            close(second_pipefd[1]); // close the write end of the pipe in the parent
+            close(first_pipefd[0]);  // close the read end of the first pipe in the parent
 
-            std::cout << "result:" << std::endl;
+            std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
 
-            // dup2(pipefd[0], 0); // set stdin the pipe
+            this->_raw.ignore(body_pos);
+
+            // std::size_t bytes_read = 0;
+            // while (bytes_read < this->get_content_length()) {
+            //     std::string line;
+            //     line = getline_from_body(bytes_read);
+            //     if (line == "\r\n");
+            // }
+
+            char body[this->get_content_length()];
+
+            this->_raw.read(body, this->get_content_length());
+
+            std::cout << "-----------------------------body is: " << body << std::endl
+                      << "------------------------------" << std::endl;
+
+            // std::cout << "body_pos " << body_pos << std::endl;
+
+            if (write(first_pipefd[1], body, this->get_content_length()) == -1) {
+                std::cout << "failed to send the body to the CGI" << std::endl;
+            }
+
+            close(first_pipefd[1]);
+
+            std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
 
             char buffer[1024];
             ft_memset(&buffer, 0, 1024);
 
-            while (read(pipefd[0], buffer, 1023) != 0) {
+            while (read(second_pipefd[0], buffer, 1023) != 0) {
                 std::cout << buffer << std::endl;
             }
 
-            close(pipefd[0]);
+            close(second_pipefd[0]);
             waitpid(pid, NULL, 0);
+            std::cout << "---------------- END OUTPUT ----------------" << std::endl;
         }
-
-        std::cout << " done cgi " << std::endl;
-
     } else {
         conn->response.set_status_code("404", conn->server);
     }
 }
 
-// std::string Request::getline_from_body(std::size_t &bytes_read) {
-//     std::stringstream line;
+std::string Request::getline_from_body(std::size_t &bytes_read) {
+    std::stringstream line;
 
-//     // stop reading when reach the end of content length
-//     while (bytes_read < this->get_content_length()) {
-//         char buf[1];
-//         this->_raw.read(buf, 1);
-//         if (this->_raw.fail()) {
-//             print_error("Failed to extract line from request body");
-//             this->_raw.clear();
-//             return line.str();
-//         }
-//         bytes_read++;
-//         line << buf;
-//         if (line.str().find("\r\n") != std::string::npos)
-//             break;
-//     }
+    // stop reading when reach the end of content length
+    while (bytes_read < this->get_content_length()) {
+        char buf[1];
+        this->_raw.read(buf, 1);
+        if (this->_raw.fail()) {
+            print_error("Failed to extract line from request body");
+            this->_raw.clear();
+            return line.str();
+        }
+        bytes_read++;
+        line << buf;
+        if (line.str().find("\r\n") != std::string::npos)
+            break;
+    }
 
-//     // std::string tmp = line.str();
-//     // tmp.erase(tmp.size() - 2); // remove \r\n from string
+    // std::string tmp = line.str();
+    // tmp.erase(tmp.size() - 2); // remove \r\n from string
 
-//     return line.str();
-// }
+    return line.str();
+}
 
 // std::string Request::extract_filename_from_body(size_t &bytes_read) {
 
@@ -590,3 +644,82 @@ void Request::process_post_request(Connection *conn, char **envp) {
 //         }
 //     }
 // }
+
+// SERVER_PROTOCOL -The name and revision of the information protcol this request came
+// in with. Format: protocol/revision
+
+// SERVER_PORT - The port number to which the request was sent.
+
+// REQUEST_METHOD - he method with which the request was made. For HTTP, this is "GET",
+// "HEAD", "POST", etc.
+
+// PATH_INFO
+
+// The extra path information, as given by the client. In other words, scripts can be
+// accessed by their virtual pathname, followed by extra information at the end of this
+// path. The extra information is sent as PATH_INFO. This information should be decoded
+// by the server if it comes from a URL before it is passed to the CGI script.
+
+// PATH_TRANSLATED
+
+// The server provides a translated version of PATH_INFO, which takes the path and does
+// any virtual-to-physical mapping to it.
+
+// SCRIPT_NAME
+
+// A virtual path to the script being executed, used for self-referencing URLs.
+
+// QUERY_STRING
+
+// The information which follows the ? in the URL which referenced this script. This is
+// the query information. It should not be decoded in any fashion. This variable should
+// always be set when there is query information, regardless of command line decoding.
+
+// REMOTE_HOST
+
+// The hostname making the request. If the server does not have this information, it
+// should set REMOTE_ADDR and leave this unset.
+
+// REMOTE_ADDR
+
+// The IP address of the remote host making the request.
+
+// AUTH_TYPE
+
+// If the server supports user authentication, and the script is protects, this is the
+// protocol-specific authentication method used to validate the user.
+
+// REMOTE_USER
+
+// If the server supports user authentication, and the script is protected, this is the
+// username they have authenticated as.
+
+// REMOTE_IDENT
+
+// If the HTTP server supports RFC 931 identification, then this variable will be set to
+// the remote user name retrieved from the server. Usage of this variable should be
+// limited to logging only.
+
+// CONTENT_TYPE
+
+// For queries which have attached information, such as HTTP POST and PUT, this is the
+// content type of the data.
+
+// CONTENT_LENGTH
+
+// The length of the said content as given by the client.
+
+// std::cout << "size of envp " << i << std::endl;
+
+// export GATEWAY_INTERFACE="CGI/1.1"
+// export SCRIPT_FILENAME="/home/xzhttpd/htdocs/test.php"
+// export REQUEST_METHOD="POST"
+// export REDIRECT_STATUS=200
+// export SERVER_PROTOCOL="HTTP/1.1"
+// export REMOTE_HOST="127.0.0.1"
+// export CONTENT_LENGHT=3
+// export HTTP_ACCEPT="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+// export CONTENT_TYPE="application/x-www-form-urlencoded"
+// export BODY="t=1"
+
+// url: http:127.0.0.1:8084?name=testing&age=35
