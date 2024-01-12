@@ -137,7 +137,7 @@ std::string MimeTypes::identify(const std::string &original_path) {
             return it->second;
     }
 
-    return ""; // unknow mime type, browser will try to assume the correct type
+    return "text/html"; // unknow mime type, browser will try to assume the correct type
 }
 
 bool MimeTypes::is_binary_file(const std::string &mime) {

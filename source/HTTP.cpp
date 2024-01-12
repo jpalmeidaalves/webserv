@@ -52,9 +52,8 @@ int HTTP::open_listening_sockets(std::vector<struct sockaddr_in> addresses) {
         }
 
         // show message
-        std::cout << "Server listening on " << BOLDGREEN
-                  << convert_uint32_to_str(ntohl(it->sin_addr.s_addr)) << ":" << ntohs(it->sin_port)
-                  << RESET << ", sockfd: " << curr_sockfd << std::endl;
+        std::cout << "Server listening on " << BOLDGREEN << convert_uint32_to_str(ntohl(it->sin_addr.s_addr)) << ":"
+                  << ntohs(it->sin_port) << RESET << ", sockfd: " << curr_sockfd << std::endl;
 
         this->_listening_sockets.push_back(curr_sockfd);
     }
@@ -101,8 +100,8 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
         return 1;
     }
 
-    std::cout << "accepted connection in listing socket: " << sockfd
-              << " for incoming socket: " << accepted_fd << std::endl;
+    std::cout << "accepted connection in listing socket: " << sockfd << " for incoming socket: " << accepted_fd
+              << std::endl;
 
     // add to epoll modifiyng the flags to allow read and write operations
     ev.events = EPOLLIN;
@@ -251,7 +250,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
     // buf[bytes_read] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
-    // Response &response = this->_active_connects[cfd]->response;
+    Response &response = this->_active_connects[cfd]->response;
 
     if (bytes_read == 0 && request.getRaw().size() == 0) {
         print_error("---- read 0 bytes ----");
@@ -312,16 +311,16 @@ void HTTP::read_socket(struct epoll_event &ev) {
             return;
         }
 
-        if (request.getMethod() == "GET") {
-            // std::cout << "processing GET request" << std::endl;
-            request.process_request(this->_active_connects[cfd]);
-        } else if (request.getMethod() == "POST") {
+        if (request.has_cgi()) {
+            // TODO do CGI stuff
             request.process_post_request(this->_active_connects[cfd]);
-        } else if (request.getMethod() == "DELETE") {
-            // TODO delete
-            // std::cout << "processing DELETE request" << std::endl;
         } else {
-            // TODO handle unknow http method
+
+            if (request.getMethod() == "GET") {
+                request.process_request(this->_active_connects[cfd]);
+            } else {
+                response.set_status_code("404", this->_active_connects[cfd]->server);
+            }
         }
     }
 }
@@ -339,8 +338,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     }
 
     if (response.isdir) {
-        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) ==
-            -1) {
+        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
             print_error("failed to write");
         }
         this->close_connection(cfd, this->_epoll_fd, ev);
@@ -355,8 +353,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     int bytes_read = 0;
     char buff[BUFFERSIZE];
+    ft_memset(&buff, 0, BUFFERSIZE);
 
-    bytes_read = read(file_fd, buff, BUFFERSIZE);
+    bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
     if (bytes_read == -1) {
         print_error("Failed read file");
         close(file_fd);
@@ -370,6 +369,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
+    std::cout << "sended to socket: " << RED << buff << RESET << std::endl;
+
     if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
         print_error("failed to write");
         this->close_connection(cfd, this->_epoll_fd, ev);
@@ -379,8 +380,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
 int HTTP::send_header(int &cfd, Response &response) {
     std::ostringstream ss;
     ss << "HTTP/1.1 " << response.get_status_code() << "\n"
-       << "Content-Type: " << response.get_content_type() << "\n"
-       << "Content-Length: " << response.get_content_length() << "\n"
+       << "Content-Type: " << response.get_content_type()
+       << "\n"
+       //    << "Content-Length: " << response.get_content_length() << "\n"
        << "Access-Control-Allow-Origin: *\n"
        << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
        << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"

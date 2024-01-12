@@ -90,6 +90,29 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
+bool Request::has_cgi() {
+
+    // HAS CGI
+    // /upload.php
+    // /upload.php?name=nuno&other=stuff
+
+    // DOES NOT HAVE CGI
+    // /upload.html?name=.php&other=stuff
+    // /upload.html
+
+    std::size_t has_query = this->getUrl().find("?");
+
+    if (has_query != std::string::npos) {
+        this->short_url = this->getUrl().substr(0, has_query);
+        std::cout << RED << short_url << RESET << std::endl;
+        this->query = this->getUrl().substr(has_query + 1);
+    } else {
+        this->short_url = this->getUrl();
+    }
+
+    return has_suffix(short_url, ".php");
+}
+
 void Request::process_requested_file(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
@@ -234,8 +257,8 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     std::stringstream ss;
 
-    ss << "<html><head><title>Index of " << request.getUrl()
-       << "/</title></head><body><h1>Index of " << request.getUrl() << "</h1><hr><pre>";
+    ss << "<html><head><title>Index of " << request.getUrl() << "/</title></head><body><h1>Index of "
+       << request.getUrl() << "</h1><hr><pre>";
 
     std::map<std::string, struct dir_entry>::iterator it;
     {
@@ -293,111 +316,130 @@ void Request::process_post_request(Connection *conn) {
     // std::cout << this->getRaw() << std::endl;
     // std::cout << "[end request]" << std::endl;
 
-    // std::cout << "============" << std::endl;
-    // std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+    // TODO handle CGI
+    print_error("TODO MUST HANDLE CGI");
 
-    // char *all = (char *)this->_raw.rdbuf();
-    // while (1) {
-    //     std::getline(this->_raw, tmp);
-    //     std::cout << "@: " << tmp << std::endl;
-    //     if (tmp == "\r")
-    //         break;
-    // }
-    // char *body = (char *)(this->_raw.str().c_str());
+    int first_pipefd[2];
+    int second_pipefd[2];
+    pipe(first_pipefd);
+    pipe(second_pipefd);
+    pid_t pid = fork();
 
-    // char *body = (char *)this->_raw.rdbuf();
-    // body += 10;
-    // std::cout << "body content is: " << body << std::endl;
-    // std::cout << "============" << std::endl << std::endl << std::endl;
+    if (pid == 0) {              // child 1
+        close(first_pipefd[1]);  // close the write end of the first pipe
+        close(second_pipefd[0]); // close reading end in the child
 
-    if (has_suffix(this->getUrl(), ".php")) {
-        // TODO handle CGI
-        print_error("TODO MUST HANDLE CGI");
+        dup2(first_pipefd[0], STDIN_FILENO); // send stdin to the first pipe
 
-        int first_pipefd[2];
-        int second_pipefd[2];
-        pipe(first_pipefd);
-        pipe(second_pipefd);
-        std::cout << "*1*" << std::endl;
-        pid_t pid = fork();
+        dup2(second_pipefd[1], 1); // send stdout to the pipe
+        dup2(second_pipefd[1], 2); // send stderr to the pipe
 
-        if (pid == 0) {              // child 1
-            close(first_pipefd[1]);  // close the write end of the first pipe
-            close(second_pipefd[0]); // close reading end in the child
-            std::cerr << "*2*" << std::endl;
+        close(second_pipefd[1]); // this descriptor is no longer needed
+        close(first_pipefd[0]);
 
-            dup2(first_pipefd[0], STDIN_FILENO); // send stdin to the first pipe
+        std::string file_path = conn->server->root + this->getUrl();
 
-            dup2(second_pipefd[1], 1); // send stdout to the pipe
-            dup2(second_pipefd[1], 2); // send stderr to the pipe
+        (char *)this->_raw.rdbuf();
+        char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
 
-            close(second_pipefd[1]); // this descriptor is no longer needed
-            close(first_pipefd[0]);
+        std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->short_url;
+        std::string server_port = "SERVER_PORT" + conn->server->port;
+        std::string remote_host = "REMOTE_HOST" + conn->server->host;
+        // std::string remote_addr = "REMOTE_ADDR" + conn->server->host;
+        // std::string http_accept = "HTTP_ACCEPT";
 
-            std::string file_path = conn->server->root + this->getUrl();
+        std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
+        std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
+        std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
+        std::string script_name = "SCRIPT_FILENAME=" + conn->server->root + this->short_url;
+        std::string path_info = "PATH_INFO=" + conn->server->root + this->short_url;
+        std::string content_type = "CONTENT_TYPE=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+        std::string query = "QUERY_STRING=" + this->query;
 
-            (char *)this->_raw.rdbuf();
-            char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
+        // char *custom_envp[] = build_custom_envp();
 
-            std::string len = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
-            std::string query = "QUERY_STRING=name=testing&age=35&length=" + len;
+        char *custom_envp[] = {
+            (char *)server_protocol.c_str(),
+            (char *)"REDIRECT_STATUS=200",
+            (char *)path_translated.c_str(),
+            (char *)server_port.c_str(),  
+            (char *)request_method.c_str(), 
+            (char *)script_name.c_str(),
+            (char *)path_info.c_str(),
+            (char *)query.c_str(),
+            (char *)content_length.c_str(),
+            (char *)content_type.c_str(),
+            (char *)remote_host.c_str(),
+            NULL
+        };
 
-            char *custom_envp[] = {(char *)"SERVER_PROTOCOL=HTTP/1.1",
-                                   //    (char *)"REMOTE_HOST=127.0.0.1:8084",
-                                   (char *)"REDIRECT_STATUS=200", (char *)"REQUEST_METHOD=POST",
-                                   (char *)"SCRIPT_FILENAME=./www/a/upload.php",
-                                   (char *)"PATH_INFO=./www/a/upload.php", (char *)query.c_str(),
-                                   (char *)len.c_str(),
-                                   (char *)"CONTENT_TYPE=application/x-www-form-urlencoded",
-                                   (char *)"BODY=testing=42", NULL};
+        // char *custom_envp[] = {
+        //     (char *)server_protocol.c_str(),
+        //     //    (char *)"REMOTE_HOST=127.0.0.1:8084",
+        //     (char *)"REDIRECT_STATUS=200",
+        //     (char *)request_method.c_str(),
+        //     (char *)script_name.c_str(),
+        //     (char *)path_info.c_str(),
+        //     (char *)query.c_str(),
+        //     (char *)content_length.c_str(),
+        //     (char *)"CONTENT_TYPE=application/x-www-form-urlencoded",
+        //     // (char *)"BODY=testing=42",
+        //     NULL
+        // };
 
-            if (execve(cmd[0], cmd, custom_envp) == -1)
-                perror("execvp ls failed");
-        } else if (pid > 0) {        // parent
-            close(second_pipefd[1]); // close the write end of the pipe in the parent
-            close(first_pipefd[0]);  // close the read end of the first pipe in the parent
+        if (execve(cmd[0], cmd, custom_envp) == -1)
+            perror("execvp ls failed");
+    } else if (pid > 0) {        // parent
+        close(second_pipefd[1]); // close the write end of the pipe in the parent
+        close(first_pipefd[0]);  // close the read end of the first pipe in the parent
 
-            std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+        std::size_t body_pos = this->getRaw().find("\r\n\r\n") + 4;
+        this->_raw.ignore(body_pos);
 
-            this->_raw.ignore(body_pos);
+        char body[this->get_content_length()];
 
-            // std::size_t bytes_read = 0;
-            // while (bytes_read < this->get_content_length()) {
-            //     std::string line;
-            //     line = getline_from_body(bytes_read);
-            //     if (line == "\r\n");
-            // }
+        this->_raw.read(body, this->get_content_length());
 
-            char body[this->get_content_length()];
+        std::cout << "body is: " << body << std::endl;
 
-            this->_raw.read(body, this->get_content_length());
-
-            std::cout << "-----------------------------body is: " << body << std::endl
-                      << "------------------------------" << std::endl;
-
-            // std::cout << "body_pos " << body_pos << std::endl;
-
-            if (write(first_pipefd[1], body, this->get_content_length()) == -1) {
-                std::cout << "failed to send the body to the CGI" << std::endl;
-            }
-
-            close(first_pipefd[1]);
-
-            std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
-
-            char buffer[1024];
-            ft_memset(&buffer, 0, 1024);
-
-            while (read(second_pipefd[0], buffer, 1023) != 0) {
-                std::cout << buffer << std::endl;
-            }
-
-            close(second_pipefd[0]);
-            waitpid(pid, NULL, 0);
-            std::cout << "---------------- END OUTPUT ----------------" << std::endl;
+        if (write(first_pipefd[1], body, this->get_content_length()) == -1) {
+            std::cout << "failed to send the body to the CGI" << std::endl;
         }
-    } else {
-        conn->response.set_status_code("404", conn->server);
+
+        close(first_pipefd[1]);
+
+        std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
+
+
+        // TODO read until end of the header
+        std::stringstream ss;
+        while(1) {
+            char buffer[1];
+            std::size_t byr = read(second_pipefd[0], buffer, 1);
+            if (byr <= 0)
+                break;
+            ss << buffer;
+            
+            if(ss.str().find("\r\n\r\n") != std::string::npos)
+                break;
+        }
+
+        // ss has the complete header from CGI
+
+        std::cout << "header from CGI: " <<std::endl;
+        std::cout << ss.str() <<std::endl; 
+        
+        // TODO extract from ss http code
+
+
+
+        conn->response.set_req_file_fd(second_pipefd[0]);
+
+        // close(second_pipefd[0]);
+        // waitpid(pid, NULL, 0);
+
+        // TODO if takes too long send request timed out
+        std::cout << "---------------- END OUTPUT ----------------" << std::endl;
     }
 }
 

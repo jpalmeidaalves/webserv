@@ -31,6 +31,8 @@ class Request {
     Request &operator=(const Request &rhs);
 
   public:
+    std::string query; // TODO make pivate?
+    std::string short_url;
     Request();
     ~Request();
     std::string getMethod() const;
@@ -44,6 +46,7 @@ class Request {
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);
+    bool has_cgi();
 
     void set_content_type(const std::string type);
     void set_content_length(std::size_t length);
