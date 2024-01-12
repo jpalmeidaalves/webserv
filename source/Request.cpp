@@ -430,7 +430,8 @@ void Request::process_post_request(Connection *conn) {
         std::cout << ss.str() <<std::endl; 
         
         // TODO extract from ss http code
-
+        // conn->response.set_status_code();
+        // conn->response.set_content_type();
 
 
         conn->response.set_req_file_fd(second_pipefd[0]);
