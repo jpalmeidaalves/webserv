@@ -1,6 +1,8 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
+#include <map>
+#include <sstream>
 #include <string>
 #include <sys/types.h>
 
@@ -10,10 +12,11 @@ class HTTP;
 class Response {
   private:
     std::string _version;
-    std::string _status;
+    std::string _status_code;
     std::string _content_type;
     std::size_t _content_length;
     int _req_file_fd;
+    std::map<std::string, std::string> _headers;
 
     Response(const Response &src);
     Response &operator=(const Response &rhs);
@@ -27,6 +30,7 @@ class Response {
     bool _sent_header;
     mode_t permissions;
     std::string last_modified;
+    void set_header(std::string key, std::string value);
     void set_status_code(std::string code, Server *server);
     // void set_content_data(unsigned char * data);
     void set_content_type(const std::string type);
@@ -39,6 +43,7 @@ class Response {
     // std::string get_content_data() const;
     std::string get_content_type() const;
     std::size_t get_content_length() const;
+    std::string assemble_header();
 };
 
 #endif /* RESPONSE_HPP */

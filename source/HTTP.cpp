@@ -378,22 +378,29 @@ void HTTP::write_socket(struct epoll_event &ev) {
 }
 
 int HTTP::send_header(int &cfd, Response &response) {
-    std::ostringstream ss;
+    // std::ostringstream ss;
 
-    // TODO each line must have \r\n (carefull adding headers from CGI)
-    ss << "HTTP/1.1 " << response.get_status_code() << "\n"
-       << "Content-Type: " << response.get_content_type() << "\n"
-       //    << "Content-Length: " << response.get_content_length() << "\n"
-       << "Access-Control-Allow-Origin: *\n"
-       << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
-       << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"
-       << "Access-Control-Allow-Credentials: true\n"
-       << "\n";
+    // // TODO each line must have \r\n (carefull adding headers from CGI)
+
+    // // TODO missing status description after status code
+    // ss << "HTTP/1.1 " << response.get_status_code() << "\r\n"
+
+    //    << "Content-Type: " << response.get_content_type()
+    //    << "\n"
+    //    //    << "Content-Length: " << response.get_content_length() << "\n"
+    //    << "Access-Control-Allow-Origin: *\n"
+    //    << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
+    //    << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"
+    //    << "Access-Control-Allow-Credentials: true\n"
+    //    << "\n";
+
+    std::string header = response.assemble_header();
+
+    if (write(cfd, header.c_str(), header.size()) == -1)
+        return 1;
 
     response._sent_header = true;
 
-    if (write(cfd, ss.str().c_str(), ss.str().size()) == -1)
-        return 1;
     return 0;
 }
 

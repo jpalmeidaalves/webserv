@@ -4,8 +4,17 @@
 #include "../headers/utils.hpp"
 
 Response::Response()
-    : _version("HTTP/1.1"), _status("200"), _content_type("text/html"), _content_length(0),
-      _req_file_fd(0), isdir(false), _sent_header(false) {}
+    : _version("HTTP/1.1"), _status_code("200"), _content_type("text/html"), _content_length(0), _req_file_fd(0),
+      isdir(false), _sent_header(false) {
+
+    // Define default headers
+    this->set_header("Content-Type", "text/html");
+    // Enabling CORS by default
+    this->set_header("Access-Control-Allow-Origin", "*");
+    this->set_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
+    this->set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    this->set_header("Access-Control-Allow-Credentials", "true");
+}
 
 Response::~Response() {}
 
@@ -42,9 +51,13 @@ void Response::set_error_page_fd(std::string full_path) {
     this->set_req_file_fd(file_fd);
 }
 
+void Response::set_header(std::string key, std::string value) {
+    this->_headers.insert(std::pair<std::string, std::string>(key, value));
+}
+
 void Response::set_status_code(std::string code, Server *server) {
     // update status code
-    this->_status = code;
+    this->_status_code = code;
 
     // TODO check if is a error code
 
@@ -57,17 +70,28 @@ void Response::set_status_code(std::string code, Server *server) {
     }
 }
 
-// void Response::set_content_data(std::string data) {
-//     this->_content_data = data;
-// }
-
 void Response::set_content_type(const std::string type) { this->_content_type = type; }
 void Response::set_content_length(std::size_t length) { this->_content_length = length; }
 
-std::string Response::get_status_code() const { return (this->_status); }
+std::string Response::get_status_code() const { return (this->_status_code); }
 
-// std::string  Response::get_content_data() const{
-//     return (this->_content_data);
-// }
 std::string Response::get_content_type() const { return (this->_content_type); }
 std::size_t Response::get_content_length() const { return (this->_content_length); }
+
+std::string Response::assemble_header() {
+    std::ostringstream ss;
+
+    // TODO each line must have \r\n (carefull adding headers from CGI)
+    // TODO missing status description after status code
+
+    ss << "HTTP/1.1 " << this->_status_code << "\r\n";
+
+    std::map<std::string, std::string>::iterator it;
+    for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
+        ss << it->first << ": " << it->second << "\r\n";
+    }
+
+    ss << "\r\n";
+
+    return ss.str();
+}

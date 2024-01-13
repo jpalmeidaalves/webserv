@@ -359,19 +359,10 @@ void Request::process_post_request(Connection *conn) {
         // char *custom_envp[] = build_custom_envp();
 
         char *custom_envp[] = {
-            (char *)server_protocol.c_str(),
-            (char *)"REDIRECT_STATUS=200",
-            (char *)path_translated.c_str(),
-            (char *)server_port.c_str(),  
-            (char *)request_method.c_str(), 
-            (char *)script_name.c_str(),
-            (char *)path_info.c_str(),
-            (char *)query.c_str(),
-            (char *)content_length.c_str(),
-            (char *)content_type.c_str(),
-            (char *)remote_host.c_str(),
-            NULL
-        };
+            (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200",  (char *)path_translated.c_str(),
+            (char *)server_port.c_str(),     (char *)request_method.c_str(), (char *)script_name.c_str(),
+            (char *)path_info.c_str(),       (char *)query.c_str(),          (char *)content_length.c_str(),
+            (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
 
         // char *custom_envp[] = {
         //     (char *)server_protocol.c_str(),
@@ -410,24 +401,23 @@ void Request::process_post_request(Connection *conn) {
 
         std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
 
-
         // TODO read until end of the header
         std::stringstream ss;
-        while(1) {
+        while (1) {
             char buffer[1];
             std::size_t byr = read(second_pipefd[0], buffer, 1);
             if (byr <= 0)
                 break;
             ss << buffer;
-            
-            if(ss.str().find("\r\n\r\n") != std::string::npos)
+
+            if (ss.str().find("\r\n\r\n") != std::string::npos)
                 break;
         }
 
         // ss has the complete header from CGI
 
-        std::cout << "header from CGI: " <<std::endl;
-        std::cout << ss.str() <<std::endl; 
+        std::cout << "header from CGI: " << std::endl;
+        std::cout << ss.str() << std::endl;
 
         /*
         Status: 201 Created
@@ -435,30 +425,28 @@ void Request::process_post_request(Connection *conn) {
 
         */
 
-       // TODO must update all headers in the response if custom headers are defined inside PHP
-       std::string key_status = "Status: ";
-       std::string key_content_type = "Content-type: ";
+        // TODO must update all headers in the response if custom headers are defined inside PHP
+        std::string key_status = "Status: ";
+        std::string key_content_type = "Content-type: ";
 
-       
-       while(1) {
-        std::string line;
-        std::getline(ss, line);
-        if(ss.fail())
-            break;
+        while (1) {
+            std::string line;
+            std::getline(ss, line);
+            if (ss.fail())
+                break;
 
-        if (line == "\r")
-            break;
+            if (line == "\r")
+                break;
 
-        if (line.find(key_status) == 0) {
-            std::string value_status = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
-            std::cout << "status is " << value_status << std::endl;
-            conn->response.set_status_code(value_status, conn->server);
-        } else if (line.find(key_content_type) == 0) {   
-            std::string value_content_type = line.substr(key_content_type.size());
-            conn->response.set_content_type(value_content_type);
+            if (line.find(key_status) == 0) {
+                std::string value_status = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
+                std::cout << "status is " << value_status << std::endl;
+                conn->response.set_status_code(value_status, conn->server);
+            } else if (line.find(key_content_type) == 0) {
+                std::string value_content_type = line.substr(key_content_type.size());
+                conn->response.set_content_type(value_content_type);
+            }
         }
-       }
-
 
         conn->response.set_req_file_fd(second_pipefd[0]);
 
