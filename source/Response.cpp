@@ -108,3 +108,51 @@ std::string Response::assemble_header() {
 
     return ss.str();
 }
+
+/**
+ * Use the stringstream from the CGI header and update the headers in the response object.
+ *
+ * @param ss - stringstream with the headers from CGI
+ * @param server - pointer to the server that handle this request
+ */
+void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
+    // Update all the headers in the response with the header from CGI
+    std::string key_status = "Status: ";
+    std::string line;
+
+    while (1) {
+        std::getline(ss, line);
+        if (ss.fail())
+            break;
+
+        if (line == "\r" || line == "")
+            break;
+
+        if (line.find(key_status) == 0) {
+            std::string value = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
+            // std::cout << "status is " << value << std::endl;
+            this->set_status_code(value, server);
+        } else {
+            std::size_t colon_pos = line.find(":");
+
+            if (colon_pos != std::string::npos) {
+                std::string key = line.substr(0, colon_pos);
+                std::string value = line.substr(colon_pos + 1);
+
+                // if first char is ' ' remove it
+                if (value.at(0) == ' ') {
+                    value.erase(0, 1);
+                }
+                // if last char is '\r' remove it
+                if (value.size() && value.at(value.size() - 1) == '\r') {
+                    value.erase(value.size() - 1);
+                }
+
+                // std::cout << "1) key is >" << key << "<" << std::endl;
+                // std::cout << "2) value is >" << value << "<" << std::endl;
+
+                this->set_header(key, value);
+            }
+        }
+    }
+}

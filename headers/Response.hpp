@@ -44,6 +44,7 @@ class Response {
     std::string get_content_type() const;
     std::size_t get_content_length() const;
     std::string assemble_header();
+    void parse_cgi_headers(std::stringstream &ss, Server *server);
 };
 
 #endif /* RESPONSE_HPP */

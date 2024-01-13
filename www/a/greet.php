@@ -1,4 +1,4 @@
-<?php header('HTTP/1.1 200 LOL');
+<?php header('HTTP/1.1 201 LOL');
 
 
 
@@ -15,6 +15,8 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST');
 
 header("Access-Control-Allow-Headers: X-Requested-With");
+
+header("custom header: hello world!");
 
 ?>
 

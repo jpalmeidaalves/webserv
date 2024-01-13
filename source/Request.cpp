@@ -425,52 +425,7 @@ void Request::process_post_request(Connection *conn) {
 
         */
 
-        // Update all the headers in the response with the header from CGI
-        std::string key_status = "Status: ";
-
-        while (1) {
-            std::string line;
-            std::getline(ss, line);
-            if (ss.fail())
-                break;
-
-            if (line == "\r" || line == "")
-                break;
-
-            if (line.find(key_status) == 0) {
-                std::string value_status = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
-                std::cout << "status is " << value_status << std::endl;
-                conn->response.set_status_code(value_status, conn->server);
-            } else {
-                std::size_t colon_pos = line.find(":");
-
-                if (colon_pos != std::string::npos) {
-
-                    std::string key = line.substr(0, colon_pos);
-                    std::cout << "1) key is >" << key << "<" << std::endl;
-                    std::cout << std::flush;
-                    std::string value = line.substr(colon_pos + 1);
-                    // if first char is ' ' remove it
-                    if (value.at(0) == ' ') {
-                        value.erase(0, 1);
-                    }
-                    // if last char is '\r' remove it
-                    if (value.size() && value.at(value.size() - 1) == '\r') {
-                        value.erase(value.size() - 1);
-                    }
-                    std::cout << "2) value is >" << value << "<" << std::endl;
-                    conn->response.set_header(key, value);
-                }
-
-                // std::string value_content_type = line.substr(key_content_type.size());
-                // // if last char is \r remove it
-                // if (value_content_type.size() && value_content_type.at(value_content_type.size() - 1) == '\r') {
-                //     value_content_type.erase(value_content_type.size() - 1);
-                // }
-                // // print_ascii(value_content_type.c_str());
-                // conn->response.set_content_type(value_content_type);
-            }
-        }
+        conn->response.parse_cgi_headers(ss, conn->server);
 
         conn->response.set_req_file_fd(second_pipefd[0]);
 
