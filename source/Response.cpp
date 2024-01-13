@@ -94,8 +94,8 @@ std::size_t Response::get_content_length() const { return (this->_content_length
 std::string Response::assemble_header() {
     std::ostringstream ss;
 
-    // TODO each line must have \r\n (carefull adding headers from CGI)
     // TODO missing status description after status code
+    // TODO how to handle if we set an invalid status code in the header inside PHP
 
     ss << "HTTP/1.1 " << this->_status_code << "\r\n";
 
