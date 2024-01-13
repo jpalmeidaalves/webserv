@@ -428,10 +428,36 @@ void Request::process_post_request(Connection *conn) {
 
         std::cout << "header from CGI: " <<std::endl;
         std::cout << ss.str() <<std::endl; 
-        
-        // TODO extract from ss http code
-        // conn->response.set_status_code();
-        // conn->response.set_content_type();
+
+        /*
+        Status: 201 Created
+        Content-type: text/html; charset=UTF-8
+
+        */
+
+       // TODO must update all headers in the response if custom headers are defined inside PHP
+       std::string key_status = "Status: ";
+       std::string key_content_type = "Content-type: ";
+
+       
+       while(1) {
+        std::string line;
+        std::getline(ss, line);
+        if(ss.fail())
+            break;
+
+        if (line == "\r")
+            break;
+
+        if (line.find(key_status) == 0) {
+            std::string value_status = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
+            std::cout << "status is " << value_status << std::endl;
+            conn->response.set_status_code(value_status, conn->server);
+        } else if (line.find(key_content_type) == 0) {   
+            std::string value_content_type = line.substr(key_content_type.size());
+            conn->response.set_content_type(value_content_type);
+        }
+       }
 
 
         conn->response.set_req_file_fd(second_pipefd[0]);
@@ -458,6 +484,7 @@ std::string Request::getline_from_body(std::size_t &bytes_read) {
         }
         bytes_read++;
         line << buf;
+        // TODO optimize, on check this if current char is \r or \n
         if (line.str().find("\r\n") != std::string::npos)
             break;
     }

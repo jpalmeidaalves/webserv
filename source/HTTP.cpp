@@ -379,9 +379,10 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
 int HTTP::send_header(int &cfd, Response &response) {
     std::ostringstream ss;
+
+    // TODO each line must have \r\n (carefull adding headers from CGI)
     ss << "HTTP/1.1 " << response.get_status_code() << "\n"
-       << "Content-Type: " << response.get_content_type()
-       << "\n"
+       << "Content-Type: " << response.get_content_type() << "\n"
        //    << "Content-Length: " << response.get_content_length() << "\n"
        << "Access-Control-Allow-Origin: *\n"
        << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
