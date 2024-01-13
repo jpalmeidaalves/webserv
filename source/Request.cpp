@@ -425,9 +425,8 @@ void Request::process_post_request(Connection *conn) {
 
         */
 
-        // TODO must update all headers in the response if custom headers are defined inside PHP
+        // Update all the headers in the response with the header from CGI
         std::string key_status = "Status: ";
-        std::string key_content_type = "Content-type: ";
 
         while (1) {
             std::string line;
@@ -435,16 +434,41 @@ void Request::process_post_request(Connection *conn) {
             if (ss.fail())
                 break;
 
-            if (line == "\r")
+            if (line == "\r" || line == "")
                 break;
 
             if (line.find(key_status) == 0) {
                 std::string value_status = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
                 std::cout << "status is " << value_status << std::endl;
                 conn->response.set_status_code(value_status, conn->server);
-            } else if (line.find(key_content_type) == 0) {
-                std::string value_content_type = line.substr(key_content_type.size());
-                conn->response.set_content_type(value_content_type);
+            } else {
+                std::size_t colon_pos = line.find(":");
+
+                if (colon_pos != std::string::npos) {
+
+                    std::string key = line.substr(0, colon_pos);
+                    std::cout << "1) key is >" << key << "<" << std::endl;
+                    std::cout << std::flush;
+                    std::string value = line.substr(colon_pos + 1);
+                    // if first char is ' ' remove it
+                    if (value.at(0) == ' ') {
+                        value.erase(0, 1);
+                    }
+                    // if last char is '\r' remove it
+                    if (value.size() && value.at(value.size() - 1) == '\r') {
+                        value.erase(value.size() - 1);
+                    }
+                    std::cout << "2) value is >" << value << "<" << std::endl;
+                    conn->response.set_header(key, value);
+                }
+
+                // std::string value_content_type = line.substr(key_content_type.size());
+                // // if last char is \r remove it
+                // if (value_content_type.size() && value_content_type.at(value_content_type.size() - 1) == '\r') {
+                //     value_content_type.erase(value_content_type.size() - 1);
+                // }
+                // // print_ascii(value_content_type.c_str());
+                // conn->response.set_content_type(value_content_type);
             }
         }
 

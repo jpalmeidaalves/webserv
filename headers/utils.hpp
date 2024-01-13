@@ -1,6 +1,7 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
+#include <algorithm>
 #include <ctime>
 #include <dirent.h>
 #include <errno.h>
@@ -39,6 +40,7 @@ bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets);
 void remove_char_from_string(std::string &str, char to_remove);
 void print_ascii(const char *str);
 bool has_permissions(std::string full_path, mode_t permissions);
+bool ft_strcmp_insensitive(std::string str1, std::string str2);
 
 template <typename T>
 void printVector(std::vector<T> v) {

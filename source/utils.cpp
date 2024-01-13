@@ -8,8 +8,7 @@
 void print_error(const std::string &error_msg) { std::cerr << "Error: " << error_msg << std::endl; }
 
 bool has_suffix(const std::string &str, const std::string &suffix) {
-    return str.size() >= suffix.size() &&
-           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 void *ft_memset(void *s, int c, std::size_t n) {
@@ -86,8 +85,7 @@ bool has_permissions(std::string full_path, mode_t permissions) {
 
 std::string convert_uint32_to_str(uint32_t nb) {
     std::stringstream ss;
-    ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.'
-       << (nb & 0xFF);
+    ss << ((nb >> 24) & 0xFF) << '.' << ((nb >> 16) & 0xFF) << '.' << ((nb >> 8) & 0xFF) << '.' << (nb & 0xFF);
 
     return (ss.str().c_str());
 }
@@ -167,10 +165,24 @@ void remove_char_from_string(std::string &str, char to_remove) {
     }
 }
 
+/**
+ * Print ascii characters from a char *
+ *
+ * @note usefull for debuging
+ */
 void print_ascii(const char *str) {
     int i = 0;
     while (str[i]) {
         std::cout << str[i] << " - " << (int)str[i] << std::endl;
         i++;
     }
+}
+
+/**
+ * Compares two strings in case insensitive mode
+ */
+bool ft_strcmp_insensitive(std::string str1, std::string str2) {
+    std::transform(str1.begin(), str1.end(), str1.begin(), ::tolower);
+    std::transform(str2.begin(), str2.end(), str2.begin(), ::tolower);
+    return (str1 == str2);
 }

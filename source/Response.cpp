@@ -52,6 +52,19 @@ void Response::set_error_page_fd(std::string full_path) {
 }
 
 void Response::set_header(std::string key, std::string value) {
+    std::map<std::string, std::string>::iterator it;
+
+    // check if there is a key already in the header
+    for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
+        // keys can be case insensitive so we will check in insensitive mode
+        if (ft_strcmp_insensitive(it->first, key)) {
+            // found match, update it and stop here
+            it->second = value;
+            return;
+        }
+    }
+
+    // if reaches here means its a new entry and must be inserted
     this->_headers.insert(std::pair<std::string, std::string>(key, value));
 }
 
