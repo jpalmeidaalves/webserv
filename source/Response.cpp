@@ -73,14 +73,16 @@ void Response::set_status_code(std::string code, Server *server) {
     this->_status_code = code;
 
     // TODO check if is a error code
-
-    // check if has custom error page
-    if (server->get_error_page(code) != "") {
-        this->set_error_page_fd(server->root + server->get_error_page(code));
-    } else {
-        // else use the default error page
-        this->set_error_page_fd(server->get_default_error_page(code));
+    if (code[0] == '4' || code[0] == '5') {
+        // check if has custom error page
+        if (server->get_error_page(code) != "") {
+            this->set_error_page_fd(server->root + server->get_error_page(code));
+        } else {
+            // else use the default error page
+            this->set_error_page_fd(server->get_default_error_page(code));
+        }
     }
+
 }
 
 void Response::set_content_type(const std::string type) { this->_content_type = type; }

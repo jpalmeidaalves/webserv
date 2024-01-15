@@ -19,6 +19,13 @@ Server::~Server() {}
 /* -------------------------------------------------------------------------- */
 /*                              Member Functions                              */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Returns the path of the error page from this server when available
+ * 
+ * @return if found the path string, 
+ * @return if not found returns empty string
+*/
 std::string Server::get_error_page(std::string error_code) {
     std::map<std::string, std::string>::iterator it;
     for (it = this->_error_pages.begin(); it != this->_error_pages.end(); it++) {

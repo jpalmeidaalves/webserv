@@ -104,7 +104,7 @@ bool Request::has_cgi() {
 
     if (has_query != std::string::npos) {
         this->short_url = this->getUrl().substr(0, has_query);
-        std::cout << RED << short_url << RESET << std::endl;
+        // std::cout << RED << short_url << RESET << std::endl;
         this->query = this->getUrl().substr(has_query + 1);
     } else {
         this->short_url = this->getUrl();
@@ -399,7 +399,7 @@ void Request::process_post_request(Connection *conn) {
 
         close(first_pipefd[1]);
 
-        std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
+        // std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
 
         // TODO read until end of the header
         std::stringstream ss;
@@ -410,14 +410,17 @@ void Request::process_post_request(Connection *conn) {
                 break;
             ss << buffer;
 
-            if (ss.str().find("\r\n\r\n") != std::string::npos)
-                break;
+            if (*buffer == '\n') {
+                if (ss.str().find("\r\n\r\n") != std::string::npos)
+                    break;
+            }
+
         }
 
         // ss has the complete header from CGI
 
-        std::cout << "header from CGI: " << std::endl;
-        std::cout << ss.str() << std::endl;
+        // std::cout << "header from CGI: " << std::endl;
+        // std::cout << ss.str() << std::endl;
 
         /*
         Status: 201 Created
@@ -433,7 +436,7 @@ void Request::process_post_request(Connection *conn) {
         // waitpid(pid, NULL, 0);
 
         // TODO if takes too long send request timed out
-        std::cout << "---------------- END OUTPUT ----------------" << std::endl;
+        // std::cout << "---------------- END OUTPUT ----------------" << std::endl;
     }
 }
 

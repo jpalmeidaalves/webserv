@@ -282,7 +282,6 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
-
         if (request.not_parsed()) {
             request.parse_request(); // extract header info
             this->redirect_to_server(this->_active_connects[cfd]);
@@ -297,7 +296,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
             // std::cout << "body is: " << test << std::endl;
 
             if (test.size() != request.get_content_length()) {
-                std::cout << RED << "NOT done reading" << RESET << std::endl;
+                // std::cout << RED << "NOT done reading" << RESET << std::endl;
                 return;
             }
         }
@@ -369,7 +368,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    std::cout << "sended to socket: " << RED << buff << RESET << std::endl;
+    // std::cout << "sended to socket: " << RED << buff << RESET << std::endl;
 
     if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
         print_error("failed to write");
