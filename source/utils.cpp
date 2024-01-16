@@ -133,6 +133,8 @@ void get_port_host_from_sockfd(int sockfd, Connection *conn) {
     conn->sin_port = addr.sin_port;
     conn->host = convert_uint32_to_str(ntohl(addr.sin_addr.s_addr));
     conn->port = ft_itos(ntohs(addr.sin_port));
+
+    std::cout << "Accepted connection to " << conn->host << ":" << conn->port << std::endl;
 }
 
 int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }

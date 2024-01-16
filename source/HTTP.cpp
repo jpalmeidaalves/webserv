@@ -194,8 +194,9 @@ int HTTP::set_to_write_mode(struct epoll_event &ev) {
 void HTTP::redirect_to_server(Connection *conn) {
     std::cout << "redirect to server" << std::endl;
 
-    std::cout << "host " << conn->host << std::endl;
-    std::cout << "port " << conn->port << std::endl;
+    // std::cout << "host " << conn->host << std::endl;
+    // std::cout << YELLOW << "****HERE****" << RESET << std::endl;
+    // std::cout << "port " << conn->port << std::endl;
 
     std::cout << "host from header " << conn->request.getHost() << std::endl;
 
@@ -210,6 +211,7 @@ void HTTP::redirect_to_server(Connection *conn) {
 
     std::vector<Server>::iterator ite;
     for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
+        // std::cout << "checking server: " << ite->host << ":" << ite->port << std::endl;
         if (ite->host == conn->host && ite->port == conn->port) {
             // if is the first match and default server is not defined, define it now
             if (!default_server) {
@@ -240,19 +242,20 @@ void HTTP::redirect_to_server(Connection *conn) {
 // when a readable event is detected on a socket
 void HTTP::read_socket(struct epoll_event &ev) {
 
-    std::cout << GREEN << "start reading socket" << RESET << std::endl;
+    // std::cout << GREEN << "start reading socket" << RESET << std::endl;
 
     int cfd = ev.data.fd;
     char buf[BUFFERSIZE];
     int bytes_read;
 
-    bytes_read = read(cfd, buf, BUFFERSIZE); // TODO maybe change to recv to handle SIGPIPE
+    ft_memset(&buf, 0, BUFFERSIZE);
+    bytes_read = read(cfd, buf, BUFFERSIZE - 1); // TODO maybe change to recv to handle SIGPIPE
     // buf[bytes_read] = '\0';
 
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
 
-    if (bytes_read == 0 && request.getRaw().size() == 0) {
+    if (bytes_read == 0 && !request._header_complete) {
         print_error("---- read 0 bytes ----");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
@@ -270,9 +273,9 @@ void HTTP::read_socket(struct epoll_event &ev) {
     header\r\n\r\nbody
     */
 
-    std::size_t end_header_pos = std::string(request.getRaw()).find("\r\n\r\n");
+    // std::size_t end_header_pos = std::string(request.getRaw()).find("\r\n\r\n");
 
-    if (end_header_pos != std::string::npos) {
+    if (request._header_complete) {
 
         // std::cout << "***************" << std::endl;
 
@@ -282,24 +285,24 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
-        if (request.not_parsed()) {
-            request.parse_request(); // extract header info
-            this->redirect_to_server(this->_active_connects[cfd]);
-        }
+        // if (request.not_parsed()) {
+        request.parse_request(); // extract header info
+        this->redirect_to_server(this->_active_connects[cfd]);
+        // }
 
-        if (request.get_content_length() && request.getMethod() == "POST") {
-            // std::cout << RED << "inside post test " << RESET << std::endl;
-            // needs to continue to read body until max body size
-            // std::cout << "request length: " << request.get_content_length() << std::endl;
-            // end_header_pos ate ao fim == request.get_content_length()
-            std::string test = request.getRaw().substr(end_header_pos + 4);
-            // std::cout << "body is: " << test << std::endl;
+        // if (request.get_content_length() && request.getMethod() == "POST") {
+        //     // std::cout << RED << "inside post test " << RESET << std::endl;
+        //     // needs to continue to read body until max body size
+        //     // std::cout << "request length: " << request.get_content_length() << std::endl;
+        //     // end_header_pos ate ao fim == request.get_content_length()
+        //     std::string test = request.getRaw().substr(end_header_pos + 4);
+        //     // std::cout << "body is: " << test << std::endl;
 
-            if (test.size() != request.get_content_length()) {
-                // std::cout << RED << "NOT done reading" << RESET << std::endl;
-                return;
-            }
-        }
+        //     if (test.size() != request.get_content_length()) {
+        //         // std::cout << RED << "NOT done reading" << RESET << std::endl;
+        //         return;
+        //     }
+        // }
 
         // std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
         //           << std::endl;

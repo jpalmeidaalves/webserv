@@ -20,7 +20,7 @@ class Server;
 class Request {
   private:
     std::stringstream _raw;
-    std::size_t _rawsize;
+    // std::size_t _rawsize;
     std::string _method;
     std::string _url;
     std::string _host;
@@ -31,7 +31,8 @@ class Request {
     Request &operator=(const Request &rhs);
 
   public:
-    std::string query; // TODO make pivate?
+    bool _header_complete; // TODO make private
+    std::string query;     // TODO make pivate?
     std::string short_url;
     Request();
     ~Request();

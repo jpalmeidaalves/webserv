@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _rawsize(0), _content_length(0) {}
+Request::Request() : _content_length(0), _header_complete(false) {}
 
 Request::~Request() {}
 
@@ -24,7 +24,7 @@ Request::Request(const Request &src) { *this = src; }
 void Request::parse_request() {
     // std::cout << "data: " << data << std::endl;
     // parse request
-    std::stringstream ss(this->_raw.str());
+    std::stringstream ss(this->_raw.str()); // TODO dont make a duplicate
     std::string line;
 
     // process first line
@@ -32,7 +32,7 @@ void Request::parse_request() {
     getline(ss, this->_url, ' ');
     getline(ss, line); // ignore the rest of the line
 
-    // std::cout << "---------- parsing header -----------" << std::endl;
+    std::cout << "---------- parsing header -----------" << std::endl;
 
     while (getline(ss, line)) {
 
@@ -41,7 +41,7 @@ void Request::parse_request() {
             break;
 
         // std::cout << line << std::endl;
-        // print_ascii(line.c_str());
+        print_ascii(line.c_str());
 
         if (line.find("Host:") == 0) {
             remove_char_from_string(line, '\r');
@@ -54,7 +54,7 @@ void Request::parse_request() {
             this->_content_type = line.substr(line.find(" ") + 1);
         }
     }
-    // std::cout << "---------- end parsing header -----------" << std::endl;
+    std::cout << "---------- end parsing header -----------" << std::endl;
 }
 
 std::string Request::getMethod() const { return (this->_method); }
@@ -76,8 +76,14 @@ void Request::set_content_type(const std::string type) { this->_content_type = t
 void Request::set_content_length(std::size_t length) { this->_content_length = length; }
 
 void Request::append_raw(const char *buf, size_t len) {
-    this->_raw.write(buf, len);
-    this->_rawsize += len;
+    // this->_raw.write(buf, len);
+    this->_raw << buf;
+    // this->_rawsize += len;
+    (void)len; // TODO remove this
+
+    if (*buf == '\n' && this->_raw.str().find("\r\n\r\n") != std::string::npos) {
+        this->_header_complete = true;
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -414,7 +420,6 @@ void Request::process_post_request(Connection *conn) {
                 if (ss.str().find("\r\n\r\n") != std::string::npos)
                     break;
             }
-
         }
 
         // ss has the complete header from CGI
