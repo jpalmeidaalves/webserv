@@ -316,8 +316,7 @@ void Request::process_post_request(Connection *conn) {
     // std::cout << this->getRaw() << std::endl;
     // std::cout << "[end request]" << std::endl;
 
-    // TODO handle CGI
-    print_error("TODO MUST HANDLE CGI");
+    // TODO change to socketpair
 
     int first_pipefd[2];
     int second_pipefd[2];
@@ -414,7 +413,6 @@ void Request::process_post_request(Connection *conn) {
                 if (ss.str().find("\r\n\r\n") != std::string::npos)
                     break;
             }
-
         }
 
         // ss has the complete header from CGI
