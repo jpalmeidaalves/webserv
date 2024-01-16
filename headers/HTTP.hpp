@@ -52,9 +52,11 @@ class HTTP {
 
     std::vector<Server> _servers;
     connects_map _active_connects;
+
     HTTP();
 
   public:
+    // std::map<int, Connection *> _active_cgis;
     HTTP(std::vector<Server> &servers);
     ~HTTP();
     int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
@@ -62,11 +64,12 @@ class HTTP {
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
     int close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
-    void read_socket(struct epoll_event &ev);
+    void read_socket(struct epoll_event &ev, struct epoll_event &default_ev);
     int send_header(int &cfd, Response &response);
     void write_socket(struct epoll_event &ev);
-    int set_to_write_mode(struct epoll_event &ev);
+    int set_to_write_mode(struct epoll_event &ev, int cfd);
     void redirect_to_server(Connection *conn);
+    void read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev);
 };
 
 #endif /* HTTP_HPP */

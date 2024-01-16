@@ -18,6 +18,8 @@ struct Connection {
     std::string port;
     uint32_t s_addr;
     uint16_t sin_port;
+    // struct epoll_event *ev;
+    int fd;
 };
 
 #endif /* CONNECTION_HPP */

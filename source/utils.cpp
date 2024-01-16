@@ -147,15 +147,25 @@ bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets) {
     }
     return false;
 }
-// void print_nonprintables(std::string str) {
-//     for (char c : str) {
-//         if (!isprint(static_cast<unsigned char>(c))) {
-//             // Print the non-printable character as its ASCII code
-//             std::cout << static_cast<int>(c) << " ";
-//         }
-//     }
-//     std::cout << std::endl;
-// }
+
+Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_connects) {
+    std::map<int, Connection *>::iterator it;
+
+    // std::cout << YELLOW << "checking if is CGI, sockfd: " << sockfd << std::endl;
+
+    // std::cout << "active_connects size: " << _active_connects.size() << std::endl;
+
+    for (it = _active_connects.begin(); it != _active_connects.end(); ++it) {
+        std::cout << "current: " << it->second->request.cgi_socket << std::endl;
+        if ((it->second->request.cgi_socket == sockfd)) {
+            return it->second;
+        }
+    }
+
+    std::cout << RESET << std::endl;
+    return NULL;
+}
+
 void remove_char_from_string(std::string &str, char to_remove) {
     for (std::string::iterator it = str.begin(); it != str.end(); ++it) {
         if (*it == to_remove) {
@@ -186,3 +196,33 @@ bool ft_strcmp_insensitive(std::string str1, std::string str2) {
     std::transform(str2.begin(), str2.end(), str2.begin(), ::tolower);
     return (str1 == str2);
 }
+
+struct timeval begin, end;
+
+void start_timer(struct timeval *begin) {
+    std::cout << YELLOW << "Timer started" << std::endl;
+    gettimeofday(begin, 0);
+}
+
+void end_timer(struct timeval *begin, struct timeval *end) {
+    // Stop measuring time and calculate the elapsed time
+    gettimeofday(end, 0);
+    long seconds = end->tv_sec - begin->tv_sec;
+    long microseconds = end->tv_usec - begin->tv_usec;
+    double elapsed = seconds + microseconds * 1e-6;
+
+    std::cout.setf(std::ios::fixed, std::ios::floatfield);
+    std::cout.precision(3);
+
+    std::cout << YELLOW << "Time elapsed: " << elapsed << RESET << std::endl;
+}
+
+// void print_nonprintables(std::string str) {
+//     for (char c : str) {
+//         if (!isprint(static_cast<unsigned char>(c))) {
+//             // Print the non-printable character as its ASCII code
+//             std::cout << static_cast<int>(c) << " ";
+//         }
+//     }
+//     std::cout << std::endl;
+// }

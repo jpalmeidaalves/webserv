@@ -7,11 +7,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
+#include <map>
 #include <netinet/in.h>
 #include <string.h>
 #include <string>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h> // TODO remove
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
@@ -41,6 +43,7 @@ void remove_char_from_string(std::string &str, char to_remove);
 void print_ascii(const char *str);
 bool has_permissions(std::string full_path, mode_t permissions);
 bool ft_strcmp_insensitive(std::string str1, std::string str2);
+Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_connects);
 
 template <typename T>
 void printVector(std::vector<T> v) {
@@ -48,5 +51,8 @@ void printVector(std::vector<T> v) {
         std::cout << v[i] << std::endl;
     std::cout << "size: " << v.size();
 }
+
+void start_timer(struct timeval *begin);
+void end_timer(struct timeval *begin, struct timeval *end);
 
 #endif /* UTILS_HPP */
