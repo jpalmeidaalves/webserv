@@ -157,7 +157,7 @@ Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_conne
 
     for (it = _active_connects.begin(); it != _active_connects.end(); ++it) {
         std::cout << "current: " << it->second->request.cgi_socket << std::endl;
-        if ((it->second->request.cgi_socket == sockfd)) {
+        if (it->second->request.cgi_socket == sockfd) {
             return it->second;
         }
     }
