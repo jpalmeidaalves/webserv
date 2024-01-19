@@ -20,6 +20,7 @@ struct Connection {
     uint16_t sin_port;
     // struct epoll_event *ev;
     int fd;
+    int cgi_pid; // if has CGI add the process ID of the child process
 };
 
 #endif /* CONNECTION_HPP */

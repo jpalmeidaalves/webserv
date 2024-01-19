@@ -3,6 +3,7 @@
 
 #include <dirent.h>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 #include <sys/types.h>
@@ -31,6 +32,7 @@ class Request {
     Request &operator=(const Request &rhs);
 
   public:
+    bool cgi_complete;
     bool is_done;
     int cgi_socket;
     std::stringstream _cgi_header;
@@ -57,7 +59,7 @@ class Request {
     std::string get_content_type() const;
     std::size_t get_content_length() const;
 
-    void process_post_request(Connection *conn, int epfd, struct epoll_event &ev);
+    void process_post_request(Connection *conn, int epfd);
     // std::string upload_files(Server *server);
     std::string getline_from_body(std::size_t &bytes_read);
     // std::string extract_filename_from_body(size_t &bytes_read);

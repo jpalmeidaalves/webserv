@@ -17,6 +17,7 @@ class Response {
     std::size_t _content_length;
     int _req_file_fd;
     std::map<std::string, std::string> _headers;
+    std::stringstream _response_buffer;
 
     Response(const Response &src);
     Response &operator=(const Response &rhs);
@@ -45,6 +46,10 @@ class Response {
     std::size_t get_content_length() const;
     std::string assemble_header();
     void parse_cgi_headers(std::stringstream &ss, Server *server);
+    void write_buffer(char *str, std::size_t len);
+    int read_buffer(char *buf, std::size_t size);
+    bool has_header();
+    int bytes_in_buffer();
 };
 
 #endif /* RESPONSE_HPP */

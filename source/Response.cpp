@@ -82,7 +82,6 @@ void Response::set_status_code(std::string code, Server *server) {
             this->set_error_page_fd(server->get_default_error_page(code));
         }
     }
-
 }
 
 void Response::set_content_type(const std::string type) { this->_content_type = type; }
@@ -119,6 +118,8 @@ std::string Response::assemble_header() {
  */
 void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
     // Update all the headers in the response with the header from CGI
+
+    std::cout << "parsing CGI headers" << std::endl;
     std::string key_status = "Status: ";
     std::string line;
 
@@ -157,4 +158,28 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
             }
         }
     }
+}
+
+void Response::write_buffer(char *str, std::size_t len) {
+    if (this->_response_buffer.write(str, len)) {
+        if (this->_response_buffer.fail())
+            std::cerr << "_response_buffer error FAILED TO WRITE" << std::endl;
+    }
+
+    // TODO check for errors
+}
+
+bool Response::has_header() {
+    if (this->_response_buffer.str().find("\r\n\r\n") != std::string::npos)
+        return true;
+    return false;
+}
+
+int Response::bytes_in_buffer() { return (this->_response_buffer.tellp()); }
+
+int Response::read_buffer(char *buf, std::size_t size) {
+    this->_response_buffer.read(buf, size);
+    if (this->_response_buffer.fail())
+        return 0;
+    return (0);
 }

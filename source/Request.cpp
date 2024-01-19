@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _rawsize(0), _content_length(0), is_done(false), cgi_socket(0), body_pos(0) {}
+Request::Request() : _rawsize(0), _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0), body_pos(0) {}
 
 Request::~Request() {}
 
@@ -101,7 +101,8 @@ bool Request::has_cgi() {
     // /upload.html?name=.php&other=stuff
     // /upload.html
 
-    std::size_t has_query = this->getUrl().find("?");
+    std::string url = this->getUrl();
+    std::size_t has_query = url.find("?");
 
     if (has_query != std::string::npos) {
         this->short_url = this->getUrl().substr(0, has_query);
@@ -310,7 +311,7 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
-void Request::process_post_request(Connection *conn, int epfd, struct epoll_event &ev) {
+void Request::process_post_request(Connection *conn, int epfd) {
 
     (void)epfd;
     std::cout << "processing POST request" << std::endl;
@@ -359,8 +360,8 @@ void Request::process_post_request(Connection *conn, int epfd, struct epoll_even
             (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
 
         if (execve(cmd[0], cmd, custom_envp) == -1)
-            perror("execvp ls failed");
-    } else if (pid > 0) { // parent
+            perror("execvp ls failed"); // TODO handle error and send it to client
+    } else if (pid > 0) {               // parent
         close(sockets[0]);
 
         this->_raw.ignore(body_pos);
@@ -379,7 +380,6 @@ void Request::process_post_request(Connection *conn, int epfd, struct epoll_even
 
         // std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
 
-        (void)ev;
         struct epoll_event ev2;
         ft_memset(&ev2, 0, sizeof(ev2));
         ev2.events = EPOLLIN;
@@ -394,6 +394,9 @@ void Request::process_post_request(Connection *conn, int epfd, struct epoll_even
         std::cout << RED << "the read cgi socket is :" << sockets[1] << RESET << std::endl;
 
         this->cgi_socket = sockets[1];
+        HTTP::add_cgi_socket(sockets[1], conn->fd);
+
+        // std::cout << "Added cgi socket " << HTTP::get_associated_conn(sockets[1]) << std::endl;
 
         // conn->response.set_req_file_fd(sockets[1]); // TODO ALERT
 
