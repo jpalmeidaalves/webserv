@@ -441,6 +441,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "test: " << request.getUrl() << std::endl;
 
     Response &response = this->_active_connects[cfd]->response;
+    Connection *conn = this->_active_connects[cfd];
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
@@ -466,7 +467,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         if (response.read_buffer(buf, BUFFERSIZE) == -1) {
             print_error("failed to read response buffer");
             std::cout << "buf has: " << std::string(buf) << std::endl;
-            if (request.has_cgi() && !request.cgi_complete) {
+            if (conn->cgi_pid && !request.cgi_complete) {
                 request.cgi_complete = true;
             }
             this->close_connection(cfd, this->_epoll_fd, ev);
@@ -481,19 +482,29 @@ void HTTP::write_socket(struct epoll_event &ev) {
         if (nbytes <= BUFFERSIZE) {
             // TODO check if the buffer can be empty at some point
 
-            if (request.has_cgi() && request.cgi_complete) {
-                // int sockets[] = {cfd, request.cgi_socket};
-
-                dup2(request.cgi_socket, cfd);
-                close(request.cgi_socket);
+            if (conn->cgi_pid && request.cgi_complete) {
 
                 int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
-                std::cout << "DUPED and removed from EPOLL" << std::endl;
+                std::cout << "removed from EPOLL and redirect cgi fd to the incomming socket" << std::endl;
                 if (ret == -1) {
                     std::cerr << "fd: " << cfd << std::endl;
                     print_error(strerror(errno));
                     std::cout << "ANOTHER ?????????" << std::endl;
                 }
+
+                dup2(request.cgi_socket, cfd);
+                close(request.cgi_socket);
+
+                int cgi_socket = request.cgi_socket;
+
+                // TODO erase from active connection
+                delete this->_active_connects[cfd];
+                this->_active_connects.erase(cfd);
+                // TODO erase active cgi
+                HTTP::cgi_sockets.erase(cgi_socket);
+
+                std::cout << "checking active connects: " << this->_active_connects.size() << std::endl;
+                std::cout << "checking active cgis: " << HTTP::cgi_sockets.size() << std::endl;
             }
         }
 
@@ -503,7 +514,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         // TODO socketpair cgi socket with connection socket
     }
 
-    if (request.has_cgi())
+    if (conn->cgi_pid)
         return;
 
     int file_fd = response.get_requested_fd();

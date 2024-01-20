@@ -328,6 +328,8 @@ void Request::process_post_request(Connection *conn, int epfd) {
 
     pid_t pid = fork();
 
+    // TODO handle fork failed
+
     if (pid == 0) { // child 1
 
         close(sockets[1]);
@@ -363,6 +365,7 @@ void Request::process_post_request(Connection *conn, int epfd) {
             perror("execvp ls failed"); // TODO handle error and send it to client
     } else if (pid > 0) {               // parent
         close(sockets[0]);
+        conn->cgi_pid = pid;
 
         this->_raw.ignore(body_pos);
 
