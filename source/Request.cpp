@@ -338,7 +338,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
     // std::cout << "[end request]" << std::endl;
 
     int sockets[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) {
+    if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
         print_error("opening stream socket pair");
         return;
     }
@@ -349,11 +349,28 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
     if (pid == 0) { // child 1
 
-        close(sockets[1]);
+        // close(sockets[1]);
 
-        dup2(sockets[0], STDIN_FILENO);
-        dup2(sockets[0], STDOUT_FILENO);
-        dup2(sockets[0], STDERR_FILENO);
+        // int dumpfd = open("cgibody.txt", O_RDWR | O_CREAT, 0777);
+
+        // dup2(sockets[0], dumpfd);
+        // dup2(dumpfd, STDIN_FILENO);
+        char tmp[1000];
+        ft_memset(tmp, 0, 1000);
+        read(sockets[0], tmp, 999);
+
+        std::cout << "from child:" << std::endl;
+        std::cout << tmp << std::endl;
+
+        exit(0);
+
+        //         dup2(sockets[0], dumpfd);
+        //         dup2(sockets[0], STDOUT_FILENO);
+        // close(STDIN_FILENO);
+        // close(STDOUT_FILENO);
+
+        // close(sockets[0]);
+        // close(dumpfd);
 
         std::string file_path = conn->server->root + this->getUrl();
 
@@ -392,7 +409,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         std::cout << "body is: " << body << std::endl;
 
-        if (write(sockets[1], body, bytes_left) == -1) {
+        if (write(sockets[1], body, bytes_left) <= 0) {
             std::cout << "failed to send the body to the CGI" << std::endl;
         }
 

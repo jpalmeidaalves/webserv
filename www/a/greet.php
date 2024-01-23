@@ -31,5 +31,14 @@ header("custom header: hello world!");
 <body>
     
 <h1>hello <?php echo isset($_GET["name"]) ? $_GET["name"] : "world"; ?></h1>
+
+<?php
+var_dump($_GET);
+?>
+
+<?php var_dump($_POST); ?>
+
+<?php file_get_contents('php://input'); ?>
+
 </body>
 </html>
