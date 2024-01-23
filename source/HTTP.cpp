@@ -385,31 +385,31 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
-        if (request.not_parsed()) {
-            request.parse_request(); // extract header info
-            this->redirect_to_server(this->_active_connects[cfd]);
-        }
+        // if (request.not_parsed()) {
+        request.parse_request(); // extract header info
+        this->redirect_to_server(this->_active_connects[cfd]);
+        // }
 
-        if (request.get_content_length() && request.getMethod() == "POST") {
-            // std::cout << RED << "inside post test " << RESET << std::endl;
-            // needs to continue to read body until max body size
-            // std::cout << "request length: " << request.get_content_length() << std::endl;
-            // end_header_pos ate ao fim == request.get_content_length()
-            std::string test = request.getRaw().substr(end_header_pos + 4);
-            // std::cout << "body is: " << test << std::endl;
+        // if (request.get_content_length() && request.getMethod() == "POST") {
+        //     // std::cout << RED << "inside post test " << RESET << std::endl;
+        //     // needs to continue to read body until max body size
+        //     // std::cout << "request length: " << request.get_content_length() << std::endl;
+        //     // end_header_pos ate ao fim == request.get_content_length()
+        //     std::string test = request.getRaw().substr(end_header_pos + 4);
+        //     // std::cout << "body is: " << test << std::endl;
 
-            if (test.size() != request.get_content_length()) {
-                // std::cout << RED << "NOT done reading" << RESET << std::endl;
-                return;
-            }
-        }
+        //     if (test.size() != request.get_content_length()) {
+        //         // std::cout << RED << "NOT done reading" << RESET << std::endl;
+        //         return;
+        //     }
+        // }
 
         // std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
         //           << std::endl;
 
         if (request.has_cgi()) {
             // TODO do CGI stuff
-            request.process_post_request(this->_active_connects[cfd], this->_epoll_fd);
+            request.process_cgi(this->_active_connects[cfd], this->_epoll_fd);
         } else {
 
             std::cout << CYAN << "updated to write mode" << RESET << std::endl;

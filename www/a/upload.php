@@ -1,14 +1,18 @@
-<p>PATH_INFO: <?php echo isset($_SERVER[ "PATH_INFO" ]) ? $_SERVER[ "PATH_INFO" ] : ""; ?></p>
-<p>CONTENT_TYPE: <?php echo isset($_SERVER[ "CONTENT_TYPE" ]) ? $_SERVER[ "CONTENT_TYPE" ] : ""; ?></p>
-<p>CONTENT_TYPE: <?php echo isset($_SERVER[ "CONTENT_TYPE" ]) ? $_SERVER[ "CONTENT_TYPE" ] : ""; ?></p>
-<p>QUERY_STRING: <?php echo isset($_SERVER[ "QUERY_STRING" ]) ? $_SERVER[ "QUERY_STRING" ] : ""; ?></p>
-
-<p>query name: <?php echo isset($_GET["name"]) ? $_GET["name"] : ""; ?></p>
-<p>query age: <?php echo isset($_GET["age"]) ? $_GET["age"] : ""; ?></p>
-
-<p>post test: <?php echo isset($POST["test"]) ? $POST["test"] : ""; ?></p>
-<p>post name: <?php echo isset($POST["name"]) ? $POST["name"] : ""; ?></p>
-
-
-
-<?php var_dump($_POST); ?>
+<?php
+$target_dir = "uploads/";
+echo $_FILES["fileToUpload"]["name"];
+$target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+$uploadOk = 1;
+$imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+// Check if image file is a actual image or fake image
+if(isset($_POST["submit"])) {
+  $check = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
+  if($check !== false) {
+    echo "File is an image - " . $check["mime"] . ".";
+    $uploadOk = 1;
+  } else {
+    echo "File is not an image.";
+    $uploadOk = 0;
+  }
+}
+?>

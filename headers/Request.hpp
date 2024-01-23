@@ -36,7 +36,6 @@ class Request {
     bool is_done;
     int cgi_socket;
     std::stringstream _cgi_header;
-    std::size_t body_pos;
     std::string query; // TODO make pivate?
     std::string short_url;
     Request();
@@ -59,7 +58,7 @@ class Request {
     std::string get_content_type() const;
     std::size_t get_content_length() const;
 
-    void process_post_request(Connection *conn, int epfd);
+    void process_cgi(Connection *conn, int epfd);
     // std::string upload_files(Server *server);
     std::string getline_from_body(std::size_t &bytes_read);
     // std::string extract_filename_from_body(size_t &bytes_read);

@@ -232,3 +232,11 @@ void end_timer(struct timeval *begin, struct timeval *end) {
 //     }
 //     std::cout << std::endl;
 // }
+
+std::size_t remaining_bytes(const std::stringstream &s) {
+    std::streambuf *buf = s.rdbuf();
+    std::streampos pos = buf->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
+    std::streampos end = buf->pubseekoff(0, std::ios_base::end, std::ios_base::in);
+    buf->pubseekpos(pos, std::ios_base::in);
+    return end - pos;
+}

@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _rawsize(0), _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0), body_pos(0) {}
+Request::Request() : _rawsize(0), _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0) {}
 
 Request::~Request() {}
 
@@ -24,17 +24,17 @@ Request::Request(const Request &src) { *this = src; }
 void Request::parse_request() {
     // std::cout << "data: " << data << std::endl;
     // parse request
-    std::stringstream ss(this->_raw.str());
+    // std::stringstream ss(this->_raw.str());
     std::string line;
 
     // process first line
-    getline(ss, this->_method, ' ');
-    getline(ss, this->_url, ' ');
-    getline(ss, line); // ignore the rest of the line
+    getline(this->_raw, this->_method, ' ');
+    getline(this->_raw, this->_url, ' ');
+    getline(this->_raw, line); // ignore the rest of the line
 
     // std::cout << "---------- parsing header -----------" << std::endl;
 
-    while (getline(ss, line)) {
+    while (getline(this->_raw, line)) {
 
         // has reach the end of the header
         if (line == "\r")
@@ -313,10 +313,25 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
-void Request::process_post_request(Connection *conn, int epfd) {
+void Request::process_cgi(Connection *conn, int epfd) {
 
     (void)epfd;
-    std::cout << "processing POST request" << std::endl;
+    std::cout << "processing CGI" << std::endl;
+
+    // TODO verify if request buffer has more content than just the header
+
+    // TODO if it has, than we must write the remaining bytes to the CGI socket
+
+    // TODO redirect the input from socket to the output of CGI socket (dup2 the incomming socket to the CGI)
+
+    // std::string line;
+    // getline(this->_raw, line);
+
+    std::size_t bytes_left = remaining_bytes(this->_raw);
+
+    std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
+
+    // std::cout << line << std::endl;
 
     // std::cout << "[request]" << std::endl;
     // std::cout << this->getRaw() << std::endl;
@@ -369,15 +384,15 @@ void Request::process_post_request(Connection *conn, int epfd) {
         close(sockets[0]);
         conn->cgi_pid = pid;
 
-        this->_raw.ignore(body_pos);
+        char body[bytes_left + 1];
 
-        char body[this->get_content_length()];
+        ft_memset(body, 0, sizeof(body));
 
-        this->_raw.read(body, this->get_content_length());
+        this->_raw.read(body, bytes_left);
 
         std::cout << "body is: " << body << std::endl;
 
-        if (write(sockets[1], body, this->get_content_length()) == -1) {
+        if (write(sockets[1], body, bytes_left) == -1) {
             std::cout << "failed to send the body to the CGI" << std::endl;
         }
 
