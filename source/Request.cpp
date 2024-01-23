@@ -140,7 +140,9 @@ void Request::process_requested_file(Connection *conn) {
     }
 
     // response.set_status_code("200");
-    response.set_content_type(MimeTypes::identify(full_path));
+    std::string file_type = MimeTypes::identify(full_path);
+    // std::cout << RED << "file mimetype: " << file_type << RESET << std::endl;
+    response.set_content_type(file_type);
     response.set_req_file_fd(file_fd);
 }
 

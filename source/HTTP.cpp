@@ -497,10 +497,10 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
                 int cgi_socket = request.cgi_socket;
 
-                // TODO erase from active connection
+                // erase from active connection
                 delete this->_active_connects[cfd];
                 this->_active_connects.erase(cfd);
-                // TODO erase active cgi
+                // erase active cgi
                 HTTP::cgi_sockets.erase(cgi_socket);
 
                 std::cout << "checking active connects: " << this->_active_connects.size() << std::endl;
@@ -513,9 +513,6 @@ void HTTP::write_socket(struct epoll_event &ev) {
         // TODO send the remainder of the buffer (in case if it read more than the header)
         // TODO socketpair cgi socket with connection socket
     }
-
-    if (conn->cgi_pid)
-        return;
 
     int file_fd = response.get_requested_fd();
     if (!file_fd) {
@@ -552,23 +549,11 @@ void HTTP::write_socket(struct epoll_event &ev) {
 }
 
 int HTTP::send_header(int &cfd, Response &response) {
-    // std::ostringstream ss;
-
-    // // TODO each line must have \r\n (carefull adding headers from CGI)
-
-    // // TODO missing status description after status code
-    // ss << "HTTP/1.1 " << response.get_status_code() << "\r\n"
-
-    //    << "Content-Type: " << response.get_content_type()
-    //    << "\n"
-    //    //    << "Content-Length: " << response.get_content_length() << "\n"
-    //    << "Access-Control-Allow-Origin: *\n"
-    //    << "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\n"
-    //    << "Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With\n"
-    //    << "Access-Control-Allow-Credentials: true\n"
-    //    << "\n";
-
     std::string header = response.assemble_header();
+    response.set_content_type("application/zip");
+
+    std::cout << "Will send this header" << std::endl;
+    std::cout << YELLOW << header << RESET << std::endl;
 
     if (write(cfd, header.c_str(), header.size()) == -1)
         return 1;

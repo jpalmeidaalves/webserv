@@ -84,12 +84,14 @@ void Response::set_status_code(std::string code, Server *server) {
     }
 }
 
-void Response::set_content_type(const std::string type) { this->_content_type = type; }
-void Response::set_content_length(std::size_t length) { this->_content_length = length; }
-
 std::string Response::get_status_code() const { return (this->_status_code); }
 
-std::string Response::get_content_type() const { return (this->_content_type); }
+void Response::set_content_type(const std::string type) { this->set_header("Content-Type", type); }
+void Response::set_content_length(std::size_t length) {
+    this->_content_length = length;
+    this->set_header("Content-Length", ft_ultos(length));
+}
+
 std::size_t Response::get_content_length() const { return (this->_content_length); }
 
 std::string Response::assemble_header() {
@@ -100,10 +102,15 @@ std::string Response::assemble_header() {
 
     ss << "HTTP/1.1 " << this->_status_code << "\r\n";
 
+    // std::cout << "assembling header" << std::endl;
+
     std::map<std::string, std::string>::iterator it;
     for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
         ss << it->first << ": " << it->second << "\r\n";
+        // std::cout << it->first << ": " << it->second << std::endl;
     }
+
+    // std::cout << "done assembling" << std::endl;
 
     ss << "\r\n";
 

@@ -35,6 +35,7 @@ int get_stat_info(std::string full_path, Response &response);
 int file_exists(std::string path);
 void get_port_host_from_sockfd(int sockfd, Connection *conn);
 int ft_stoi(std::string str);
+std::string ft_ultos(unsigned long nb);
 std::string ft_itos(int nb);
 uint32_t convert_str_to_uint32(const std::string &str);
 std::string convert_uint32_to_str(uint32_t nb);

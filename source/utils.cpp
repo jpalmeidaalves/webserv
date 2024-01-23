@@ -33,6 +33,12 @@ std::string ft_itos(int nb) {
     return ss.str();
 }
 
+std::string ft_ultos(unsigned long nb) {
+    std::stringstream ss;
+    ss << nb;
+    return ss.str();
+}
+
 file_types get_file_type(const char *name) {
     DIR *directory = opendir(name);
 
