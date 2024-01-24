@@ -1,3 +1,6 @@
+Client <-----> HTTP Server <-------> CGI PROcess
+                                      BBBBBBBBBBBBBBB 
+
 ## Functions Notes
 
 https://www.youtube.com/watch?v=XXfdzwEsxFk

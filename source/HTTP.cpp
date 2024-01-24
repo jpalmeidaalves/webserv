@@ -221,6 +221,18 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         if (ret == -1) {
             print_error(strerror(errno)); // TODO check this case
         }
+
+        // // TODO must add conn_ev to poll again
+        // ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, conn->fd, &conn_ev);
+        // if (ret == -1) {
+        //     print_error("failed epoll_ctl in read_cgi_socket"); // TODO check this case
+        //     return;
+        // }
+
+        // // if (set_to_write_mode(conn_ev, conn->fd) == -1) {
+        // //     print_error("failed to set write mode in incomming socket");
+        // //     // this->close_connection(, this->_epoll_fd, ev);
+        // // }
         return;
     }
 
@@ -235,6 +247,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         if (ret == -1) {
             print_error(strerror(errno)); // TODO check this case
         }
+        // HTTP::cgi_sockets.erase(fd);
 
         conn->response.parse_cgi_headers(conn->request._cgi_header, conn->server);
         conn->request.cgi_complete = true;
@@ -244,6 +257,18 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 
         // Change the connection socket to write mode
         std::cout << CYAN << "updated to write mode" << RESET << std::endl;
+
+        // struct epoll_event ev2;
+        // ft_memset(&ev2, 0, sizeof(ev2));
+        // ev2.events = EPOLLOUT;
+        // ev2.data.fd = conn->fd;
+
+        // ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, conn->fd, &ev2);
+        // if (ret == -1) {
+        //     print_error("failed epoll_ctl in read_cgi_socket 2"); // TODO check this case
+        //     return;
+        // }
+
         if (set_to_write_mode(conn_ev, conn->fd) == -1) {
             print_error("failed to set write mode in incomming socket");
             // this->close_connection(, this->_epoll_fd, ev);
@@ -376,8 +401,8 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
         // std::cout << "***************" << std::endl;
 
         // print_ascii(request.getRaw().c_str());
-        std::cout << "[Request Raw]" << std::endl;
-        std::cout << request.getRaw() << std::endl;
+        // std::cout << "[Request Raw]" << std::endl;
+        // std::cout << request.getRaw() << std::endl;
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
@@ -394,7 +419,7 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
             std::string test = request.getRaw().substr(end_header_pos + 4);
             // std::cout << "body is: " << test << std::endl;
 
-            if (test.size() != request.get_content_length()) {
+            if (test.size() < request.get_content_length()) {
                 // std::cout << RED << "NOT done reading" << RESET << std::endl;
                 return;
             }
@@ -407,22 +432,28 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
             // TODO do CGI stuff
             std::cout << GREEN << "cgi request" << RESET << std::endl;
             request.process_cgi(this->_active_connects[cfd], this->_epoll_fd);
+
+            // int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
+            // if (ret == -1) {
+            //     print_error("failed remove client socket from poll after processing cgi");
+            //     close_connection(cfd, this->_epoll_fd, ev);
+            // }
         } else {
 
             std::cout << GREEN << "normal request" << RESET << std::endl;
 
             std::cout << CYAN << "updated to write mode" << RESET << std::endl;
 
-            if (set_to_write_mode(ev, cfd) == -1) {
-                print_error("failed to set write mode in incomming socket");
-                this->close_connection(cfd, this->_epoll_fd, ev);
-                return;
-            }
-
             if (request.getMethod() == "GET") {
                 request.process_request(this->_active_connects[cfd]);
             } else {
                 response.set_status_code("404", this->_active_connects[cfd]->server);
+            }
+
+            if (set_to_write_mode(ev, cfd) == -1) {
+                print_error("failed to set write mode in incomming socket");
+                this->close_connection(cfd, this->_epoll_fd, ev);
+                return;
             }
         }
     }
