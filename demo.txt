@@ -1,0 +1,54 @@
+Server listening on [1m[32m127.0.0.1:8084[0m, sockfd: 3
+Server listening on [1m[32m127.0.0.1:8085[0m, sockfd: 4
+Server listening on [1m[32m127.0.0.2:8087[0m, sockfd: 5
+accepted connection in listing socket: 3 for incoming socket: 7
+[31mcur fd: 7[0m
+[33mREADING[0m
+NORMAL read
+here
+[31mparsed request[0m
+redirect to server
+host 127.0.0.1
+port 8084
+host from header 127.0.0.1:8084
+
+
+checking if has CGI: short_url = /
+[32mnormal request[0m
+[36mupdated to write mode[0m
+------- dir --------
+found: 14
+ext: .html
+[31mcur fd: 7[0m
+[34mWRITING[0m
+writing to socket: 7
+active connects: 1
+request url is: //index.html
+Will send this header
+[33mHTTP/1.1 200
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE
+Access-Control-Allow-Origin: *
+Content-Length: 237
+Content-Type: text/html
+
+[0m
+[31mcur fd: 7[0m
+[34mWRITING[0m
+writing to socket: 7
+active connects: 1
+request url is: //index.html
+will read from FD: 8
+****buffer nb of bytes: 0
+[31mcur fd: 7[0m
+[34mWRITING[0m
+writing to socket: 7
+active connects: 1
+request url is: //index.html
+will read from FD: 8
+****buffer nb of bytes: 0
+*****0 bytes
+trying to remove from EPOLL fd 7
+closed connection for fd(socket) 7
+control-c triggered!!

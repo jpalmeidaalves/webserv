@@ -106,7 +106,7 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
               << std::endl;
 
     // add to epoll modifiyng the flags to allow read and write operations
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN | EPOLLOUT;
     ev.data.fd = accepted_fd;
 
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, accepted_fd, &ev);
@@ -169,6 +169,7 @@ int HTTP::handle_connections() {
             if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
                 this->accept_and_add_to_poll(ev, this->_epoll_fd, evlist[i].data.fd);
             } else {
+                std::cout << RED << "cur fd: " << evlist[i].data.fd << RESET << std::endl;
                 if (evlist[i].events & EPOLLIN) {
                     std::cout << YELLOW << "READING" << RESET << std::endl;
 
@@ -185,8 +186,16 @@ int HTTP::handle_connections() {
                 } else if (evlist[i].events & EPOLLOUT) {
                     std::cout << BLUE << "WRITING" << RESET << std::endl;
 
-                    // Ready for write
-                    this->write_socket(evlist[i]);
+                    if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
+                        std::cout << "CGI write" << std::endl;
+                        Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
+                        this->write_to_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i],
+                                                  evlist[associated_conn->fd]);
+                    } else {
+
+                        // Ready for write
+                        this->write_socket(evlist[i]);
+                    }
                 }
             }
         }
@@ -201,8 +210,35 @@ int HTTP::handle_connections() {
     return 0;
 }
 
-void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
+void HTTP::write_to_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
+    (void)cgi_ev;
+    (void)conn_ev;
+    std::size_t bytes_left = remaining_bytes(conn->request._raw);
+    std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
 
+    if (bytes_left && conn->request.cgi_bytes_written < conn->request.get_content_length()) {
+
+        std::size_t bytes_to_write = (bytes_left > BUFFERSIZE) ? BUFFERSIZE : bytes_left;
+
+        char buffer[bytes_to_write + 1];
+        ft_memset(&buffer, 0, sizeof(buffer));
+
+        conn->request._raw.read(buffer, bytes_to_write);
+
+        // std::cout << "request buffer is: " << buffer << std::endl;
+
+        if (write(fd, buffer, bytes_to_write) <= 0) {
+            std::cout << "failed to send the body to the CGI" << std::endl;
+        }
+
+        conn->request.cgi_bytes_written += bytes_to_write;
+
+        // TODO must handle timeout if body has less content than the Content-Length
+    }
+}
+
+void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
+    (void)conn_ev;
     // struct timeval begin, end;
     // start_timer(&begin);
 
@@ -210,6 +246,8 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
     ft_memset(&buffer, 0, sizeof(buffer));
 
     std::size_t bytes_read = read(fd, buffer, BUFFERSIZE);
+    conn->request.complete = true;
+
     if (bytes_read <= 0) {
         std::cout << RED << "ALERT" << RESET << std::endl;
 
@@ -221,18 +259,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         if (ret == -1) {
             print_error(strerror(errno)); // TODO check this case
         }
-
-        // // TODO must add conn_ev to poll again
-        // ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, conn->fd, &conn_ev);
-        // if (ret == -1) {
-        //     print_error("failed epoll_ctl in read_cgi_socket"); // TODO check this case
-        //     return;
-        // }
-
-        // // if (set_to_write_mode(conn_ev, conn->fd) == -1) {
-        // //     print_error("failed to set write mode in incomming socket");
-        // //     // this->close_connection(, this->_epoll_fd, ev);
-        // // }
+        close(fd);
         return;
     }
 
@@ -242,21 +269,21 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 
     if (conn->response.has_header()) {
 
-        // TODO STOP reading from CGI
-        int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev);
-        if (ret == -1) {
-            print_error(strerror(errno)); // TODO check this case
-        }
+        // // TODO STOP reading from CGI
+        // int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev);
+        // if (ret == -1) {
+        //     print_error(strerror(errno)); // TODO check this case
+        // }
         // HTTP::cgi_sockets.erase(fd);
 
         conn->response.parse_cgi_headers(conn->request._cgi_header, conn->server);
-        conn->request.cgi_complete = true;
+        // conn->request.cgi_complete = true;
 
-        conn->response.set_req_file_fd(fd);
-        std::cout << "Updated req_file_fd: " << conn->response.get_requested_fd() << std::endl;
+        // conn->response.set_req_file_fd(fd);
+        // std::cout << "Updated req_file_fd: " << conn->response.get_requested_fd() << std::endl;
 
         // Change the connection socket to write mode
-        std::cout << CYAN << "updated to write mode" << RESET << std::endl;
+        // std::cout << CYAN << "updated to write mode" << RESET << std::endl;
 
         // struct epoll_event ev2;
         // ft_memset(&ev2, 0, sizeof(ev2));
@@ -269,10 +296,10 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         //     return;
         // }
 
-        if (set_to_write_mode(conn_ev, conn->fd) == -1) {
-            print_error("failed to set write mode in incomming socket");
-            // this->close_connection(, this->_epoll_fd, ev);
-        }
+        // if (set_to_write_mode(conn_ev, conn->fd) == -1) {
+        //     print_error("failed to set write mode in incomming socket");
+        //     // this->close_connection(, this->_epoll_fd, ev);
+        // }
     }
 
     /*
@@ -282,42 +309,42 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
     */
 }
 
-int HTTP::set_to_write_mode(struct epoll_event &ev, int cfd) {
-    // ev.data.fd = cfd;
+// int HTTP::set_to_write_mode(struct epoll_event &ev, int cfd) {
+//     // ev.data.fd = cfd;
 
-    // struct epoll_event ev2;
-    // ft_memset(&ev2, 0, sizeof(ev2));
-    // ev2.events = EPOLLIN;
-    // ev2.data.fd = cfd;
+//     // struct epoll_event ev2;
+//     // ft_memset(&ev2, 0, sizeof(ev2));
+//     // ev2.events = EPOLLIN;
+//     // ev2.data.fd = cfd;
 
-    int ret = 0;
+//     int ret = 0;
 
-    std::cout << "+-+-+---+-+-cfd: " << cfd << std::endl;
-    std::cout << "+-+-+-+epoll_fd: " << this->_epoll_fd << std::endl;
+//     std::cout << "+-+-+---+-+-cfd: " << cfd << std::endl;
+//     std::cout << "+-+-+-+epoll_fd: " << this->_epoll_fd << std::endl;
 
-    if (HTTP::is_cgi_socket(cfd))
-        return 0;
+//     if (HTTP::is_cgi_socket(cfd))
+//         return 0;
 
-    ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
-    if (ret == -1) {
-        print_error("AQUI1");
-        print_error(strerror(errno)); // TODO check this case
-        return ret;
-    }
+//     ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
+//     if (ret == -1) {
+//         print_error("AQUI1");
+//         print_error(strerror(errno)); // TODO check this case
+//         return ret;
+//     }
 
-    ev.data.fd = cfd;
-    ev.events = EPOLLOUT;
+//     ev.data.fd = cfd;
+//     ev.events = EPOLLOUT;
 
-    ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, cfd, &ev);
-    if (ret == -1) {
-        print_error("failed epoll_ctl"); // TODO check this case
-        return ret;
-    }
+//     ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_ADD, cfd, &ev);
+//     if (ret == -1) {
+//         print_error("failed epoll_ctl"); // TODO check this case
+//         return ret;
+//     }
 
-    std::cout << "inside set_to_write_mode, cfd: " << ev.data.fd << std::endl;
+//     std::cout << "inside set_to_write_mode, cfd: " << ev.data.fd << std::endl;
 
-    return 0;
-}
+//     return 0;
+// }
 
 void HTTP::redirect_to_server(Connection *conn) {
     std::cout << "redirect to server" << std::endl;
@@ -372,12 +399,15 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
     int cfd = ev.data.fd;
     // std::cout << GREEN << "start reading socket" << cfd << RESET << std::endl;
 
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
+
+    if (request.complete)
+        return;
+
     char buf[BUFFERSIZE];
     int bytes_read;
     ft_memset(&buf, 0, BUFFERSIZE);
-
-    Request &request = this->_active_connects[cfd]->request;
-    Response &response = this->_active_connects[cfd]->response;
 
     bytes_read = read(cfd, buf, BUFFERSIZE); // TODO maybe change to recv to handle SIGPIPE
     // buf[bytes_read] = '\0';
@@ -409,53 +439,56 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
         if (request.not_parsed()) {
             request.parse_request(); // extract header info
             this->redirect_to_server(this->_active_connects[cfd]);
-        }
 
-        if (request.get_content_length() && request.getMethod() == "POST") {
-            // std::cout << RED << "inside post test " << RESET << std::endl;
-            // needs to continue to read body until max body size
-            // std::cout << "request length: " << request.get_content_length() << std::endl;
-            // end_header_pos ate ao fim == request.get_content_length()
-            std::string test = request.getRaw().substr(end_header_pos + 4);
-            // std::cout << "body is: " << test << std::endl;
+            if (request.has_cgi()) {
+                // TODO do CGI stuff
+                std::cout << GREEN << "cgi request" << RESET << std::endl;
+                request.process_cgi(this->_active_connects[cfd], this->_epoll_fd);
 
-            if (test.size() < request.get_content_length()) {
-                // std::cout << RED << "NOT done reading" << RESET << std::endl;
-                return;
+                // int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
+                // if (ret == -1) {
+                //     print_error("failed remove client socket from poll after processing cgi");
+                //     close_connection(cfd, this->_epoll_fd, ev);
+                // }
+            } else {
+
+                std::cout << GREEN << "normal request" << RESET << std::endl;
+
+                std::cout << CYAN << "updated to write mode" << RESET << std::endl;
+
+                if (request.getMethod() == "GET") {
+                    request.process_request(this->_active_connects[cfd]);
+                } else {
+                    response.set_status_code("404", this->_active_connects[cfd]->server);
+                }
+
+                request.complete = true;
+
+                // if (set_to_write_mode(ev, cfd) == -1) {
+                //     print_error("failed to set write mode in incomming socket");
+                //     this->close_connection(cfd, this->_epoll_fd, ev);
+                //     return;
+                // }
             }
         }
+
+        // TODO check if  needed
+        // if (request.get_content_length() && request.getMethod() == "POST") {
+        //     // std::cout << RED << "inside post test " << RESET << std::endl;
+        //     // needs to continue to read body until max body size
+        //     // std::cout << "request length: " << request.get_content_length() << std::endl;
+        //     // end_header_pos ate ao fim == request.get_content_length()
+        //     std::string test = request.getRaw().substr(end_header_pos + 4);
+        //     // std::cout << "body is: " << test << std::endl;
+
+        //     if (test.size() < request.get_content_length()) {
+        //         // std::cout << RED << "NOT done reading" << RESET << std::endl;
+        //         return;
+        //     }
+        // }
 
         // std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
         //           << std::endl;
-
-        if (request.has_cgi()) {
-            // TODO do CGI stuff
-            std::cout << GREEN << "cgi request" << RESET << std::endl;
-            request.process_cgi(this->_active_connects[cfd], this->_epoll_fd);
-
-            // int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
-            // if (ret == -1) {
-            //     print_error("failed remove client socket from poll after processing cgi");
-            //     close_connection(cfd, this->_epoll_fd, ev);
-            // }
-        } else {
-
-            std::cout << GREEN << "normal request" << RESET << std::endl;
-
-            std::cout << CYAN << "updated to write mode" << RESET << std::endl;
-
-            if (request.getMethod() == "GET") {
-                request.process_request(this->_active_connects[cfd]);
-            } else {
-                response.set_status_code("404", this->_active_connects[cfd]->server);
-            }
-
-            if (set_to_write_mode(ev, cfd) == -1) {
-                print_error("failed to set write mode in incomming socket");
-                this->close_connection(cfd, this->_epoll_fd, ev);
-                return;
-            }
-        }
     }
 }
 
@@ -463,15 +496,18 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
 void HTTP::write_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
 
+    Response &response = this->_active_connects[cfd]->response;
+    Request &request = this->_active_connects[cfd]->request;
+    Connection *conn = this->_active_connects[cfd];
+
+    if (!request.complete)
+        return;
+
     std::cout << "writing to socket: " << cfd << std::endl;
 
     std::cout << "active connects: " << this->_active_connects.size() << std::endl;
 
-    Request &request = this->_active_connects[cfd]->request;
     std::cout << "request url is: " << request.getUrl() << std::endl;
-
-    Response &response = this->_active_connects[cfd]->response;
-    Connection *conn = this->_active_connects[cfd];
 
     if (!response._sent_header) {
         this->send_header(cfd, response);
@@ -509,42 +545,25 @@ void HTTP::write_socket(struct epoll_event &ev) {
             this->close_connection(cfd, this->_epoll_fd, ev);
         }
 
-        if (nbytes <= BUFFERSIZE) {
-            // TODO check if the buffer can be empty at some point
-
-            if (conn->cgi_pid && request.cgi_complete) {
-
-                int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, cfd, &ev);
-                std::cout << "removed from EPOLL and redirect cgi fd to the incomming socket" << std::endl;
-                if (ret == -1) {
-                    std::cerr << "fd: " << cfd << std::endl;
-                    print_error(strerror(errno));
-                    std::cout << "ANOTHER ?????????" << std::endl;
-                }
-
-                dup2(request.cgi_socket, cfd);
-                close(request.cgi_socket);
-
-                int cgi_socket = request.cgi_socket;
-
-                // erase from active connection
-                delete this->_active_connects[cfd];
-                this->_active_connects.erase(cfd);
-                // erase active cgi
-                HTTP::cgi_sockets.erase(cgi_socket);
-
-                std::cout << "checking active connects: " << this->_active_connects.size() << std::endl;
-                std::cout << "checking active cgis: " << HTTP::cgi_sockets.size() << std::endl;
-            }
-        }
-
-        return;
-
         // TODO send the remainder of the buffer (in case if it read more than the header)
         // TODO socketpair cgi socket with connection socket
+        return;
     }
 
-    if (HTTP::is_cgi_socket(cfd)) {
+    if (conn->cgi_pid && request.cgi_complete) {
+
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        int cgi_socket = request.cgi_socket;
+
+        // erase from active connection
+        delete this->_active_connects[cfd];
+        this->_active_connects.erase(cfd);
+        // erase active cgi
+        HTTP::cgi_sockets.erase(cgi_socket);
+
+        std::cout << "checking active connects: " << this->_active_connects.size() << std::endl;
+        std::cout << "checking active cgis: " << HTTP::cgi_sockets.size() << std::endl;
+
         return;
     }
 

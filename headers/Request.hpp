@@ -20,7 +20,6 @@ class Server;
 
 class Request {
   private:
-    std::stringstream _raw;
     std::size_t _rawsize;
     std::string _method;
     std::string _url;
@@ -32,12 +31,14 @@ class Request {
     Request &operator=(const Request &rhs);
 
   public:
+    std::stringstream _raw;
     bool cgi_complete;
-    bool is_done;
+    bool complete;
     int cgi_socket;
     std::stringstream _cgi_header;
     std::string query; // TODO make pivate?
     std::string short_url;
+    std::size_t cgi_bytes_written;
     Request();
     ~Request();
     std::string getMethod() const;

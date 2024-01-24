@@ -6,7 +6,8 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _rawsize(0), _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0) {}
+Request::Request()
+    : _rawsize(0), _content_length(0), cgi_complete(0), complete(false), cgi_socket(0), cgi_bytes_written(0) {}
 
 Request::~Request() {}
 
@@ -328,9 +329,9 @@ void Request::process_cgi(Connection *conn, int epfd) {
     // std::string line;
     // getline(this->_raw, line);
 
-    std::size_t bytes_left = remaining_bytes(this->_raw);
+    // std::size_t bytes_left = remaining_bytes(this->_raw);
 
-    std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
+    // std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
 
     // std::cout << line << std::endl;
 
@@ -417,29 +418,31 @@ void Request::process_cgi(Connection *conn, int epfd) {
         // close(pipe_child_to_parent[1]); // Close the unwanted pipe2 read side
 
         close(sockets[0]);
+
         conn->cgi_pid = pid;
 
-        char body[bytes_left + 1];
-        ft_memset(body, 0, sizeof(body));
-        this->_raw.read(body, bytes_left);
+        // char body[bytes_left + 1];
+        // ft_memset(body, 0, sizeof(body));
+        // this->_raw.read(body, bytes_left);
 
         // std::cout << "body is: " << body << std::endl;
 
-        if (write(sockets[1], body, bytes_left) <= 0) {
-            std::cout << "failed to send the body to the CGI" << std::endl;
-        }
+        // ! TODO Cant write here without going through the EPOLL
+        // if (write(sockets[1], body, bytes_left) <= 0) {
+        //     std::cout << "failed to send the body to the CGI" << std::endl;
+        // }
 
         // Read the rest directly from client socket
         // int tmpfd = dup(conn->fd);
         // dup2(conn->fd, pipe_parent_to_child[1]);
 
-        std::cout << "done writting to CGI child process" << std::endl;
+        // std::cout << "done writting to CGI child process" << std::endl;
 
         // std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
 
         struct epoll_event ev2;
         ft_memset(&ev2, 0, sizeof(ev2));
-        ev2.events = EPOLLIN;
+        ev2.events = EPOLLIN | EPOLLOUT;
         ev2.data.fd = sockets[1];
         int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev2);
         if (ret == -1) {
