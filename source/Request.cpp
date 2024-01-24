@@ -22,6 +22,7 @@ Request::Request(const Request &src) { *this = src; }
 /* -------------------------------------------------------------------------- */
 
 void Request::parse_request() {
+    std::cout << RED << "parsed request" << RESET << std::endl;
     // std::cout << "data: " << data << std::endl;
     // parse request
     // std::stringstream ss(this->_raw.str());
@@ -111,6 +112,8 @@ bool Request::has_cgi() {
     } else {
         this->short_url = this->getUrl();
     }
+
+    std::cout << "checking if has CGI: short_url = " << this->short_url << std::endl;
 
     return has_suffix(short_url, ".php");
 }

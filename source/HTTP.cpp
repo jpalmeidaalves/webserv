@@ -170,7 +170,7 @@ int HTTP::handle_connections() {
                 this->accept_and_add_to_poll(ev, this->_epoll_fd, evlist[i].data.fd);
             } else {
                 if (evlist[i].events & EPOLLIN) {
-                    // std::cout << YELLOW << "READING" << RESET << std::endl;
+                    std::cout << YELLOW << "READING" << RESET << std::endl;
 
                     if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
                         std::cout << "CGI read" << std::endl;
@@ -197,6 +197,7 @@ int HTTP::handle_connections() {
     for (ite = this->_active_connects.begin(); ite != this->_active_connects.end(); ++ite) {
         delete (*ite).second;
     }
+
     return 0;
 }
 
@@ -356,16 +357,10 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
     bytes_read = read(cfd, buf, BUFFERSIZE); // TODO maybe change to recv to handle SIGPIPE
     // buf[bytes_read] = '\0';
 
-    if (bytes_read == 0 && request.getRaw().size() == 0) {
-        print_error("---- read 0 bytes ----");
+    if (bytes_read <= 0 && request.getRaw().size() == 0) {
+        print_error("failed to read socket");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
-    }
-    if (bytes_read == -1) {
-        print_error("failed to read socket");
-        if (this->close_connection(cfd, this->_epoll_fd, ev)) {
-            return;
-        }
     }
 
     request.append_raw(buf, bytes_read);
@@ -381,37 +376,40 @@ void HTTP::read_socket(struct epoll_event &ev, struct epoll_event &default_ev) {
         // std::cout << "***************" << std::endl;
 
         // print_ascii(request.getRaw().c_str());
-        // std::cout << "[Request Raw]" << std::endl;
-        // std::cout << request.getRaw() << std::endl;
+        std::cout << "[Request Raw]" << std::endl;
+        std::cout << request.getRaw() << std::endl;
 
         // std::cout << "***************" << std::endl;
         // std::cout << print_ascii(request.getRaw().c_str()) << std::endl;
-        // if (request.not_parsed()) {
-        request.parse_request(); // extract header info
-        this->redirect_to_server(this->_active_connects[cfd]);
-        // }
+        if (request.not_parsed()) {
+            request.parse_request(); // extract header info
+            this->redirect_to_server(this->_active_connects[cfd]);
+        }
 
-        // if (request.get_content_length() && request.getMethod() == "POST") {
-        //     // std::cout << RED << "inside post test " << RESET << std::endl;
-        //     // needs to continue to read body until max body size
-        //     // std::cout << "request length: " << request.get_content_length() << std::endl;
-        //     // end_header_pos ate ao fim == request.get_content_length()
-        //     std::string test = request.getRaw().substr(end_header_pos + 4);
-        //     // std::cout << "body is: " << test << std::endl;
+        if (request.get_content_length() && request.getMethod() == "POST") {
+            // std::cout << RED << "inside post test " << RESET << std::endl;
+            // needs to continue to read body until max body size
+            // std::cout << "request length: " << request.get_content_length() << std::endl;
+            // end_header_pos ate ao fim == request.get_content_length()
+            std::string test = request.getRaw().substr(end_header_pos + 4);
+            // std::cout << "body is: " << test << std::endl;
 
-        //     if (test.size() != request.get_content_length()) {
-        //         // std::cout << RED << "NOT done reading" << RESET << std::endl;
-        //         return;
-        //     }
-        // }
+            if (test.size() != request.get_content_length()) {
+                // std::cout << RED << "NOT done reading" << RESET << std::endl;
+                return;
+            }
+        }
 
         // std::cout << "the root for this server is: " << this->_active_connects[cfd]->server->root
         //           << std::endl;
 
         if (request.has_cgi()) {
             // TODO do CGI stuff
+            std::cout << GREEN << "cgi request" << RESET << std::endl;
             request.process_cgi(this->_active_connects[cfd], this->_epoll_fd);
         } else {
+
+            std::cout << GREEN << "normal request" << RESET << std::endl;
 
             std::cout << CYAN << "updated to write mode" << RESET << std::endl;
 

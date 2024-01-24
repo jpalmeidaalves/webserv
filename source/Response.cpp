@@ -70,6 +70,7 @@ void Response::set_header(std::string key, std::string value) {
 
 void Response::set_status_code(std::string code, Server *server) {
     // update status code
+    std::cout << RED << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
 
     // TODO check if is a error code
