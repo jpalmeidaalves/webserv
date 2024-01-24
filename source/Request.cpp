@@ -341,42 +341,51 @@ void Request::process_cgi(Connection *conn, int epfd) {
     std::cout << "content-length from request: " << this->get_content_length() << std::endl;
     std::cout << "content-type from request: " << this->get_content_type() << std::endl;
 
-    // int sockets[2];
-    // if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
-    //     print_error("opening stream socket pair");
-    //     return;
+    int sockets[2];
+    if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
+        print_error("opening stream socket pair");
+        return;
+    }
+
+    // int pipe_parent_to_child[2];
+    // int pipe_child_to_parent[2];
+    // int returnstatus1, returnstatus2;
+
+    // returnstatus1 = pipe(pipe_parent_to_child);
+    // if (returnstatus1 == -1) {
+    //     printf("Unable to create pipe 1 \n");
+    //     exit(1);
     // }
-
-    int pipe_parent_to_child[2];
-    int pipe_child_to_parent[2];
-    int returnstatus1, returnstatus2;
-
-    returnstatus1 = pipe(pipe_parent_to_child);
-    if (returnstatus1 == -1) {
-        printf("Unable to create pipe 1 \n");
-        exit(1);
-    }
-    returnstatus2 = pipe(pipe_child_to_parent);
-    if (returnstatus2 == -1) {
-        printf("Unable to create pipe 2 \n");
-        exit(1);
-    }
+    // returnstatus2 = pipe(pipe_child_to_parent);
+    // if (returnstatus2 == -1) {
+    //     printf("Unable to create pipe 2 \n");
+    //     exit(1);
+    // }
 
     pid_t pid = fork();
 
     // TODO handle fork failed
 
-    if (pid == 0) {                     // child 1
-        close(pipe_parent_to_child[1]); // Close the unwanted pipe1 write side
-        close(pipe_child_to_parent[0]); // Close the unwanted pipe2 read side
+    if (pid == 0) { // child 1
+        // close(pipe_parent_to_child[1]); // Close the unwanted pipe1 write side
+        // close(pipe_child_to_parent[0]); // Close the unwanted pipe2 read side
 
-        dup2(pipe_parent_to_child[0], STDIN_FILENO); // rediricet STD IN to pipe_parent_to_child
+        // dup2(pipe_parent_to_child[0], STDIN_FILENO); // rediricet STD IN to pipe_parent_to_child
 
-        dup2(pipe_child_to_parent[1], STDOUT_FILENO);
-        dup2(pipe_child_to_parent[1], STDERR_FILENO);
+        // dup2(pipe_child_to_parent[1], STDOUT_FILENO);
+        // dup2(pipe_child_to_parent[1], STDERR_FILENO);
 
-        close(pipe_parent_to_child[0]);
-        close(pipe_child_to_parent[1]);
+        // close(pipe_parent_to_child[0]);
+        // close(pipe_child_to_parent[1]);
+
+        close(sockets[1]);
+
+        dup2(sockets[0], STDIN_FILENO);
+
+        dup2(sockets[0], STDOUT_FILENO);
+        dup2(sockets[0], STDERR_FILENO);
+
+        close(sockets[0]);
 
         std::string file_path = conn->server->root + this->getUrl();
 
@@ -404,8 +413,10 @@ void Request::process_cgi(Connection *conn, int epfd) {
         if (execve(cmd[0], cmd, custom_envp) == -1)
             perror("execvp ls failed"); // TODO handle error and send it to client
     } else if (pid > 0) {               // parent
-        close(pipe_parent_to_child[0]); // Close the unwanted pipe1 write side
-        close(pipe_child_to_parent[1]); // Close the unwanted pipe2 read side
+        // close(pipe_parent_to_child[0]); // Close the unwanted pipe1 write side
+        // close(pipe_child_to_parent[1]); // Close the unwanted pipe2 read side
+
+        close(sockets[0]);
         conn->cgi_pid = pid;
 
         char body[bytes_left + 1];
@@ -414,7 +425,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         // std::cout << "body is: " << body << std::endl;
 
-        if (write(pipe_parent_to_child[1], body, bytes_left) <= 0) {
+        if (write(sockets[1], body, bytes_left) <= 0) {
             std::cout << "failed to send the body to the CGI" << std::endl;
         }
 
@@ -429,18 +440,18 @@ void Request::process_cgi(Connection *conn, int epfd) {
         struct epoll_event ev2;
         ft_memset(&ev2, 0, sizeof(ev2));
         ev2.events = EPOLLIN;
-        ev2.data.fd = pipe_child_to_parent[0];
-        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_child_to_parent[0], &ev2);
+        ev2.data.fd = sockets[1];
+        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev2);
         if (ret == -1) {
-            close(pipe_child_to_parent[0]);
+            close(sockets[1]);
             print_error("failed epoll_ctl");
             return;
         }
 
-        std::cout << RED << "the read cgi socket is :" << pipe_child_to_parent[0] << RESET << std::endl;
+        std::cout << RED << "the read cgi socket is :" << sockets[1] << RESET << std::endl;
 
-        this->cgi_socket = pipe_child_to_parent[0];
-        HTTP::add_cgi_socket(pipe_child_to_parent[0], conn->fd);
+        this->cgi_socket = sockets[1];
+        HTTP::add_cgi_socket(sockets[1], conn->fd);
 
         // std::cout << "Added cgi socket " << HTTP::get_associated_conn(sockets[1]) << std::endl;
 
