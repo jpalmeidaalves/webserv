@@ -172,7 +172,7 @@ int HTTP::handle_connections() {
                 if (evlist[i].events & EPOLLIN) {
                     // std::cout << YELLOW << "READING" << RESET << std::endl;
 
-                    if (this->is_cgi_socket(evlist[i].data.fd)) {
+                    if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
                         std::cout << "CGI read" << std::endl;
                         Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
                         this->read_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i],
@@ -184,6 +184,7 @@ int HTTP::handle_connections() {
                     }
                 } else if (evlist[i].events & EPOLLOUT) {
                     std::cout << BLUE << "WRITING" << RESET << std::endl;
+
                     // Ready for write
                     this->write_socket(evlist[i]);
                 }
@@ -438,7 +439,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "active connects: " << this->_active_connects.size() << std::endl;
 
     Request &request = this->_active_connects[cfd]->request;
-    std::cout << "test: " << request.getUrl() << std::endl;
+    std::cout << "request url is: " << request.getUrl() << std::endl;
 
     Response &response = this->_active_connects[cfd]->response;
     Connection *conn = this->_active_connects[cfd];
@@ -512,6 +513,10 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
         // TODO send the remainder of the buffer (in case if it read more than the header)
         // TODO socketpair cgi socket with connection socket
+    }
+
+    if (HTTP::is_cgi_socket(cfd)) {
+        return;
     }
 
     int file_fd = response.get_requested_fd();

@@ -337,6 +337,8 @@ void Request::process_cgi(Connection *conn, int epfd) {
     // std::cout << this->getRaw() << std::endl;
     // std::cout << "[end request]" << std::endl;
 
+    std::cout << "content-type from request: " << this->get_content_type() << std::endl;
+
     int sockets[2];
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
         print_error("opening stream socket pair");
@@ -349,28 +351,13 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
     if (pid == 0) { // child 1
 
-        // close(sockets[1]);
+        close(sockets[1]);
 
-        // int dumpfd = open("cgibody.txt", O_RDWR | O_CREAT, 0777);
+        dup2(sockets[0], STDIN_FILENO);
+        dup2(sockets[0], STDOUT_FILENO);
+        dup2(sockets[0], STDERR_FILENO);
 
-        // dup2(sockets[0], dumpfd);
-        // dup2(dumpfd, STDIN_FILENO);
-        char tmp[1000];
-        ft_memset(tmp, 0, 1000);
-        read(sockets[0], tmp, 999);
-
-        std::cout << "from child:" << std::endl;
-        std::cout << tmp << std::endl;
-
-        exit(0);
-
-        //         dup2(sockets[0], dumpfd);
-        //         dup2(sockets[0], STDOUT_FILENO);
-        // close(STDIN_FILENO);
-        // close(STDOUT_FILENO);
-
-        // close(sockets[0]);
-        // close(dumpfd);
+        close(sockets[0]);
 
         std::string file_path = conn->server->root + this->getUrl();
 
@@ -386,7 +373,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
         std::string script_name = "SCRIPT_FILENAME=" + conn->server->root + this->short_url;
         std::string path_info = "PATH_INFO=" + conn->server->root + this->short_url;
-        std::string content_type = "CONTENT_TYPE=text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+        std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         std::string query = "QUERY_STRING=" + this->query;
 
         char *custom_envp[] = {

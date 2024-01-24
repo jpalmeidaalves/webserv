@@ -30,7 +30,7 @@ int main() {
         // ! Basically content type was wrong!!!
 
         char *env[] = {(char *)"REDIRECT_STATUS=200",      (char *)"PATH_TRANSLATED=./test.php",
-                       (char *)"SERVER_PROTOCOL=HTTP/1.1", (char *)"CONTENT_LENGTH=10",
+                       (char *)"SERVER_PROTOCOL=HTTP/1.1", (char *)"CONTENT_LENGTH=17",
                        (char *)"REQUEST_METHOD=POST",      (char *)"SCRIPT_FILENAME=./test.php",
                        (char *)"PATH_INFO=./test.php",     (char *)"CONTENT_TYPE=application/x-www-form-urlencoded",
                        (char *)"QUERY_STRING=page=35"};
@@ -41,9 +41,9 @@ int main() {
     } else if (pid > 0) { // parent
         close(sockets[0]);
 
-        char body[] = "user=nuno";
+        char body[] = "user=nuno&age=35";
 
-        if (write(sockets[1], body, 10) <= 0) {
+        if (write(sockets[1], body, 17) <= 0) {
             std::cout << "failed to send the body to the CGI" << std::endl;
         }
 
