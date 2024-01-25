@@ -27,8 +27,8 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 100
-#define BACKLOG 200 // how many pending connections queue will hold
+#define BUFFERSIZE 100 // TODO increase buffersize
+#define BACKLOG 200    // how many pending connections queue will hold
 
 struct Connection;
 class Server;
@@ -72,13 +72,14 @@ class HTTP {
     void read_socket(struct epoll_event &ev);
     int send_header(int &cfd, Response &response);
     void write_socket(struct epoll_event &ev);
-    int set_to_write_mode(struct epoll_event &ev, int cfd);
+    int epoll_mod(struct epoll_event &ev, uint32_t flag);
     void redirect_to_server(Connection *conn);
     void read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev);
     static bool is_cgi_socket(int sock);
     Connection *get_associated_conn(int sock);
     static void remove_cgi_socket(int sock);
     static void add_cgi_socket(int sock, int connection_socket);
+    void process_request(struct epoll_event &ev);
 };
 
 #endif /* HTTP_HPP */

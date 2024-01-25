@@ -46,7 +46,7 @@ class Request {
     std::string getRaw() const;
     bool not_parsed();
     void setUrl(std::string url);
-    void parse_request();
+    void parse_request_header();
     void process_request(Connection *conn);
     void process_requested_file(Connection *conn);
     int list_directory(std::string full_path, Connection *conn);

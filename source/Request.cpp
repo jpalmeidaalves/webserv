@@ -21,7 +21,7 @@ Request::Request(const Request &src) { *this = src; }
 /*                                   Methods                                  */
 /* -------------------------------------------------------------------------- */
 
-void Request::parse_request() {
+void Request::parse_request_header() {
     std::cout << RED << "parsed request" << RESET << std::endl;
     // std::cout << "data: " << data << std::endl;
     // parse request
@@ -64,6 +64,11 @@ std::string Request::getBody() const { return ""; }
 std::string Request::getHost() const { return (this->_host); }
 std::string Request::getRaw() const { return (this->_buffer.str()); }
 
+/**
+ * Checks if the request has been parsed.
+ *
+ * @note If the request has a method defined (GET, POST, ...) means that it's parsed.
+ */
 bool Request::not_parsed() {
     if (this->_method == "")
         return true;
