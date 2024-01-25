@@ -27,7 +27,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 8000
+#define BUFFERSIZE 100
 #define BACKLOG 200 // how many pending connections queue will hold
 
 struct Connection;
@@ -67,9 +67,9 @@ class HTTP {
     int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
     int handle_connections();
     int accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd);
-    int close_connection(int cfd, int &epfd, epoll_event &ev);
+    void close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
-    void read_socket(struct epoll_event &ev, struct epoll_event &default_ev);
+    void read_socket(struct epoll_event &ev);
     int send_header(int &cfd, Response &response);
     void write_socket(struct epoll_event &ev);
     int set_to_write_mode(struct epoll_event &ev, int cfd);

@@ -20,8 +20,7 @@ class Server;
 
 class Request {
   private:
-    std::stringstream _raw;
-    std::size_t _rawsize;
+    std::stringstream _buffer;
     std::string _method;
     std::string _url;
     std::string _host;
@@ -64,7 +63,7 @@ class Request {
     // std::string extract_filename_from_body(size_t &bytes_read);
     // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
 
-    void append_raw(const char *buf, size_t len);
+    void append_buffer(const char *buf, size_t len);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 

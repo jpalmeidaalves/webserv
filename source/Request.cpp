@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _rawsize(0), _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0) {}
+Request::Request() : _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0) {}
 
 Request::~Request() {}
 
@@ -25,17 +25,17 @@ void Request::parse_request() {
     std::cout << RED << "parsed request" << RESET << std::endl;
     // std::cout << "data: " << data << std::endl;
     // parse request
-    // std::stringstream ss(this->_raw.str());
+    // std::stringstream ss(this->_buffer.str());
     std::string line;
 
     // process first line
-    getline(this->_raw, this->_method, ' ');
-    getline(this->_raw, this->_url, ' ');
-    getline(this->_raw, line); // ignore the rest of the line
+    getline(this->_buffer, this->_method, ' ');
+    getline(this->_buffer, this->_url, ' ');
+    getline(this->_buffer, line); // ignore the rest of the line
 
     // std::cout << "---------- parsing header -----------" << std::endl;
 
-    while (getline(this->_raw, line)) {
+    while (getline(this->_buffer, line)) {
 
         // has reach the end of the header
         if (line == "\r")
@@ -62,7 +62,7 @@ std::string Request::getMethod() const { return (this->_method); }
 std::string Request::getUrl() const { return (this->_url); }
 std::string Request::getBody() const { return ""; }
 std::string Request::getHost() const { return (this->_host); }
-std::string Request::getRaw() const { return (this->_raw.str()); }
+std::string Request::getRaw() const { return (this->_buffer.str()); }
 
 bool Request::not_parsed() {
     if (this->_method == "")
@@ -76,10 +76,9 @@ std::size_t Request::get_content_length() const { return (this->_content_length)
 void Request::set_content_type(const std::string type) { this->_content_type = type; }
 void Request::set_content_length(std::size_t length) { this->_content_length = length; }
 
-void Request::append_raw(const char *buf, size_t len) {
-    this->_raw.write(buf, len);
-    std::cout << "here" << std::endl;
-    this->_rawsize += len;
+void Request::append_buffer(const char *buf, size_t len) {
+    this->_buffer.write(buf, len);
+    std::cout << "appended data in the request buffer" << std::endl;
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -155,7 +154,7 @@ void Request::process_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
+    std::cout << "[Request Header]" << request.getRaw() << std::endl;
 
     std::string full_path = conn->server->root + request.getUrl();
 
@@ -326,9 +325,9 @@ void Request::process_cgi(Connection *conn, int epfd) {
     // TODO redirect the input from socket to the output of CGI socket (dup2 the incomming socket to the CGI)
 
     // std::string line;
-    // getline(this->_raw, line);
+    // getline(this->_buffer, line);
 
-    std::size_t bytes_left = remaining_bytes(this->_raw);
+    std::size_t bytes_left = remaining_bytes(this->_buffer);
 
     std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
 
@@ -389,7 +388,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         std::string file_path = conn->server->root + this->getUrl();
 
-        // (char *)this->_raw.rdbuf();
+        // (char *)this->_buffer.rdbuf();
         char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
 
         std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->short_url;
@@ -421,7 +420,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         char body[bytes_left + 1];
         ft_memset(body, 0, sizeof(body));
-        this->_raw.read(body, bytes_left);
+        this->_buffer.read(body, bytes_left);
 
         // std::cout << "body is: " << body << std::endl;
 
@@ -472,10 +471,10 @@ std::string Request::getline_from_body(std::size_t &bytes_read) {
     // stop reading when reach the end of content length
     while (bytes_read < this->get_content_length()) {
         char buf[1];
-        this->_raw.read(buf, 1);
-        if (this->_raw.fail()) {
+        this->_buffer.read(buf, 1);
+        if (this->_buffer.fail()) {
             print_error("Failed to extract line from request body");
-            this->_raw.clear();
+            this->_buffer.clear();
             return line.str();
         }
         bytes_read++;
