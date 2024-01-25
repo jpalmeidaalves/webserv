@@ -318,6 +318,8 @@ void HTTP::process_request(struct epoll_event &ev) {
     }
 }
 
+// TODO BEFORE MOVING ON TO THE CGI, USE IFSTREAM IN FILES TO AVOID USING AN FD
+
 /* -------------------------------------------------------------------------- */
 /*                         REFACTOR BELLOW THIS POINT                         */
 /* -------------------------------------------------------------------------- */
