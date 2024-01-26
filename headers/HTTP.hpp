@@ -70,7 +70,7 @@ class HTTP {
     void close_connection(int cfd, int &epfd, epoll_event &ev);
     int add_listening_socket_to_poll(struct epoll_event &ev, int sockfd);
     void read_socket(struct epoll_event &ev);
-    int send_header(int &cfd, Response &response);
+    int send_header(int &cfd, struct epoll_event &ev, Response &response);
     void write_socket(struct epoll_event &ev);
     int epoll_mod(struct epoll_event &ev, uint32_t flag);
     void redirect_to_server(Connection *conn);

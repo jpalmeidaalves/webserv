@@ -300,7 +300,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "request url is: " << request.getUrl() << std::endl;
 
     if (!response._sent_header) {
-        this->send_header(cfd, response);
+        this->send_header(cfd, ev, response);
         return;
     }
 
@@ -422,6 +422,27 @@ void HTTP::redirect_to_server(Connection *conn) {
     }
 }
 
+/**
+ * Assemble response Header and send it to the client.
+ * @note If fail close connection and print error.
+ */
+int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
+    std::string header = response.assemble_header();
+    // response.set_content_type("application/zip");
+
+    std::cout << BLUE << "Will send this header" << RESET << std::endl;
+    std::cout << BLUE << header << RESET << std::endl;
+
+    if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) == -1) {
+        print_error("failed to write in write_socket");
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return 1;
+    }
+
+    response._sent_header = true;
+    return 0;
+}
+
 // TODO BEFORE MOVING ON TO THE CGI, USE IFSTREAM IN FILES TO AVOID USING AN FD
 
 /* -------------------------------------------------------------------------- */
@@ -507,23 +528,6 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
     Content-type: text/html; charset=UTF-8
 
     */
-}
-
-// when a writable event is detected on a socket
-
-int HTTP::send_header(int &cfd, Response &response) {
-    std::string header = response.assemble_header();
-    response.set_content_type("application/zip");
-
-    std::cout << "Will send this header" << std::endl;
-    std::cout << YELLOW << header << RESET << std::endl;
-
-    if (write(cfd, header.c_str(), header.size()) == -1)
-        return 1;
-
-    response._sent_header = true;
-
-    return 0;
 }
 
 void HTTP::add_cgi_socket(int sock, int connection_socket) { HTTP::cgi_sockets[sock] = connection_socket; }
