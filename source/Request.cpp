@@ -313,23 +313,16 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
+
 void Request::process_cgi(Connection *conn, int epfd) {
     std::cout << "processing CGI" << std::endl;
 
     // TODO verify if request buffer has more content than just the header
-
     // TODO if it has, than we must write the remaining bytes to the CGI socket
-
     // TODO redirect the input from socket to the output of CGI socket (dup2 the incomming socket to the CGI)
 
-    // std::string line;
-    // getline(this->_buffer, line);
-
-    std::size_t bytes_left = remaining_bytes(this->_buffer);
-
-    std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
-
-    // std::cout << line << std::endl;
+    // std::size_t bytes_left = remaining_bytes(this->_buffer);
+    // std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
 
     // std::cout << "[request]" << std::endl;
     // std::cout << this->getRaw() << std::endl;
@@ -344,41 +337,14 @@ void Request::process_cgi(Connection *conn, int epfd) {
         return;
     }
 
-    // int pipe_parent_to_child[2];
-    // int pipe_child_to_parent[2];
-    // int returnstatus1, returnstatus2;
-
-    // returnstatus1 = pipe(pipe_parent_to_child);
-    // if (returnstatus1 == -1) {
-    //     printf("Unable to create pipe 1 \n");
-    //     exit(1);
-    // }
-    // returnstatus2 = pipe(pipe_child_to_parent);
-    // if (returnstatus2 == -1) {
-    //     printf("Unable to create pipe 2 \n");
-    //     exit(1);
-    // }
-
     pid_t pid = fork();
-
     // TODO handle fork failed
 
     if (pid == 0) { // child 1
-        // close(pipe_parent_to_child[1]); // Close the unwanted pipe1 write side
-        // close(pipe_child_to_parent[0]); // Close the unwanted pipe2 read side
-
-        // dup2(pipe_parent_to_child[0], STDIN_FILENO); // rediricet STD IN to pipe_parent_to_child
-
-        // dup2(pipe_child_to_parent[1], STDOUT_FILENO);
-        // dup2(pipe_child_to_parent[1], STDERR_FILENO);
-
-        // close(pipe_parent_to_child[0]);
-        // close(pipe_child_to_parent[1]);
 
         close(sockets[1]);
 
         dup2(sockets[0], STDIN_FILENO);
-
         dup2(sockets[0], STDOUT_FILENO);
         dup2(sockets[0], STDERR_FILENO);
 
@@ -386,13 +352,11 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         std::string file_path = conn->server->root + this->getUrl();
 
-        // (char *)this->_buffer.rdbuf();
         char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
 
         std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->short_url;
         std::string server_port = "SERVER_PORT" + conn->server->port;
         std::string remote_host = "REMOTE_HOST" + conn->server->host;
-
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
         std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
@@ -410,56 +374,50 @@ void Request::process_cgi(Connection *conn, int epfd) {
         if (execve(cmd[0], cmd, custom_envp) == -1)
             perror("execvp ls failed"); // TODO handle error and send it to client
     } else if (pid > 0) {               // parent
-        // close(pipe_parent_to_child[0]); // Close the unwanted pipe1 write side
-        // close(pipe_child_to_parent[1]); // Close the unwanted pipe2 read side
 
         close(sockets[0]);
         conn->cgi_pid = pid;
 
-        char body[bytes_left + 1];
-        ft_memset(body, 0, sizeof(body));
-        this->_buffer.read(body, bytes_left);
+        // Add the socket in the parent end to the EPOLL
+        /**
+         * The socket in the parent end (resulted from socketpair) will be added
+         * to the EPOLL and we'll be interested in read and write events for this FD.
+         *
+         * @note We set this to read and write because the CGI process may have all the data
+         * necessary to handle the request and has began to send the response, even if we have more data
+         * that we wish to send to it.
+         */
+        struct epoll_event ev;
+        ft_memset(&ev, 0, sizeof(ev));
 
-        // std::cout << "body is: " << body << std::endl;
-
-        if (write(sockets[1], body, bytes_left) <= 0) {
-            std::cout << "failed to send the body to the CGI" << std::endl;
-        }
-
-        // Read the rest directly from client socket
-        // int tmpfd = dup(conn->fd);
-        // dup2(conn->fd, pipe_parent_to_child[1]);
-
-        std::cout << "done writting to CGI child process" << std::endl;
-
-        // std::cout << "---------------- CGI OUTPUT ----------------" << std::endl;
-
-        struct epoll_event ev2;
-        ft_memset(&ev2, 0, sizeof(ev2));
-        ev2.events = EPOLLIN;
-        ev2.data.fd = sockets[1];
-        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev2);
+        ev.events = EPOLLIN | EPOLLOUT;
+        ev.data.fd = sockets[1];
+        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev);
         if (ret == -1) {
             close(sockets[1]);
             print_error("failed epoll_ctl");
             return;
         }
 
-        std::cout << RED << "the read cgi socket is :" << sockets[1] << RESET << std::endl;
-
         this->cgi_socket = sockets[1];
         HTTP::add_cgi_socket(sockets[1], conn->fd);
 
         // std::cout << "Added cgi socket " << HTTP::get_associated_conn(sockets[1]) << std::endl;
 
-        // conn->response.set_req_file_fd(sockets[1]); // TODO ALERT
+        // TODO this will be moved to write_to_cgi_socket
+        // char body[BUFFERSIZE];
+        // ft_memset(body, 0, sizeof(body));
 
-        // create a key with accepted_fd, whose value is a struct Connection
-        // std::stringstream *ss = new std::stringstream;
-        // _active_cgis[sockets[1]] = new std::stringstream;
-        // add_cgi(sockets[1], ss);
+        // this->_buffer.read(body, BUFFERSIZE);
+        // int bytes_read = this->_buffer.gcount();
 
-        // ! THE REST WILL CONTINUE IN read_cgi_socket
+        // if (bytes_read) {
+        //     if (send(sockets[1], body, bytes_read, MSG_NOSIGNAL) <= 0) {
+        //         std::cout << "failed to send the body to the CGI" << std::endl;
+        //         // TODO handle error
+        //     } else {
+        //         std::cout << "wrote " << bytes_read << " to the cgi process" << std::endl;
+        //     }
     }
 }
 

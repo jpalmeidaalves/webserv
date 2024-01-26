@@ -18,7 +18,6 @@ class Response {
     std::size_t _content_length;
     int _req_file_fd;
     std::map<std::string, std::string> _headers;
-    std::stringstream _response_buffer;
 
     Response(const Response &src);
     Response &operator=(const Response &rhs);
@@ -27,12 +26,16 @@ class Response {
     Response();
     ~Response();
 
+    std::stringstream _response_buffer;
     std::ifstream inputfilestream;
     bool isdir;
     std::string dir_data;
     bool _sent_header;
     mode_t permissions;
     std::string last_modified;
+    bool _cgi_header_parsed;
+    int buffer_writes;
+
     void set_header(std::string key, std::string value);
     void set_status_code(std::string code, Server *server);
     // void set_content_data(unsigned char * data);

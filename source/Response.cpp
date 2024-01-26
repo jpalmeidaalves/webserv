@@ -5,7 +5,7 @@
 
 Response::Response()
     : _version("HTTP/1.1"), _status_code("200"), _content_type("text/html"), _content_length(0), _req_file_fd(0),
-      isdir(false), _sent_header(false) {
+      isdir(false), _sent_header(false), _cgi_header_parsed(false), buffer_writes(0) {
 
     // Define default headers
     this->set_header("Content-Type", "text/html");
@@ -170,8 +170,11 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
 
 void Response::write_buffer(char *str, std::size_t len) {
     if (this->_response_buffer.write(str, len)) {
-        if (this->_response_buffer.fail())
+        if (this->_response_buffer.fail()) {
             std::cerr << "_response_buffer error FAILED TO WRITE" << std::endl;
+        } else {
+            this->buffer_writes++;
+        }
     }
 
     // TODO check for errors
