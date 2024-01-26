@@ -128,6 +128,8 @@ void Request::process_requested_file(Connection *conn) {
 
     std::string full_path = conn->server->root + request.getUrl();
 
+    std::cout << "processing requested file, full_path: " << full_path << std::endl;
+
     if (get_stat_info(full_path, response)) {
         response.set_status_code("500", conn->server);
         return;
@@ -163,6 +165,8 @@ void Request::process_request(Connection *conn) {
 
     std::string full_path = conn->server->root + request.getUrl();
 
+    std::cout << GREEN << "processing request full_path: " << full_path << RESET << std::endl;
+
     // check if is a file or dir
     file_types curr_type = get_file_type(full_path.c_str());
 
@@ -177,9 +181,9 @@ void Request::process_request(Connection *conn) {
 
         // if index file is present
         // TODO must check all index files defined in the configfile
-        if (file_exists(full_path + "/" + "index.html")) {
+        if (file_exists(full_path + "index.html")) {
             // send file (must check permissions)
-            request.setUrl(request.getUrl() + "/" + "index.html"); // update url
+            request.setUrl(request.getUrl() + "index.html"); // update url
             this->process_requested_file(conn);
         } else {
             // send list dir (must check permissions)

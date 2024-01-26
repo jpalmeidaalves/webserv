@@ -125,12 +125,11 @@ std::string MimeTypes::identify(const std::string &original_path) {
 
     supported_types::iterator it;
     std::size_t found = path.find_last_of(".");
-    std::cout << "found: " << found << std::endl;
     if (found != std::string::npos) {
 
         std::string ext = path.substr(found);
 
-        std::cout << "ext: " << ext << std::endl;
+        std::cout << "found mimetype, ext: " << ext << std::endl;
 
         it = MimeTypes::types.find(ext);
         if (it != MimeTypes::types.end())

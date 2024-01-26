@@ -288,6 +288,67 @@ void HTTP::read_socket(struct epoll_event &ev) {
     }
 }
 
+void HTTP::write_socket(struct epoll_event &ev) {
+    int cfd = ev.data.fd;
+
+    Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
+    // Connection *conn = this->_active_connects[cfd];
+
+    std::cout << "writing to socket: " << cfd << std::endl;
+    std::cout << "active connects: " << this->_active_connects.size() << std::endl;
+    std::cout << "request url is: " << request.getUrl() << std::endl;
+
+    if (!response._sent_header) {
+        this->send_header(cfd, response);
+        return;
+    }
+
+    if (response.isdir) {
+        // TODO use the response buffer instead of dir_data
+        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
+            print_error("failed to send directory response");
+        }
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
+
+    std::cout << "will read from FD: " << response.get_requested_fd() << std::endl;
+
+    int file_fd = response.get_requested_fd();
+    if (!file_fd) {
+        std::cout << "*****NO FD" << std::endl;
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
+
+    int bytes_read = 0;
+    char buff[BUFFERSIZE];
+    ft_memset(&buff, 0, BUFFERSIZE);
+
+    bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
+    if (bytes_read == -1) {
+        print_error("Failed read file");
+        close(file_fd);
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
+
+    if (bytes_read == 0) {
+        std::cout << "*****0 bytes" << std::endl;
+        close(file_fd);
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
+
+    if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
+        print_error("failed to write in write_socket");
+        this->close_connection(cfd, this->_epoll_fd, ev);
+    } else {
+        std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
+    }
+}
+
 void HTTP::process_request(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Connection *conn = this->_active_connects[cfd];
@@ -315,6 +376,49 @@ void HTTP::process_request(struct epoll_event &ev) {
             print_error("failed to set write mode in incomming socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
         }
+    }
+}
+
+/**
+ * Will search the server blocks in config file and match the request header `Host:` with the
+ * server block `server_name`. If not found, use the first server block with the same
+ * ip and port as the default server.
+ */
+void HTTP::redirect_to_server(Connection *conn) {
+    std::cout << "redirecting to server " << conn->host << ":" << conn->port << std::endl;
+    std::cout << "host from header " << conn->request.getHost() << std::endl;
+
+    Server *default_server = NULL;
+
+    std::vector<Server>::iterator ite;
+    for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
+        if (ite->host == conn->host && ite->port == conn->port) {
+            // if is the first match and default server is not defined, define it now
+            if (!default_server) {
+                default_server = &(*ite);
+                // std::cout << "default server updated " << std::endl;
+                // printVector(default_server->server_names);
+            }
+
+            std::vector<std::string>::iterator it;
+            for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
+                if (*it == conn->request.getHost()) {
+                    // found the correct server name (host from header)
+                    conn->server = &(*ite);
+                    return;
+                }
+            }
+        }
+    }
+
+    // no server name (host from header) found, use the default server
+    conn->server = default_server;
+
+    if (!conn->server) {
+        // TODO this should never happen but if somehow did, close the connection
+        print_error("FAILED TO REDIRECT TO SERVER");
+    } else {
+        std::cout << "redirected sucessfuly to " << conn->server->host << ":" << conn->server->port << std::endl;
     }
 }
 
@@ -405,82 +509,74 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
     */
 }
 
-void HTTP::redirect_to_server(Connection *conn) {
-    std::cout << "redirect to server" << std::endl;
+// when a writable event is detected on a socket
 
-    std::cout << "host " << conn->host << std::endl;
-    std::cout << "port " << conn->port << std::endl;
+int HTTP::send_header(int &cfd, Response &response) {
+    std::string header = response.assemble_header();
+    response.set_content_type("application/zip");
 
-    std::cout << "host from header " << conn->request.getHost() << std::endl;
+    std::cout << "Will send this header" << std::endl;
+    std::cout << YELLOW << header << RESET << std::endl;
 
-    // char *tmp = (char *)(conn->request.getHost().c_str());
-    // while (*tmp) {
-    //     std::cout << (int)*tmp << std::endl;
-    //     tmp++;
-    // }
-    // std::cout << "end" << std::endl;
+    if (write(cfd, header.c_str(), header.size()) == -1)
+        return 1;
 
-    Server *default_server = NULL;
+    response._sent_header = true;
 
-    std::vector<Server>::iterator ite;
-    for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
-        if (ite->host == conn->host && ite->port == conn->port) {
-            // if is the first match and default server is not defined, define it now
-            if (!default_server) {
-                default_server = &(*ite);
-                // std::cout << "default server updated " << std::endl;
-                // printVector(default_server->server_names);
-            }
-            std::cout << std::endl;
-            std::vector<std::string>::iterator it;
-            for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
-                if (*it == conn->request.getHost()) {
-                    // found the correct server name (host from header)
-                    conn->server = &(*ite);
-                    return;
-                }
-            }
-        }
-    }
-
-    // no server name (host from header) found, use the default server
-    conn->server = default_server;
-
-    if (!conn->server) {
-        print_error("FAILED TO REDIRECT TO SERVER");
-    }
+    return 0;
 }
 
-// when a writable event is detected on a socket
-void HTTP::write_socket(struct epoll_event &ev) {
-    int cfd = ev.data.fd;
+void HTTP::add_cgi_socket(int sock, int connection_socket) { HTTP::cgi_sockets[sock] = connection_socket; }
 
-    std::cout << "writing to socket: " << cfd << std::endl;
-
-    std::cout << "active connects: " << this->_active_connects.size() << std::endl;
-
-    Request &request = this->_active_connects[cfd]->request;
-    std::cout << "request url is: " << request.getUrl() << std::endl;
-
-    Response &response = this->_active_connects[cfd]->response;
-    // Connection *conn = this->_active_connects[cfd];
-
-    if (!response._sent_header) {
-        this->send_header(cfd, response);
-        return;
-    }
-
-    if (response.isdir) {
-        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
-            print_error("failed to write3");
+Connection *HTTP::get_associated_conn(int sock) {
+    std::map<int, int>::iterator it;
+    for (it = HTTP::cgi_sockets.begin(); it != HTTP::cgi_sockets.end(); it++) {
+        if (it->first == sock) {
+            return (HTTP::_active_connects[it->second]);
         }
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
     }
+    return NULL;
+}
 
-    std::cout << "will read from FD: " << response.get_requested_fd() << std::endl;
+void HTTP::remove_cgi_socket(int sock) { HTTP::cgi_sockets.erase(sock); } // TODO remove end done cgi
 
-    // int nbytes = response.bytes_in_buffer();
+/*
+
+* input operation
+- output operation
+
+Request A |*****************--------------------------------------------------------------]
+Request B |***-----]
+
+
+Logger Ex
+
+timestamp [INFO] - incomming connection from x, GET /
+timestamp [INFO] - finish send response to x
+timestamp [INFO] - closed connection for x
+
+timestamp [ERROR] - failed to read
+
+
+    printf("File Permissions: \t");
+    printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+    printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+    printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+    printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+    printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+    printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
+    printf("\n\n");
+
+
+*/
+
+/*
+
+// int nbytes = response.bytes_in_buffer();
 
     // std::cout << "****buffer nb of bytes: " << nbytes << std::endl;
     // if (nbytes > 0) {
@@ -539,99 +635,4 @@ void HTTP::write_socket(struct epoll_event &ev) {
     // if (HTTP::is_cgi_socket(cfd)) {
     //     return;
     // }
-
-    int file_fd = response.get_requested_fd();
-    if (!file_fd) {
-        std::cout << "*****NO FD" << std::endl;
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
-
-    int bytes_read = 0;
-    char buff[BUFFERSIZE];
-    ft_memset(&buff, 0, BUFFERSIZE);
-
-    bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
-    if (bytes_read == -1) {
-        print_error("Failed read file");
-        close(file_fd);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
-
-    if (bytes_read == 0) {
-        std::cout << "*****0 bytes" << std::endl;
-        close(file_fd);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
-
-    // std::cout << "sended to socket: " << RED << buff << RESET << std::endl;
-
-    if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
-        print_error("failed to write1");
-        this->close_connection(cfd, this->_epoll_fd, ev);
-    }
-}
-
-int HTTP::send_header(int &cfd, Response &response) {
-    std::string header = response.assemble_header();
-    response.set_content_type("application/zip");
-
-    std::cout << "Will send this header" << std::endl;
-    std::cout << YELLOW << header << RESET << std::endl;
-
-    if (write(cfd, header.c_str(), header.size()) == -1)
-        return 1;
-
-    response._sent_header = true;
-
-    return 0;
-}
-
-void HTTP::add_cgi_socket(int sock, int connection_socket) { HTTP::cgi_sockets[sock] = connection_socket; }
-
-Connection *HTTP::get_associated_conn(int sock) {
-    std::map<int, int>::iterator it;
-    for (it = HTTP::cgi_sockets.begin(); it != HTTP::cgi_sockets.end(); it++) {
-        if (it->first == sock) {
-            return (HTTP::_active_connects[it->second]);
-        }
-    }
-    return NULL;
-}
-
-void HTTP::remove_cgi_socket(int sock) { HTTP::cgi_sockets.erase(sock); } // TODO remove end done cgi
-/*
-
-* input operation
-- output operation
-
-Request A |*****************--------------------------------------------------------------]
-Request B |***-----]
-
-
-Logger Ex
-
-timestamp [INFO] - incomming connection from x, GET /
-timestamp [INFO] - finish send response to x
-timestamp [INFO] - closed connection for x
-
-timestamp [ERROR] - failed to read
-
-
-    printf("File Permissions: \t");
-    printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
-    printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
-    printf("\n\n");
-
-
 */
