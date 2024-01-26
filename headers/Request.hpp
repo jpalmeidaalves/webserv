@@ -48,7 +48,7 @@ class Request {
     void setUrl(std::string url);
     void parse_request_header();
     void process_request(Connection *conn);
-    void process_requested_file(Connection *conn);
+    void process_requested_file(Connection *conn, std::string full_path);
     int list_directory(std::string full_path, Connection *conn);
     bool has_cgi();
 

@@ -122,37 +122,26 @@ bool Request::has_cgi() {
     return has_suffix(short_url, ".php");
 }
 
-void Request::process_requested_file(Connection *conn) {
-    Request &request = conn->request;
+void Request::process_requested_file(Connection *conn, std::string full_path) {
     Response &response = conn->response;
-
-    std::string full_path = conn->server->root + request.getUrl();
-
-    std::cout << "processing requested file, full_path: " << full_path << std::endl;
 
     if (get_stat_info(full_path, response)) {
         response.set_status_code("500", conn->server);
         return;
     }
 
-    // TODO check permission, done for read
-    if (!(response.permissions & S_IROTH)) {
+    response.inputfilestream.open(full_path.c_str(), std::ifstream::binary);
+    if (!response.inputfilestream) {
+        std::cout << "Error opening file" << std::endl;
         response.set_status_code("403", conn->server);
         return;
     }
 
-    int file_fd = open(full_path.c_str(), O_RDONLY);
-    if (!file_fd) {
-        print_error("Error opening file");
-        response.set_status_code("500", conn->server);
-        return;
-    }
-
-    // response.set_status_code("200");
     std::string file_type = MimeTypes::identify(full_path);
     // std::cout << RED << "file mimetype: " << file_type << RESET << std::endl;
     response.set_content_type(file_type);
-    response.set_req_file_fd(file_fd);
+
+    // response.set_req_file_fd(file_fd);
 }
 
 void Request::process_request(Connection *conn) {
@@ -161,10 +150,9 @@ void Request::process_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    std::cout << "[Request Header]" << request.getRaw() << std::endl;
-
     std::string full_path = conn->server->root + request.getUrl();
 
+    std::cout << "[Request Header]" << request.getRaw() << std::endl;
     std::cout << GREEN << "processing request full_path: " << full_path << RESET << std::endl;
 
     // check if is a file or dir
@@ -175,7 +163,7 @@ void Request::process_request(Connection *conn) {
         response.set_status_code("404", conn->server);
     } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
-        this->process_requested_file(conn);
+        this->process_requested_file(conn, full_path);
     } else if (curr_type == TYPE_DIR) {
         std::cout << "------- dir --------" << std::endl;
 
@@ -184,7 +172,8 @@ void Request::process_request(Connection *conn) {
         if (file_exists(full_path + "index.html")) {
             // send file (must check permissions)
             request.setUrl(request.getUrl() + "index.html"); // update url
-            this->process_requested_file(conn);
+            full_path += "index.html";
+            this->process_requested_file(conn, full_path);
         } else {
             // send list dir (must check permissions)
 

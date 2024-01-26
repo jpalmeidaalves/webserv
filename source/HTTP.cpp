@@ -313,39 +313,31 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    std::cout << "will read from FD: " << response.get_requested_fd() << std::endl;
-
-    int file_fd = response.get_requested_fd();
-    if (!file_fd) {
-        std::cout << "*****NO FD" << std::endl;
+    if (!response.inputfilestream) {
+        std::cout << "No inputfilestream, will close this connection" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
-    int bytes_read = 0;
     char buff[BUFFERSIZE];
     ft_memset(&buff, 0, BUFFERSIZE);
 
-    bytes_read = read(file_fd, buff, BUFFERSIZE - 1);
-    if (bytes_read == -1) {
-        print_error("Failed read file");
-        close(file_fd);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
+    response.inputfilestream.read(buff, BUFFERSIZE);
+    int bytes_read = response.inputfilestream.gcount();
 
-    if (bytes_read == 0) {
-        std::cout << "*****0 bytes" << std::endl;
-        close(file_fd);
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
+    if (bytes_read) {
+        std::cout << "read sucessfully from inputfilestream" << std::endl;
 
-    if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
-        print_error("failed to write in write_socket");
-        this->close_connection(cfd, this->_epoll_fd, ev);
+        if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
+            print_error("failed to write in write_socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
+        } else {
+            std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
+        }
+
     } else {
-        std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
+        response.inputfilestream.close();
+        this->close_connection(cfd, this->_epoll_fd, ev);
     }
 }
 

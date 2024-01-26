@@ -1,6 +1,7 @@
 #ifndef RESPONSE_HPP
 #define RESPONSE_HPP
 
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
@@ -26,6 +27,7 @@ class Response {
     Response();
     ~Response();
 
+    std::ifstream inputfilestream;
     bool isdir;
     std::string dir_data;
     bool _sent_header;

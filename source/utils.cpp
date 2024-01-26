@@ -59,6 +59,12 @@ std::string get_formated_time(long rawtime, const std::string &format) {
     return (std::string(buffer));
 }
 
+/**
+ * Get information of this file or dir and save the data the response object
+ *
+ * @return true if sucessfully
+ * @return false if some error ocurred
+ */
 int get_stat_info(std::string full_path, Response &response) {
     struct stat struc_st;
 
