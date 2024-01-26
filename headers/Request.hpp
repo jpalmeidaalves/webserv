@@ -20,7 +20,6 @@ class Server;
 
 class Request {
   private:
-    std::stringstream _buffer;
     std::string _method;
     std::string _url;
     std::string _host;
@@ -31,6 +30,7 @@ class Request {
     Request &operator=(const Request &rhs);
 
   public:
+    std::stringstream _buffer;
     bool cgi_complete;
     bool is_done;
     int cgi_socket;

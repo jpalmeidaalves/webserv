@@ -219,7 +219,8 @@ int HTTP::handle_connections() {
 
                 if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
                     std::cout << "CGI write in fd:" << evlist[i].data.fd << std::endl;
-                    std::cout << "TODO handle write CGI" << std::endl;
+                    Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
+                    this->write_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i], evlist[associated_conn->fd]);
                 } else {
                     std::cout << "NORMAL write in fd: " << evlist[i].data.fd << std::endl;
                     this->write_socket(evlist[i]);
@@ -309,8 +310,11 @@ void HTTP::write_socket(struct epoll_event &ev) {
         char buff[BUFFERSIZE];
         ft_memset(&buff, 0, BUFFERSIZE);
 
-        response._response_buffer.read(buff, BUFFERSIZE);
+        response._response_buffer.read(buff, BUFFERSIZE - 1);
         int bytes_read = response._response_buffer.gcount();
+
+        // std::cout << "bytes_read " << bytes_read << std::endl;
+        // std::cout << buff << std::endl;
 
         if (!bytes_read && request.cgi_complete) {
             this->close_connection(cfd, this->_epoll_fd, ev);
@@ -454,6 +458,25 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
 /* -------------------------------------------------------------------------- */
 /*                         REFACTOR BELLOW THIS POINT                         */
 /* -------------------------------------------------------------------------- */
+
+void HTTP::write_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
+    (void)cgi_ev;
+    (void)conn_ev;
+    char buffer[BUFFERSIZE];
+    ft_memset(&buffer, 0, sizeof(buffer));
+
+    conn->request._buffer.read(buffer, BUFFERSIZE);
+    int bytes_read = conn->request._buffer.gcount();
+
+    if (bytes_read) {
+        if (send(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL) == -1) {
+            // TODO handle error
+            std::cout << "error writing to cgi socket" << std::endl;
+        } else {
+            std::cout << BLUE << "wrote " << bytes_read << " to CGI socket " << fd << RESET << std::endl;
+        }
+    }
+}
 
 void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
     (void)conn_ev;

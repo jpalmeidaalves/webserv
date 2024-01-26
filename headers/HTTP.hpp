@@ -80,6 +80,7 @@ class HTTP {
     static void remove_cgi_socket(int sock);
     static void add_cgi_socket(int sock, int connection_socket);
     void process_request(struct epoll_event &ev);
+    void write_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev);
 };
 
 #endif /* HTTP_HPP */
