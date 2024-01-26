@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), cgi_complete(0), is_done(false), cgi_socket(0) {}
+Request::Request() : _content_length(0), cgi_complete(false), is_done(false), cgi_socket(0) {}
 
 Request::~Request() {}
 

@@ -258,7 +258,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
     char buf[BUFFERSIZE];
     ft_memset(&buf, 0, BUFFERSIZE);
 
-    int bytes_read = read(cfd, buf, BUFFERSIZE); // TODO maybe change to recv to handle SIGPIPE
+    int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
 
     if (bytes_read <= 0 && request.getRaw().size() == 0) {
         print_error("failed to read socket");
@@ -307,25 +307,27 @@ void HTTP::write_socket(struct epoll_event &ev) {
     // TODO maybe improve this to use a boolean instead of inspecting the extension
     if (request.has_cgi()) {
         std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
+        std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
+        int bytes_read = 0;
+
         char buff[BUFFERSIZE];
         ft_memset(&buff, 0, BUFFERSIZE);
 
         response._response_buffer.read(buff, BUFFERSIZE - 1);
-        int bytes_read = response._response_buffer.gcount();
+        bytes_read = response._response_buffer.gcount();
 
         // std::cout << "bytes_read " << bytes_read << std::endl;
         // std::cout << buff << std::endl;
 
-        if (!bytes_read && request.cgi_complete) {
+        if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
+            print_error("failed to write in write_socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
         } else {
-            std::cout << "read sucessfully from inputfilestream" << std::endl;
-            if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
-                print_error("failed to write in write_socket");
-                this->close_connection(cfd, this->_epoll_fd, ev);
-            } else {
-                std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
-            }
+            std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
+        }
+
+        if (request.cgi_complete && !bytes_read) {
+            this->close_connection(cfd, this->_epoll_fd, ev);
         }
 
         return;
@@ -469,7 +471,7 @@ void HTTP::write_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev
     int bytes_read = conn->request._buffer.gcount();
 
     if (bytes_read) {
-        if (send(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL) == -1) {
+        if (send(fd, buffer, bytes_read, MSG_NOSIGNAL) == -1) {
             // TODO handle error
             std::cout << "error writing to cgi socket" << std::endl;
         } else {
@@ -480,12 +482,18 @@ void HTTP::write_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev
 
 void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
     (void)conn_ev;
-    char buffer[BUFFERSIZE];
+    char buffer[BUFFERSIZE + 1];
     ft_memset(&buffer, 0, sizeof(buffer));
 
-    std::size_t bytes_read = recv(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL);
+    int bytes_read = recv(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL);
+
+    std::cout << "content from CGI" << std::endl;
+    std::cout << RED << buffer << RESET << std::endl;
+
+    std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
     if (bytes_read <= 0) {
         std::cout << RED << "ALERT" << RESET << std::endl;
+        std::cout << RED << "bytes read: " << bytes_read << RESET << std::endl;
 
         // will helps identify when the cgi ended
         conn->request.cgi_complete = true;
@@ -509,7 +517,11 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
          * for writes anymore because the CGI is already returning a response
          */
         epoll_mod(cgi_ev, EPOLLIN);
+    }
 
+    conn->response.write_buffer(buffer, bytes_read);
+
+    if (conn->response._cgi_header_parsed) {
         // Update Client socket to EPOLLOUT
         epoll_event new_ev;
         ft_memset(&new_ev, 0, sizeof(new_ev));
@@ -521,19 +533,26 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
             std::cout << "failed to modify from EPOLL" << std::endl;
             close(conn->fd);
         }
-    }
+    } else {
 
-    conn->response.write_buffer(buffer, bytes_read);
+        // Only parse the header when the buffer has the "\r\n\r\n"
+        if (conn->response.has_header()) {
+            /**
+             * CGI Header example
+             *
+             * Status: 201 Created\r\n
+             * Content-type: text/html; charset=UTF-8\r\n
+             * \r\n
+             */
 
-    if (!conn->response._cgi_header_parsed && conn->response.has_header()) {
-        /**
-         * CGI Header example
-         *
-         * Status: 201 Created\r\n
-         * Content-type: text/html; charset=UTF-8\r\n
-         * \r\n
-         */
-        conn->response.parse_cgi_headers(conn->request._cgi_header, conn->server);
+            std::cout << RED << "BEFORE respones buffer after parsing cgi headers" << RESET << std::endl;
+            std::cout << YELLOW << conn->response._response_buffer.str() << RESET << std::endl;
+
+            conn->response.parse_cgi_headers(conn->response._response_buffer, conn->server);
+
+            std::cout << RED << "AFTER content respones buffer after parsing cgi headers" << RESET << std::endl;
+            std::cout << YELLOW << conn->response._response_buffer.str() << RESET << std::endl;
+        }
     }
 }
 

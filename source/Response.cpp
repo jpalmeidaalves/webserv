@@ -70,7 +70,7 @@ void Response::set_header(std::string key, std::string value) {
 
 void Response::set_status_code(std::string code, Server *server) {
     // update status code
-    std::cout << RED << "updated status code: " << code << RESET << std::endl;
+    std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
 
     // TODO check if is a error code
@@ -131,13 +131,23 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
     std::string key_status = "Status: ";
     std::string line;
 
-    while (1) {
-        std::getline(ss, line);
-        if (ss.fail())
-            break;
+    std::cout << CYAN << "###content: " << ss.str() << RESET << std::endl;
 
-        if (line == "\r" || line == "")
+    int i = 0;
+    while (1) {
+
+        std::getline(ss, line, '\n');
+        std::cout << "[parging line header]: " << line << std::endl;
+        i++;
+        if (ss.bad()) {
+            std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
             break;
+        }
+
+        if (line == "\r" || line == "") {
+            std::cout << "FOUND end of header" << std::endl;
+            break;
+        }
 
         if (line.find(key_status) == 0) {
             std::string value = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
@@ -166,6 +176,8 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
             }
         }
     }
+
+    this->_cgi_header_parsed = true;
 }
 
 void Response::write_buffer(char *str, std::size_t len) {

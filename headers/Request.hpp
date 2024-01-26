@@ -34,7 +34,6 @@ class Request {
     bool cgi_complete;
     bool is_done;
     int cgi_socket;
-    std::stringstream _cgi_header;
     std::string query; // TODO make pivate?
     std::string short_url;
     Request();
