@@ -160,23 +160,23 @@ bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets) {
     return false;
 }
 
-Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_connects) {
-    std::map<int, Connection *>::iterator it;
+// Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_connects) {
+//     std::map<int, Connection *>::iterator it;
 
-    // std::cout << YELLOW << "checking if is CGI, sockfd: " << sockfd << std::endl;
+//     // std::cout << YELLOW << "checking if is CGI, sockfd: " << sockfd << std::endl;
 
-    // std::cout << "active_connects size: " << _active_connects.size() << std::endl;
+//     // std::cout << "active_connects size: " << _active_connects.size() << std::endl;
 
-    for (it = _active_connects.begin(); it != _active_connects.end(); ++it) {
-        std::cout << "current: " << it->second->request.cgi_socket << std::endl;
-        if ((it->second->request.cgi_socket == sockfd)) {
-            return it->second;
-        }
-    }
+//     for (it = _active_connects.begin(); it != _active_connects.end(); ++it) {
+//         std::cout << "current: " << it->second->request.cgi_socket << std::endl;
+//         if ((it->second->request.cgi_socket == sockfd)) {
+//             return it->second;
+//         }
+//     }
 
-    std::cout << RESET << std::endl;
-    return NULL;
-}
+//     std::cout << RESET << std::endl;
+//     return NULL;
+// }
 
 void remove_char_from_string(std::string &str, char to_remove) {
     for (std::string::iterator it = str.begin(); it != str.end(); ++it) {

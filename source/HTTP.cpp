@@ -95,6 +95,8 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     this->_active_connects[accepted_fd] = new Connection();
     this->_active_connects[accepted_fd]->fd = accepted_fd;
     this->_active_connects[accepted_fd]->cgi_pid = 0;
+    this->_active_connects[accepted_fd]->cgi_fd = 0;
+    
     // extract the ip number and port from accepted socket, store in Connecetion struct
     get_port_host_from_sockfd(accepted_fd, this->_active_connects[accepted_fd]);
     return 0;
@@ -171,42 +173,50 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
  * @note HTTP::cgi_sockets contains a map with the cgi socket and the associated socket
  * for the client.
  */
-bool HTTP::is_cgi_socket(int sock) {
-    std::map<int, int>::iterator it;
-    for (it = HTTP::cgi_sockets.begin(); it != HTTP::cgi_sockets.end(); it++) {
-        if (it->first == sock) {
-            return true;
-        }
-    }
-    return false;
-}
+// bool HTTP::is_cgi_socket(int sock) {
+//     connects_map::iterator it;
+//     for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
+//         if (it->second->cgi_fd == sock) {
+//             return true;
+//         }
+//     }
+//     return false;
+// }
 
 // TODO remove the part where we delete from epoll from this function
 void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
     std::cout << "Closing connection for socket " << cfd << " ..." << std::endl;
 
-    // check if the client socket has an associated CGI socket
-    int assoc_cgi_socket = this->_active_connects[cfd]->request.cgi_socket;
-    if (assoc_cgi_socket) {
-        std::cout << "removing cgi socket associated with this connection" << std::endl;
-        HTTP::remove_cgi_socket(assoc_cgi_socket);
+    Request &request = this->_active_connects[cfd]->request;
+    Connection *conn = this->_active_connects[cfd];
 
-        if (!this->_active_connects[cfd]->request.cgi_complete) {
+    // check if the client socket has a CGI socket active
+    if (request.is_cgi && !request.cgi_complete) {
+
+        int cgi_socket = conn->cgi_fd;
+        if (cgi_socket) {
+
+            std::cout << "removing cgi socket associated with this connection" << std::endl;
+            // HTTP::remove_cgi_socket(cgi_socket);
+
+            // Remove CGI socket from EPOLL
             epoll_event tmp;
             ft_memset(&tmp, 0, sizeof(tmp));
-
-            tmp.data.fd = assoc_cgi_socket;
-
-            int ret = epoll_ctl(epfd, EPOLL_CTL_DEL, assoc_cgi_socket, &tmp);
+            tmp.data.fd = cgi_socket;
+            int ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cgi_socket, &tmp);
             if (ret == -1) {
-                std::cerr << "failed to remove fd " << assoc_cgi_socket << " from EPOLL" << std::endl;
+                std::cerr << "failed to remove fd " << cgi_socket << " from EPOLL" << std::endl;
                 print_error(strerror(errno));
             }
 
-            close(assoc_cgi_socket);
+            close(cgi_socket);
+
+            // TODO kill process
             kill(this->_active_connects[cfd]->cgi_pid, SIGKILL);
         }
+    
+
     }
 
     delete this->_active_connects[cfd];
@@ -287,9 +297,10 @@ int HTTP::handle_connections() {
                 // Ready for read
                 std::cout << YELLOW << "READING" << RESET << std::endl;
 
-                if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
+                Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
+
+                if (associated_conn) {
                     std::cout << "CGI read in fd:" << evlist[i].data.fd << std::endl;
-                    Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
                     this->read_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i], evlist[associated_conn->fd]);
                 } else {
                     std::cout << "NORMAL read in fd: " << evlist[i].data.fd << std::endl;
@@ -329,18 +340,6 @@ int HTTP::handle_connections() {
  */
 void HTTP::read_socket(struct epoll_event &ev) {
 
-    // start reading from the socket
-    // when the stringstream has the header
-        // parse the header and redirect to correct server
-
-        // if the request does not have CGI
-            // stop reading this socket here
-        // else (is CGI)
-            // open a ifstream and save the remenants of the body in case the last read contains part of the body
-            // must continue reading the socket until Content-Length
-            // saving the data directly to that ifstream
-
-
     int cfd = ev.data.fd;
 
     Connection *conn = this->_active_connects[cfd];
@@ -352,23 +351,17 @@ void HTTP::read_socket(struct epoll_event &ev) {
     int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
     std::cout << RED << "**bytes_read: " << bytes_read << RESET << std::endl;
 
-    // if (bytes_read == -1) {
-    //     print_error("failed to read socket");
-    //     this->close_connection(cfd, this->_epoll_fd, ev);
-    //     return;
-    // }
-    // if (bytes_read == 0) { // && request.getRaw().size() == 0
-    //     print_error("read 0 bytes from socket");
-    //     this->close_connection(cfd, this->_epoll_fd, ev);
-    //     return;
-    // }
-
-    if (bytes_read <= 0 && request.getRaw().size() == 0) {
+    if (bytes_read == -1) {
         print_error("failed to read socket");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
+    if (bytes_read == 0 && request.getRaw().size() == 0) {
+        print_error("read 0 bytes");
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
 
     if (request.is_cgi) {       
         request.request_body.write(buf, bytes_read);
@@ -549,12 +542,17 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 
     if (bytes_read <= 0) {
         conn->request.cgi_complete = true;
-        close(fd);
+
 
         // Remove CGI fd from Epoll
         if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev) == -1) {
             print_error(strerror(errno));
         }
+
+        close(fd);
+        conn->cgi_fd = 0;
+
+        // HTTP::remove_cgi_socket(fd);
         return;
     }
 
@@ -582,10 +580,13 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 void HTTP::add_cgi_socket(int sock, int connection_socket) { HTTP::cgi_sockets[sock] = connection_socket; }
 
 Connection *HTTP::get_associated_conn(int sock) {
-    std::map<int, int>::iterator it;
-    for (it = HTTP::cgi_sockets.begin(); it != HTTP::cgi_sockets.end(); it++) {
-        if (it->first == sock) {
-            return (HTTP::_active_connects[it->second]);
+    if (sock <= 0)
+        return NULL;
+        
+    connects_map::iterator it;
+    for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
+        if (it->second->cgi_fd == sock) {
+            return (it->second);
         }
     }
     return NULL;

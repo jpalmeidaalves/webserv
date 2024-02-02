@@ -321,6 +321,11 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
 
 int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
+    if (this->getMethod() == "GET"){
+        process_cgi(conn, epfd);
+        std::cout << "ENTROU AQUI!" << std::endl;
+        return 0;
+    }
     this->body_file_name = "./tmp-req-body-" + ft_itos(fd);
     std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
@@ -358,17 +363,20 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
 }
 
 void Request::process_cgi(Connection *conn, int epfd) {
+    int fd = 0;
 
-    // close the ofstream
-    this->request_body.close();
+    if (this->getMethod() == "GET") {
+        // close the ofstream
+        this->request_body.close();
 
-    // Open with open() to get a fd
-    int fd = open(this->body_file_name.c_str(), O_RDONLY);
+        // Open with open() to get a fd
+        fd = open(this->body_file_name.c_str(), O_RDONLY);
 
-    if (!fd) {
-        // TODO handle error
-        std::cout << "error oping body_file_name" << std::endl;
-        exit(1);
+        if (!fd) {
+            // TODO handle error
+            std::cout << "error oping body_file_name" << std::endl;
+            exit(1);
+        }
     }
 
 
@@ -401,7 +409,9 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         close(sockets[1]);
 
-        dup2(fd, STDIN_FILENO);
+        if (this->getMethod() == "GET")
+            dup2(fd, STDIN_FILENO);
+        
         dup2(sockets[0], STDOUT_FILENO);
         dup2(sockets[0], STDERR_FILENO);
 
@@ -433,8 +443,10 @@ void Request::process_cgi(Connection *conn, int epfd) {
     } else if (pid > 0) {               // parent
 
         close(sockets[0]);
-        close(fd);
+        if (this->getMethod() == "GET")
+            close(fd);
         conn->cgi_pid = pid;
+        
 
         // Add the socket in the parent end to the EPOLL
         /**
@@ -448,7 +460,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         struct epoll_event ev;
         ft_memset(&ev, 0, sizeof(ev));
 
-        ev.events = EPOLLIN | EPOLLHUP;
+        ev.events = EPOLLIN | EPOLLHUP; // TODO check EPOLLHUP
         ev.data.fd = sockets[1];
         int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev);
         if (ret == -1) {
@@ -459,25 +471,9 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         std::cout << GREEN << "added cgi socket to epoll " << sockets[1] << RESET << std::endl;
 
-        this->cgi_socket = sockets[1];
-        HTTP::add_cgi_socket(sockets[1], conn->fd);
-
-        // std::cout << "Added cgi socket " << HTTP::get_associated_conn(sockets[1]) << std::endl;
-
-        // TODO this will be moved to write_to_cgi_socket
-        // char body[BUFFERSIZE];
-        // ft_memset(body, 0, sizeof(body));
-
-        // this->_buffer.read(body, BUFFERSIZE);
-        // int bytes_read = this->_buffer.gcount();
-
-        // if (bytes_read) {
-        //     if (send(sockets[1], body, bytes_read, MSG_NOSIGNAL) <= 0) {
-        //         std::cout << "failed to send the body to the CGI" << std::endl;
-        //         // TODO handle error
-        //     } else {
-        //         std::cout << "wrote " << bytes_read << " to the cgi process" << std::endl;
-        //     }
+        conn->cgi_fd = sockets[1];
+        this->cgi_socket = sockets[1]; // TODO remove later because its duplicated with above
+        // HTTP::add_cgi_socket(sockets[1], conn->fd);
     }
 }
 

@@ -21,6 +21,7 @@ struct Connection {
     // struct epoll_event *ev;
     int fd;
     int cgi_pid; // if has CGI add the process ID of the child process
+    int cgi_fd;
 };
 
 #endif /* CONNECTION_HPP */
