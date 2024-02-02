@@ -433,6 +433,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
     } else if (pid > 0) {               // parent
 
         close(sockets[0]);
+        close(fd);
         conn->cgi_pid = pid;
 
         // Add the socket in the parent end to the EPOLL
@@ -447,7 +448,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         struct epoll_event ev;
         ft_memset(&ev, 0, sizeof(ev));
 
-        ev.events = EPOLLIN;
+        ev.events = EPOLLIN | EPOLLHUP;
         ev.data.fd = sockets[1];
         int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev);
         if (ret == -1) {

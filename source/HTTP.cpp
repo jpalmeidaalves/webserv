@@ -101,6 +101,71 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
 }
 
 /**
+ * Will search the server blocks in config file and match the request header `Host:` with the
+ * server block `server_name`. If not found, use the first server block with the same
+ * ip and port as the default server.
+ */
+void HTTP::redirect_to_server(Connection *conn) {
+    std::cout << "redirecting to server " << conn->host << ":" << conn->port << std::endl;
+    std::cout << "host from header " << conn->request.getHost() << std::endl;
+
+    Server *default_server = NULL;
+
+    std::vector<Server>::iterator ite;
+    for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
+        if (ite->host == conn->host && ite->port == conn->port) {
+            // if is the first match and default server is not defined, define it now
+            if (!default_server) {
+                default_server = &(*ite);
+                // std::cout << "default server updated " << std::endl;
+                // printVector(default_server->server_names);
+            }
+
+            std::vector<std::string>::iterator it;
+            for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
+                if (*it == conn->request.getHost()) {
+                    // found the correct server name (host from header)
+                    conn->server = &(*ite);
+                    return;
+                }
+            }
+        }
+    }
+
+    // no server name (host from header) found, use the default server
+    conn->server = default_server;
+
+    if (!conn->server) {
+        // TODO this should never happen but if somehow did, close the connection
+        print_error("FAILED TO REDIRECT TO SERVER");
+    } else {
+        std::cout << "redirected sucessfuly to " << conn->server->host << ":" << conn->server->port << std::endl;
+    }
+}
+
+/**
+ * Assemble response Header and send it to the client.
+ * @note If fail close connection and print error.
+ */
+int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
+    std::string header = response.assemble_header();
+    // response.set_content_type("application/zip");
+
+    std::cout << BLUE << "Will send this header" << RESET << std::endl;
+    std::cout << BLUE << header << RESET << std::endl;
+
+    if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) == -1) {
+        print_error("failed to write in write_socket");
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return 1;
+    }
+
+    response._sent_header = true;
+    return 0;
+}
+
+
+/**
  * Checks if sock is in the HTTP::cgi_sockets map
  *
  * @note HTTP::cgi_sockets contains a map with the cgi socket and the associated socket
@@ -232,16 +297,9 @@ int HTTP::handle_connections() {
                 }
             } else if (evlist[i].events & EPOLLOUT) {
                 // Ready for write
-                std::cout << BLUE << "WRITING" << RESET << std::endl;
-
-                if (HTTP::is_cgi_socket(evlist[i].data.fd)) {
-                    std::cout << "CGI write in fd:" << evlist[i].data.fd << std::endl;
-                    Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
-                    this->write_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i], evlist[associated_conn->fd]);
-                } else {
-                    std::cout << "NORMAL write in fd: " << evlist[i].data.fd << std::endl;
-                    this->write_socket(evlist[i]);
-                }
+                std::cout << BLUE << "WRITING to client socket" << evlist[i].data.fd << RESET << std::endl;
+   
+                this->write_socket(evlist[i]);
             } else {
                 std::cout << "++++++++++++++++++++EPOLLHUP" << std::endl;
             }
@@ -470,69 +528,6 @@ void HTTP::process_request(struct epoll_event &ev) {
     }
 }
 
-/**
- * Will search the server blocks in config file and match the request header `Host:` with the
- * server block `server_name`. If not found, use the first server block with the same
- * ip and port as the default server.
- */
-void HTTP::redirect_to_server(Connection *conn) {
-    std::cout << "redirecting to server " << conn->host << ":" << conn->port << std::endl;
-    std::cout << "host from header " << conn->request.getHost() << std::endl;
-
-    Server *default_server = NULL;
-
-    std::vector<Server>::iterator ite;
-    for (ite = this->_servers.begin(); ite != this->_servers.end(); ite++) {
-        if (ite->host == conn->host && ite->port == conn->port) {
-            // if is the first match and default server is not defined, define it now
-            if (!default_server) {
-                default_server = &(*ite);
-                // std::cout << "default server updated " << std::endl;
-                // printVector(default_server->server_names);
-            }
-
-            std::vector<std::string>::iterator it;
-            for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
-                if (*it == conn->request.getHost()) {
-                    // found the correct server name (host from header)
-                    conn->server = &(*ite);
-                    return;
-                }
-            }
-        }
-    }
-
-    // no server name (host from header) found, use the default server
-    conn->server = default_server;
-
-    if (!conn->server) {
-        // TODO this should never happen but if somehow did, close the connection
-        print_error("FAILED TO REDIRECT TO SERVER");
-    } else {
-        std::cout << "redirected sucessfuly to " << conn->server->host << ":" << conn->server->port << std::endl;
-    }
-}
-
-/**
- * Assemble response Header and send it to the client.
- * @note If fail close connection and print error.
- */
-int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
-    std::string header = response.assemble_header();
-    // response.set_content_type("application/zip");
-
-    std::cout << BLUE << "Will send this header" << RESET << std::endl;
-    std::cout << BLUE << header << RESET << std::endl;
-
-    if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) == -1) {
-        print_error("failed to write in write_socket");
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return 1;
-    }
-
-    response._sent_header = true;
-    return 0;
-}
 
 // TODO BEFORE MOVING ON TO THE CGI, USE IFSTREAM IN FILES TO AVOID USING AN FD
 
@@ -540,117 +535,33 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
 /*                         REFACTOR BELLOW THIS POINT                         */
 /* -------------------------------------------------------------------------- */
 
-void HTTP::write_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
-    (void)cgi_ev;
-    (void)conn_ev;
-    char buffer[BUFFERSIZE + 1];
-    ft_memset(&buffer, 0, sizeof(buffer));
-
-    conn->request._buffer.read(buffer, BUFFERSIZE);
-    int bytes_read = conn->request._buffer.gcount();
-
-    std::cout << "-- bytes read from request buffer " << bytes_read << " to write to cgi socket " << fd << std::endl;
-
-    if (bytes_read) {
-        if (send(fd, buffer, bytes_read, MSG_NOSIGNAL) == -1) {
-            // TODO handle error
-            std::cout << "error writing to cgi socket" << std::endl;
-        } else {
-            std::cout << BLUE << "wrote " << bytes_read << " to CGI socket " << fd << RESET << std::endl;
-            std::cout << RED << buffer << RESET << std::endl;
-        }
-    }
-}
-
 void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
     (void)conn_ev;
+    (void)cgi_ev;
     char buffer[BUFFERSIZE + 1];
     ft_memset(&buffer, 0, sizeof(buffer));
 
-    // 2000 bytes
+    int bytes_read = recv(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL);
 
-    // read 1000 bytes each time
+    // std::cout << "content from CGI" << std::endl;
+    // std::cout << RED << buffer << RESET << std::endl;
+    // std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
 
-    // 1. 1000 bytes
-    // 2. 1000 bytes
-
-    // 3. 0 bytes
-
-    int bytes_read = read(fd, buffer, BUFFERSIZE);
-
-    std::cout << "content from CGI" << std::endl;
-    std::cout << RED << buffer << RESET << std::endl;
-
-    std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
-    if (bytes_read < BUFFERSIZE) {
-        std::cout << RED << "ALERT" << RESET << std::endl;
-        std::cout << RED << "bytes read: " << bytes_read << RESET << std::endl;
-
-        if (bytes_read) {
-            conn->response.write_buffer(buffer, bytes_read);
-        }
-
-        // will helps identify when the cgi ended
+    if (bytes_read <= 0) {
         conn->request.cgi_complete = true;
-
-        if (!conn->response._cgi_header_parsed) {
-            conn->response.parse_cgi_headers(conn->response._response_buffer, conn->server);
-
-            // Must wait until the cgi header is parsed to update client socket to EPOLLOUT
-            // Update Client socket to EPOLLOUT
-            epoll_event new_ev;
-            ft_memset(&new_ev, 0, sizeof(new_ev));
-            new_ev.data.fd = conn->fd;
-            new_ev.events = EPOLLOUT;
-            int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, conn->fd, &new_ev);
-            if (ret == -1) {
-                print_error(strerror(errno)); // TODO check this case
-                std::cout << "failed to modify from EPOLL" << std::endl;
-                close(conn->fd);
-            }
-        }
-
-        // remove CGI socket from the EPOLL
-        int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev);
-        if (ret == -1) {
-            print_error(strerror(errno)); // TODO check this case
-        }
-
-        std::cout << "------->>cgi socket remove from epoll" << std::endl;
-
-        // remove from cgi_sockets map
-        // HTTP::cgi_sockets.erase(fd);
-
         close(fd);
+
+        // Remove CGI fd from Epoll
+        if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev) == -1) {
+            print_error(strerror(errno));
+        }
         return;
     }
 
-    // if (conn->response.buffer_writes == 0) {
-    //     /**
-    //      * Update the interest in this FD to reads only. We dont want to get notified
-    //      * for writes anymore because the CGI is already returning a response
-    //      */
-    //     epoll_mod(cgi_ev, EPOLLIN);
-    // }
-
     conn->response.write_buffer(buffer, bytes_read);
 
-    std::cout << "cgi_header_parsed " << conn->response._cgi_header_parsed << " has_header() "
-              << conn->response._cgi_header_parsed << " cgI_complete " << conn->request.cgi_complete << std::endl;
-
-    if ((!conn->response._cgi_header_parsed && conn->response.has_header()) || conn->request.cgi_complete) {
+    if ((!conn->response._cgi_header_parsed && conn->response.has_header())) {
         // Only parse the header when the buffer has the "\r\n\r\n"
-        /**
-         * CGI Header example
-         *
-         * Status: 201 Created\r\n
-         * Content-type: text/html; charset=UTF-8\r\n
-         * \r\n
-         */
-
-        std::cout << RED << "BEFORE respones buffer after parsing cgi headers" << RESET << std::endl;
-        std::cout << YELLOW << conn->response._response_buffer.str() << RESET << std::endl;
-
         conn->response.parse_cgi_headers(conn->response._response_buffer, conn->server);
 
         // Must wait until the cgi header is parsed to update client socket to EPOLLOUT
@@ -665,22 +576,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
             std::cout << "failed to modify from EPOLL" << std::endl;
             close(conn->fd);
         }
-
-        std::cout << RED << "AFTER content respones buffer after parsing cgi headers" << RESET << std::endl;
-        std::cout << YELLOW << conn->response._response_buffer.str() << RESET << std::endl;
     }
-
-    if (conn->request.cgi_complete) {
-        std::cout << "cgi complete" << std::endl;
-        exit(1);
-    }
-
-    // if (conn->response.buffer_writes > 10 && conn->response._cgi_header_parsed) {
-    //     std::cout << RED << "header from CGI to big" << RESET << std::endl;
-
-    //     conn->response._cgi_header_parsed = true;
-    //     std::cout << conn->response._response_buffer.str() << std::endl;
-    // }
 }
 
 void HTTP::add_cgi_socket(int sock, int connection_socket) { HTTP::cgi_sockets[sock] = connection_socket; }
