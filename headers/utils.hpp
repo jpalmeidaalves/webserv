@@ -44,7 +44,6 @@ void remove_char_from_string(std::string &str, char to_remove);
 void print_ascii(const char *str);
 bool has_permissions(std::string full_path, mode_t permissions);
 bool ft_strcmp_insensitive(std::string str1, std::string str2);
-// Connection *is_cgi_socket(int sockfd, std::map<int, Connection *> &_active_connects);
 std::size_t remaining_bytes(const std::stringstream &s);
 
 template <typename T>

@@ -27,7 +27,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 50 // TODO increase buffersize
+#define BUFFERSIZE 8000 // TODO increase buffersize
 #define BACKLOG 200    // how many pending connections queue will hold
 
 struct Connection;
@@ -56,12 +56,6 @@ class HTTP {
     HTTP();
 
   public:
-    static std::map<int, int> cgi_sockets;
-    /**
-     * @param key cgi_socket
-     * @param value connection_socket
-     */
-    // std::map<int, Connection *> _active_cgis;
     HTTP(std::vector<Server> &servers);
     ~HTTP();
     int open_listening_sockets(std::vector<struct sockaddr_in> addresses);
@@ -75,7 +69,6 @@ class HTTP {
     int epoll_mod(struct epoll_event &ev, uint32_t flag);
     void redirect_to_server(Connection *conn);
     void read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev);
-    // bool is_cgi_socket(int sock);
     Connection *get_associated_conn(int sock);
     static void remove_cgi_socket(int sock);
     static void add_cgi_socket(int sock, int connection_socket);

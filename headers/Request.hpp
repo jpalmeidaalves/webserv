@@ -37,7 +37,6 @@ class Request {
     bool is_cgi;
     bool cgi_complete;
     bool read_complete;
-    int cgi_socket;
     std::string query; // TODO make pivate?
     std::string short_url;
     std::string body_file_name;

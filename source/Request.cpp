@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), cgi_socket(0) {}
+Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false) {}
 
 Request::~Request() {}
 
@@ -472,8 +472,6 @@ void Request::process_cgi(Connection *conn, int epfd) {
         std::cout << GREEN << "added cgi socket to epoll " << sockets[1] << RESET << std::endl;
 
         conn->cgi_fd = sockets[1];
-        this->cgi_socket = sockets[1]; // TODO remove later because its duplicated with above
-        // HTTP::add_cgi_socket(sockets[1], conn->fd);
     }
 }
 
