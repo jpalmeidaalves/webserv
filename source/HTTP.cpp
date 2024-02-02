@@ -270,8 +270,22 @@ int HTTP::handle_connections() {
  * bodycontent here
  */
 void HTTP::read_socket(struct epoll_event &ev) {
+
+    // start reading from the socket
+    // when the stringstream has the header
+        // parse the header and redirect to correct server
+
+        // if the request does not have CGI
+            // stop reading this socket here
+        // else (is CGI)
+            // open a ifstream and save the remenants of the body in case the last read contains part of the body
+            // must continue reading the socket until Content-Length
+            // saving the data directly to that ifstream
+
+
     int cfd = ev.data.fd;
 
+    Connection *conn = this->_active_connects[cfd];
     Request &request = this->_active_connects[cfd]->request;
 
     char buf[BUFFERSIZE];
@@ -297,6 +311,23 @@ void HTTP::read_socket(struct epoll_event &ev) {
         return;
     }
 
+
+    if (request.is_cgi) {       
+        request.request_body.write(buf, bytes_read);
+
+        request.request_body_writes += bytes_read;
+
+        std::cout << "request.request_body_writes " << request.request_body_writes << " request.get_content_length() " << request.get_content_length() << std::endl; 
+
+        // When we wrote all bytes from the request to the request body file, process CGI
+        if (request.request_body_writes >= request.get_content_length()) {
+            std::cout << "done writing to the temp file" << std::endl;
+            request.process_cgi(conn, this->_epoll_fd);
+        }
+
+    }
+
+  
     request.append_buffer(buf, bytes_read);
 
     if (request.not_parsed()) {
@@ -417,8 +448,11 @@ void HTTP::process_request(struct epoll_event &ev) {
 
     if (conn->request.has_cgi()) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;
-        conn->request.process_cgi(conn, this->_epoll_fd);
-        // TODO add here boolean to CGI
+        if (conn->request.prepare_file_to_save_body(cfd, conn, this->_epoll_fd) == -1) {
+            // TODO handle error
+            std::cout << "handle error opening file" << std::endl;
+            exit (1);
+        }
     } else {
 
         std::cout << GREEN << "normal request" << RESET << std::endl;
@@ -591,13 +625,13 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         return;
     }
 
-    if (conn->response.buffer_writes == 0) {
-        /**
-         * Update the interest in this FD to reads only. We dont want to get notified
-         * for writes anymore because the CGI is already returning a response
-         */
-        epoll_mod(cgi_ev, EPOLLIN);
-    }
+    // if (conn->response.buffer_writes == 0) {
+    //     /**
+    //      * Update the interest in this FD to reads only. We dont want to get notified
+    //      * for writes anymore because the CGI is already returning a response
+    //      */
+    //     epoll_mod(cgi_ev, EPOLLIN);
+    // }
 
     conn->response.write_buffer(buffer, bytes_read);
 

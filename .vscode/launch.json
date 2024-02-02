@@ -8,12 +8,12 @@
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/nuno/Documents/webserv/webserv", // Update this with your compiled executable path
+            "program": "/home/nuno/Documents/webserv/source./a.out", // Update this with your compiled executable path
             "args": [
                 "configFile.conf"
             ],
             "stopAtEntry": false,
-            "cwd": "/home/nuno/Documents/webserv",
+            "cwd": "/home/nuno/Documents/webserv/source",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

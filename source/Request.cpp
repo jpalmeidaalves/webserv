@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), cgi_complete(false), is_done(false), cgi_socket(0) {}
+Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), cgi_socket(0) {}
 
 Request::~Request() {}
 
@@ -119,7 +119,12 @@ bool Request::has_cgi() {
 
     std::cout << "checking if has CGI: short_url = " << this->short_url << std::endl;
 
-    return has_suffix(short_url, ".php");
+    if (has_suffix(short_url, ".php")) {
+        this->is_cgi = true;
+        return true;
+    }
+    
+    return false;
 }
 
 void Request::process_requested_file(Connection *conn, std::string full_path) {
@@ -314,7 +319,59 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     // this->close_connection(cfd, this->_epoll_fd, ev);
 }
 
+
+int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
+    this->body_file_name = "./tmp-req-body-" + ft_itos(fd);
+    std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
+    this->request_body.open(this->body_file_name.c_str());
+
+    if (!this->request_body.is_open()) {
+        std::cout << "this" << std::endl;
+        return -1;
+    }
+
+    // If the request buffer has read some part of the body of the request
+    // write those bytes belonging to this file
+
+    char buf[BUFFERSIZE + 1];
+    std::memset(buf, 0, sizeof(buf));
+
+    this->_buffer.read(buf, BUFFERSIZE);
+    
+    std::size_t bytes_read = this->_buffer.gcount();
+
+    this->request_body.write(buf, bytes_read);
+
+    if (this->request_body.bad()) {
+        return -1;
+    }
+
+    this->request_body_writes = bytes_read;
+
+    if (this->request_body_writes >= this->get_content_length()) {
+        process_cgi(conn, epfd);
+    }
+
+    std::cout << YELLOW << "number of bytes left in request buffer: " << bytes_read  << std::endl << buf << RESET << std::endl;
+
+    return 0;
+}
+
 void Request::process_cgi(Connection *conn, int epfd) {
+
+    // close the ofstream
+    this->request_body.close();
+
+    // Open with open() to get a fd
+    int fd = open(this->body_file_name.c_str(), O_RDONLY);
+
+    if (!fd) {
+        // TODO handle error
+        std::cout << "error oping body_file_name" << std::endl;
+        exit(1);
+    }
+
+
     std::cout << "processing CGI" << std::endl;
 
     // TODO verify if request buffer has more content than just the header
@@ -344,7 +401,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         close(sockets[1]);
 
-        dup2(sockets[0], STDIN_FILENO);
+        dup2(fd, STDIN_FILENO);
         dup2(sockets[0], STDOUT_FILENO);
         dup2(sockets[0], STDERR_FILENO);
 
@@ -390,7 +447,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         struct epoll_event ev;
         ft_memset(&ev, 0, sizeof(ev));
 
-        ev.events = EPOLLIN | EPOLLOUT;
+        ev.events = EPOLLIN;
         ev.data.fd = sockets[1];
         int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev);
         if (ret == -1) {
