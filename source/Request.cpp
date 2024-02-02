@@ -81,7 +81,7 @@ std::size_t Request::get_content_length() const { return (this->_content_length)
 void Request::set_content_type(const std::string type) { this->_content_type = type; }
 void Request::set_content_length(std::size_t length) { this->_content_length = length; }
 
-void Request::append_buffer(const char *buf, size_t len) {
+void Request::append_buffer(const char *buf, int len) {
     this->_buffer.write(buf, len);
     std::cout << "appended data in the request buffer" << std::endl;
 }
@@ -398,6 +398,8 @@ void Request::process_cgi(Connection *conn, int epfd) {
             print_error("failed epoll_ctl");
             return;
         }
+
+        std::cout << GREEN << "added cgi socket to epoll " << sockets[1] << RESET << std::endl;
 
         this->cgi_socket = sockets[1];
         HTTP::add_cgi_socket(sockets[1], conn->fd);

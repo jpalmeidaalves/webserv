@@ -27,8 +27,8 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 50 // TODO increase buffersize
-#define BACKLOG 200   // how many pending connections queue will hold
+#define BUFFERSIZE 8000 // TODO increase buffersize
+#define BACKLOG 200    // how many pending connections queue will hold
 
 struct Connection;
 class Server;

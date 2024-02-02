@@ -62,7 +62,7 @@ class Request {
     // std::string extract_filename_from_body(size_t &bytes_read);
     // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
 
-    void append_buffer(const char *buf, size_t len);
+    void append_buffer(const char *buf, int len);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 

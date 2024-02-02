@@ -127,9 +127,28 @@ std::string Response::assemble_header() {
 void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
     // Update all the headers in the response with the header from CGI
 
+    bool php_notices_in_header = false;
+
+    if (ss.str().find("PHP") == 0) {
+        php_notices_in_header = true;
+    }
+
     std::cout << "parsing CGI headers" << std::endl;
     std::string key_status = "Status: ";
+    std::string status_code;
     std::string line;
+
+    /*
+    PHP Fatal error:  Uncaught TypeError: array_filter(): Argument #1 ($array) must be of type array, string given in /home/nuno/Documents/webserv/www/a/upload.php:14
+    Stack trace:
+    #0 /home/nuno/Documents/webserv/www/a/upload.php(14): array_filter()
+    #1 {main}
+        thrown in /home/nuno/Documents/webserv/www/a/upload.php on line 14
+    custom header: hello world!
+    Content-type: text/html; charset=UTF-8
+    */
+
+    bool has_status_header = ss.str().find(key_status) != std::string::npos;
 
     std::cout << CYAN << "###content: " << ss.str() << RESET << std::endl;
 
@@ -137,7 +156,7 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
     while (1) {
 
         std::getline(ss, line, '\n');
-        std::cout << "[parging line header]: " << line << std::endl;
+        std::cout << "[parsing line header]: " << line << std::endl;
         i++;
         if (ss.bad()) {
             std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
@@ -149,34 +168,45 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
             break;
         }
 
+        // If has Status header line inside the header
+        // ignore all lines until it encounters that specific line
+        if (has_status_header && line.find(key_status) != 0 && status_code == "") {
+            continue;
+        }
+
         if (line.find(key_status) == 0) {
-            std::string value = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
+            status_code = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
             // std::cout << "status is " << value << std::endl;
-            this->set_status_code(value, server);
+            this->set_status_code(status_code, server);
         } else {
-            std::size_t colon_pos = line.find(":");
 
-            if (colon_pos != std::string::npos) {
-                std::string key = line.substr(0, colon_pos);
-                std::string value = line.substr(colon_pos + 1);
+            if (!php_notices_in_header) {
+                std::size_t colon_pos = line.find(":");
 
-                // if first char is ' ' remove it
-                if (value.at(0) == ' ') {
-                    value.erase(0, 1);
+                if (colon_pos != std::string::npos) {
+                    std::string key = line.substr(0, colon_pos);
+                    std::string value = line.substr(colon_pos + 1);
+
+                    // if first char is ' ' remove it
+                    if (value.size() && value.at(0) == ' ') {
+                        value.erase(0, 1);
+                    }
+                    // if last char is '\r' remove it
+                    if (value.size() && value.at(value.size() - 1) == '\r') {
+                        value.erase(value.size() - 1);
+                    }
+
+                    // std::cout << "1) key is >" << key << "<" << std::endl;
+                    // std::cout << "2) value is >" << value << "<" << std::endl;
+
+                    this->set_header(key, value);
                 }
-                // if last char is '\r' remove it
-                if (value.size() && value.at(value.size() - 1) == '\r') {
-                    value.erase(value.size() - 1);
-                }
-
-                // std::cout << "1) key is >" << key << "<" << std::endl;
-                // std::cout << "2) value is >" << value << "<" << std::endl;
-
-                this->set_header(key, value);
             }
         }
-    }
 
+        line = "";
+    }
+    std::cout << YELLOW << "_cgi_header_parsed = true;" << RESET << std::endl;
     this->_cgi_header_parsed = true;
 }
 

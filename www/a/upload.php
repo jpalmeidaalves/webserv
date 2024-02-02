@@ -1,8 +1,17 @@
 <?php
+
+header("custom header: hello world!");
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+var_dump($_FILES);
+
 $config['allowed_types'] = '*';
 
 
-//$files = array_filter($_FILES['upload']['name']); //something like that to be used before processing files.
+// $files = array_filter($_FILES['files']['name']); //something like that to be used before processing files.
 
 // Count # of uploaded files in array
 $total = count($_FILES['files']['name']);
@@ -28,6 +37,7 @@ for( $i=0 ; $i < $total ; $i++ ) {
     }
   }
 }
+
 
 
 // $target_dir = "./uploads/";
