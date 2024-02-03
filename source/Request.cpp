@@ -365,10 +365,11 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
 void Request::process_cgi(Connection *conn, int epfd) {
     int fd = 0;
 
-    if (this->getMethod() == "GET") {
-        // close the ofstream
+    if (this->request_body.is_open()) {
         this->request_body.close();
+    }
 
+    if (this->request_body_writes) {
         // Open with open() to get a fd
         fd = open(this->body_file_name.c_str(), O_RDONLY);
 
@@ -378,6 +379,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
             exit(1);
         }
     }
+    
 
 
     std::cout << "processing CGI" << std::endl;
@@ -409,7 +411,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         close(sockets[1]);
 
-        if (this->getMethod() == "GET")
+        if (fd)
             dup2(fd, STDIN_FILENO);
         
         dup2(sockets[0], STDOUT_FILENO);
@@ -443,7 +445,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
     } else if (pid > 0) {               // parent
 
         close(sockets[0]);
-        if (this->getMethod() == "GET")
+        if (fd)
             close(fd);
         conn->cgi_pid = pid;
         
