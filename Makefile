@@ -18,13 +18,16 @@ CC = c++
 RM = rm -f
 CPPFLAGS = -Wall -Wextra -Werror -std=c++98 -g -Wunused-variable
 
+# tmpdir:
+# 	mkdir -p ./etc/cgi/tmp
+
 .cpp.o:
 		${CC} ${CPPFLAGS} ${INCLUDE} -c $< -o ${<:.cpp=.o}
 
 $(NAME): ${OBJS}
 		${CC} ${CPPFLAGS} ${INCLUDE} ${OBJS} -o ${NAME}
 
-all:	${NAME}
+all:	${NAME} #tmpdir
 
 clean:
 		${RM} ${OBJS}

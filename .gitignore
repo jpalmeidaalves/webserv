@@ -1,5 +1,10 @@
 webserv
 *.o
+
+etc/cgi/tmp/*
+www/a/uploads/*
+z_upload_files/
+
 chrome.deb
 8k.jpg
 file.rar
