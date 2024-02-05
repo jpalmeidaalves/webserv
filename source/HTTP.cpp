@@ -170,32 +170,42 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     std::cout << "Closing connection for socket " << cfd << " ..." << std::endl;
 
     Request &request = this->_active_connects[cfd]->request;
+    Response &response = this->_active_connects[cfd]->response;
     Connection *conn = this->_active_connects[cfd];
 
-    // check if the client socket has a CGI socket active
-    if (request.is_cgi && !request.cgi_complete) {
+    if (response.inputfilestream.is_open())
+        response.inputfilestream.close();
 
-        int cgi_socket = conn->cgi_fd;
-        if (cgi_socket) {
+    if (request.request_body.is_open())
+        request.request_body.close();
+
+    // check if the client socket has a CGI socket active
+    if (request.is_cgi) {
+
+        if (conn->cgi_fd) {
 
             std::cout << "removing cgi socket associated with this connection" << std::endl;
 
             // Remove CGI socket from EPOLL
             epoll_event tmp;
             ft_memset(&tmp, 0, sizeof(tmp));
-            tmp.data.fd = cgi_socket;
-            int ret = epoll_ctl(epfd, EPOLL_CTL_DEL, cgi_socket, &tmp);
+            tmp.data.fd = conn->cgi_fd;
+            int ret = epoll_ctl(epfd, EPOLL_CTL_DEL, conn->cgi_fd, &tmp);
             if (ret == -1) {
-                std::cerr << "failed to remove fd " << cgi_socket << " from EPOLL" << std::endl;
+                std::cerr << "failed to remove fd " << conn->cgi_fd << " from EPOLL" << std::endl;
                 print_error(strerror(errno));
             }
 
-            close(cgi_socket);
-
             // TODO kill process
             kill(this->_active_connects[cfd]->cgi_pid, SIGKILL);
+
+            if (close(conn->cgi_fd) == 0) {
+                std::cout << GREEN << "Removed CGI socket " << conn->cgi_fd << RESET << std::endl;
+
+            } else {
+                 perror("Close: ");
+            }
         }
-    
 
     }
 
@@ -452,6 +462,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
     response.inputfilestream.read(buff, BUFFERSIZE);
     int bytes_read = response.inputfilestream.gcount();
 
+    std::cout << "bytes read from inputfilestream" << bytes_read << std::endl;
+
     if (bytes_read) {
         std::cout << "read sucessfully from inputfilestream" << std::endl;
 
@@ -463,7 +475,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         }
 
     } else {
-        response.inputfilestream.close();
+        std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
     }
 }
@@ -516,9 +528,9 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 
     int bytes_read = recv(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL);
 
-    // std::cout << "content from CGI" << std::endl;
-    // std::cout << RED << buffer << RESET << std::endl;
-    // std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
+    std::cout << "content from CGI" << std::endl;
+    std::cout << RED << buffer << RESET << std::endl;
+    std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
 
     if (bytes_read <= 0) {
         conn->request.cgi_complete = true;
@@ -529,7 +541,13 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
             print_error(strerror(errno));
         }
 
-        close(fd);
+        if (close(fd) == 0) {
+            std::cout << YELLOW << "Removed CGI socket " << fd << RESET << std::endl;
+
+        } else {
+              std::cout << YELLOW << "Error closing: " << fd << RESET << std::endl;
+             
+        }
         conn->cgi_fd = 0;
 
         return;

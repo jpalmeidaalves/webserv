@@ -325,7 +325,7 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         process_cgi(conn, epfd);
         std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
-    }
+    }   
     this->body_file_name = "./tmp-req-body-" + ft_itos(fd);
     std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
@@ -348,6 +348,7 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     this->request_body.write(buf, bytes_read);
 
     if (this->request_body.bad()) {
+        this->request_body.close();
         return -1;
     }
 
@@ -363,26 +364,10 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
 }
 
 void Request::process_cgi(Connection *conn, int epfd) {
-    int fd = 0;
-
-    if (this->request_body.is_open()) {
-        this->request_body.close();
-    }
-
-    if (this->request_body_writes) {
-        // Open with open() to get a fd
-        fd = open(this->body_file_name.c_str(), O_RDONLY);
-
-        if (!fd) {
-            // TODO handle error
-            std::cout << "error oping body_file_name" << std::endl;
-            exit(1);
-        }
-    }
-    
-
-
     std::cout << "processing CGI" << std::endl;
+
+    if (this->request_body.is_open())
+        this->request_body.close();
 
     // TODO verify if request buffer has more content than just the header
     // TODO if it has, than we must write the remaining bytes to the CGI socket
@@ -404,20 +389,35 @@ void Request::process_cgi(Connection *conn, int epfd) {
         return;
     }
 
+    std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
+
     pid_t pid = fork();
     // TODO handle fork failed
 
     if (pid == 0) { // child 1
 
+        close(sockets[0]);
+        dup2(sockets[1], STDOUT_FILENO);
+        dup2(sockets[1], STDERR_FILENO);
         close(sockets[1]);
 
-        if (fd)
-            dup2(fd, STDIN_FILENO);
-        
-        dup2(sockets[0], STDOUT_FILENO);
-        dup2(sockets[0], STDERR_FILENO);
+        int fd = 0;
 
-        close(sockets[0]);
+        if (this->request_body_writes) {
+            // Open with open() to get a fd
+            fd = open(this->body_file_name.c_str(), O_RDONLY);
+
+            if (!fd) {
+                // TODO handle error
+                std::cout << "error oping body_file_name" << std::endl;
+                exit(1);
+            }
+        }
+
+        if (fd) {
+            dup2(fd, STDIN_FILENO);
+            close(fd);
+        }
 
         std::string file_path = conn->server->root + this->getUrl();
 
@@ -444,9 +444,12 @@ void Request::process_cgi(Connection *conn, int epfd) {
             perror("execvp ls failed"); // TODO handle error and send it to client
     } else if (pid > 0) {               // parent
 
-        close(sockets[0]);
-        if (fd)
-            close(fd);
+        if (close(sockets[1]) == 0) {
+            std::cout << GREEN << "Removed unused socket " << sockets[1] << RESET << std::endl;
+
+        } else {
+                perror("Close: ");
+        }
         conn->cgi_pid = pid;
         
 
@@ -462,18 +465,19 @@ void Request::process_cgi(Connection *conn, int epfd) {
         struct epoll_event ev;
         ft_memset(&ev, 0, sizeof(ev));
 
+        conn->cgi_fd = sockets[0];
+
         ev.events = EPOLLIN | EPOLLHUP; // TODO check EPOLLHUP
-        ev.data.fd = sockets[1];
-        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, sockets[1], &ev);
+        ev.data.fd = conn->cgi_fd;
+        int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, conn->cgi_fd, &ev);
         if (ret == -1) {
-            close(sockets[1]);
-            print_error("failed epoll_ctl");
+            close(conn->cgi_fd);
+            print_error("failed epoll_ctl ------");
             return;
         }
 
-        std::cout << GREEN << "added cgi socket to epoll " << sockets[1] << RESET << std::endl;
+        std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
 
-        conn->cgi_fd = sockets[1];
     }
 }
 

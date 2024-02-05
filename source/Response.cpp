@@ -4,7 +4,7 @@
 #include "../headers/utils.hpp"
 
 Response::Response()
-    : _version("HTTP/1.1"), _status_code("200"), _content_type("text/html"), _content_length(0), _req_file_fd(0),
+    : _version("HTTP/1.1"), _status_code("200"), _content_type("text/html"), _content_length(0),
       isdir(false), _sent_header(false), _cgi_header_parsed(false), buffer_writes(0) {
 
     // Define default headers
@@ -25,30 +25,21 @@ Response &Response::operator=(const Response &rhs) {
 }
 Response::Response(const Response &src) { *this = src; }
 
-int Response::get_requested_fd() { return (this->_req_file_fd); }
+// int Response::get_requested_fd() { return (this->_req_file_fd); }
 
-void Response::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
+// void Response::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
 
 void Response::set_error_page_fd(std::string full_path) {
 
     std::cout << "setting error page: " << full_path << std::endl;
 
-    if (get_stat_info(full_path, *this)) {
-        return;
-    }
-
-    if (!(this->permissions & S_IROTH)) {
-        return;
-    }
-
-    int file_fd = open(full_path.c_str(), O_RDONLY);
-    if (!file_fd) {
-        print_error("Error opening file");
-        return;
-    }
-
     this->set_content_type(MimeTypes::identify(full_path));
-    this->set_req_file_fd(file_fd);
+
+    if (this->inputfilestream.is_open())
+        this->inputfilestream.close();
+
+    this->inputfilestream.open(full_path.c_str());
+
 }
 
 void Response::set_header(std::string key, std::string value) {

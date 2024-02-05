@@ -12,6 +12,8 @@ int main(int argc, char **argv) {
         return (1);
     }
 
+    std::cout << "pid: " << getpid() << std::endl;
+
     std::string config_file_path;
 
     if (argc == 1) {
