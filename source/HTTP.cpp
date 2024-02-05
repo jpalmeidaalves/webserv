@@ -201,10 +201,11 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
             if (close(conn->cgi_fd) == 0) {
                 std::cout << GREEN << "Removed CGI socket " << conn->cgi_fd << RESET << std::endl;
-
             } else {
                  perror("Close: ");
             }
+
+            std::remove(request.body_file_name.c_str());
         }
 
     }
@@ -548,6 +549,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
               std::cout << YELLOW << "Error closing: " << fd << RESET << std::endl;
              
         }
+        std::remove(conn->request.body_file_name.c_str());
         conn->cgi_fd = 0;
 
         return;

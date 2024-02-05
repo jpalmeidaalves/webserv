@@ -326,7 +326,7 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
     }
-    this->body_file_name = "./etc/cgi/tmp/tmp-req-body-" + ft_itos(fd);
+    this->body_file_name = "./etc/cgi/tmp/.tmp-req-body-" + ft_itos(fd);
     std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
 
