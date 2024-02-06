@@ -23,6 +23,7 @@ struct Connection {
     int cgi_pid; // if has CGI add the process ID of the child process
     int cgi_fd;
     long last_operation;
+    bool timedout;
 };
 
 #endif /* CONNECTION_HPP */
