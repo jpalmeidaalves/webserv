@@ -29,6 +29,7 @@
 #define MAXEPOLLSIZE SOMAXCONN
 #define BUFFERSIZE 8000 // TODO increase buffersize
 #define BACKLOG 200    // how many pending connections queue will hold
+#define TIMEOUT 10
 
 struct Connection;
 class Server;
@@ -73,6 +74,7 @@ class HTTP {
     static void remove_cgi_socket(int sock);
     static void add_cgi_socket(int sock, int connection_socket);
     void process_request(struct epoll_event &ev);
+    void handle_timeouts();
 };
 
 #endif/* HTTP_HPP */

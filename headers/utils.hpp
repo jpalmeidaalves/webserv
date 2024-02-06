@@ -53,6 +53,7 @@ void printVector(std::vector<T> v) {
     std::cout << "size: " << v.size();
 }
 
+long get_timestamp();
 void start_timer(struct timeval *begin);
 void end_timer(struct timeval *begin, struct timeval *end);
 

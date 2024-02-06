@@ -18,10 +18,11 @@ struct Connection {
     std::string port;
     uint32_t s_addr;
     uint16_t sin_port;
-    // struct epoll_event *ev;
+    struct epoll_event *ev_ptr;
     int fd;
     int cgi_pid; // if has CGI add the process ID of the child process
     int cgi_fd;
+    long last_operation;
 };
 
 #endif /* CONNECTION_HPP */

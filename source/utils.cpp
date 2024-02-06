@@ -194,6 +194,13 @@ bool ft_strcmp_insensitive(std::string str1, std::string str2) {
 
 struct timeval begin, end;
 
+long get_timestamp() {
+    struct timeval time_s;
+    gettimeofday(&time_s, 0);
+
+    return time_s.tv_sec;
+}
+
 void start_timer(struct timeval *begin) {
     std::cout << YELLOW << "Timer started" << std::endl;
     gettimeofday(begin, 0);

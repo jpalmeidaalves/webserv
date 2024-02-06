@@ -94,6 +94,8 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     this->_active_connects[accepted_fd]->fd = accepted_fd;
     this->_active_connects[accepted_fd]->cgi_pid = 0;
     this->_active_connects[accepted_fd]->cgi_fd = 0;
+    this->_active_connects[accepted_fd]->last_operation = get_timestamp();
+    this->_active_connects[accepted_fd]->ev_ptr = &ev;
     
     // extract the ip number and port from accepted socket, store in Connecetion struct
     get_port_host_from_sockfd(accepted_fd, this->_active_connects[accepted_fd]);
@@ -253,6 +255,20 @@ int HTTP::epoll_mod(struct epoll_event &ev, uint32_t flag) {
     return 0;
 }
 
+void HTTP::handle_timeouts() {
+    connects_map::iterator it;
+
+    for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
+        if ((get_timestamp() - it->second->last_operation) > TIMEOUT) {
+
+            std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
+            this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
+            this->handle_timeouts();
+            break;
+        }
+    }
+}
+
 int HTTP::handle_connections() {
 
     this->_epoll_fd = epoll_create(MAXEPOLLSIZE);
@@ -273,12 +289,19 @@ int HTTP::handle_connections() {
     // program is hanging, waiting for events
     while (!g_stop) {
         // put the epoll instance waiting for events(requests) until a fd delivers an event
-        int nfds = epoll_wait(this->_epoll_fd, evlist, MAXEPOLLSIZE, -1);
+        int nfds = epoll_wait(this->_epoll_fd, evlist, MAXEPOLLSIZE, 2000);
+        
         if (nfds == -1) {
             print_error("epoll_wait failed");
             continue;
         }
-        //
+        
+        // Check for timeouts
+        std::cout << "after epoll_wait" << std::endl;
+        this->handle_timeouts();
+        std::cout << "after handle_timeouts()" << std::endl;
+        
+
         for (int i = 0; i < nfds; i++) {
 
             if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
@@ -305,6 +328,8 @@ int HTTP::handle_connections() {
                 this->write_socket(evlist[i]);
             } else if (evlist[i].events & EPOLLRDHUP) {
                 std::cout << "++++++++++++++++++++EPOLLHUP" << std::endl;
+            } else {
+                std::cout << "++++++++++++++++++++ TIME OUT" << std::endl;
             }
         }
     }
@@ -349,6 +374,9 @@ void HTTP::read_socket(struct epoll_event &ev) {
         return;
     }
 
+    // update time since last operation
+    conn->last_operation = get_timestamp();
+
     // if (bytes_read == 0) {
     //     print_error("read 0 bytes");
     //     this->close_connection(cfd, this->_epoll_fd, ev);
@@ -392,6 +420,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     // if the connection has been removed in this happens to be in the list of FDs ready to read
     // stop here
+    // TODO remove this
     if (!this->_active_connects[cfd]) {
         std::cout << "Ooopss" << std::endl;
         exit(1);
@@ -399,10 +428,14 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
+    Connection *conn = this->_active_connects[cfd];
 
     std::cout << "writing to socket: " << cfd << std::endl;
     std::cout << "active connects: " << this->_active_connects.size() << std::endl;
     std::cout << "request url is: " << request.getUrl() << std::endl;
+
+    // update time since last operation
+    conn->last_operation = get_timestamp();
 
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
