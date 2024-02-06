@@ -235,6 +235,10 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
         std::string item_path = full_path + "/" + dp->d_name;
 
+        std::cout << "full_path: " << full_path << std::endl;
+        std::cout << "dp->d_name: " << dp->d_name << std::endl;
+        std::cout << "item_path: " << item_path << std::endl;
+
         std::string href = item_path.substr(5);
 
         ft_memset(&struc_st, 0, sizeof(struc_st));

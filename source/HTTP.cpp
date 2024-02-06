@@ -464,8 +464,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
     }
 
     // TODO maybe improve this to use a boolean instead of inspecting the extension
-    if (request.has_cgi()) {
-        std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
+    if (request.is_cgi) {
+    std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
         std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
         int bytes_read = 0;
 
@@ -504,7 +504,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    char buff[BUFFERSIZE];
+    char buff[BUFFERSIZE + 1];
     ft_memset(&buff, 0, BUFFERSIZE);
 
     response.inputfilestream.read(buff, BUFFERSIZE);
@@ -520,6 +520,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
             this->close_connection(cfd, this->_epoll_fd, ev);
         } else {
             std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
+            std::cout << buff << std::endl;
         }
 
     } else {
@@ -536,6 +537,19 @@ void HTTP::process_request(struct epoll_event &ev) {
 
     conn->request.parse_request_header(); // extract header info
     this->redirect_to_server(conn);
+
+    // TODO check request max body size
+    if (conn->request.get_content_length() > conn->server->client_max_body_size){
+        conn->response.set_status_code("413", conn->server);
+        conn->request.is_cgi = false;
+
+        if (epoll_mod(ev, EPOLLOUT) == -1) {
+            print_error("failed to set write mode in incomming socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
+        }
+
+        return;
+    }
 
     if (conn->request.has_cgi()) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;

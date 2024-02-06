@@ -27,7 +27,7 @@ class Server {
     Connection *connection;
     ~Server();
     /* ----- */
-    int client_max_body_size;
+    std::size_t client_max_body_size;
     std::string host;
     std::string port;
     uint32_t s_addr;

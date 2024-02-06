@@ -15,6 +15,7 @@ Response::Response()
     this->set_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
     this->set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
     this->set_header("Access-Control-Allow-Credentials", "true");
+    // this->set_header("Connection", "close");
 }
 
 Response::~Response() {}
@@ -68,9 +69,13 @@ void Response::set_status_code(std::string code, Server *server) {
     // TODO check if is a error code
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
+
+        std::cout << "+*+* server->get_error_page(code) " << server->get_error_page(code) << std::endl;
         if (server->get_error_page(code) != "") {
+            std::cout << "using custom error page" << std::endl;
             this->set_error_page_fd(server->root + server->get_error_page(code));
         } else {
+            
             // else use the default error page
             this->set_error_page_fd(server->get_default_error_page(code));
         }
@@ -93,6 +98,7 @@ std::string Response::assemble_header() {
     // TODO missing status description after status code
     // TODO how to handle if we set an invalid status code in the header inside PHP
 
+    // ss << "HTTP/1.1 " << this->_status_code << "\r\n";
     ss << "HTTP/1.1 " << StatusCode::get_code(this->_status_code) << "\r\n";
 
     // std::cout << "assembling header" << std::endl;

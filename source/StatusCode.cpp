@@ -39,7 +39,7 @@ status_codes StatusCode::init_codes() {
     codes_map["410"] = "Gone";
     codes_map["411"] = "Length Required";
     codes_map["412"] = "Precondition Failed";
-    codes_map["413"] = "Payload Too Large";
+    codes_map["413"] = "Content Too Large";
     codes_map["414"] = "URI Too Long";
     codes_map["415"] = "Unsupported Media Type";
     codes_map["416"] = "Range Not Satisfiable";
