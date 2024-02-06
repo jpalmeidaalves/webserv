@@ -23,7 +23,7 @@ Request::Request(const Request &src) { *this = src; }
 
 void Request::parse_request_header() {
     std::cout << RED << "parsed request" << RESET << std::endl;
-    // std::cout << "data: " << data << std::endl;
+    std::cout << CYAN << this->_buffer.str() << RESET << std::endl;
     // parse request
     // std::stringstream ss(this->_buffer.str());
     std::string line;

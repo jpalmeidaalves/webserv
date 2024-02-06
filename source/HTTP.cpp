@@ -81,7 +81,7 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     std::cout << RED << "accepted connection in listing socket: " << sockfd << " for incoming socket: " << accepted_fd
               << RESET << std::endl;
 
-    ev.events = EPOLLIN;
+    ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.fd = accepted_fd;
     ret = epoll_ctl(epfd, EPOLL_CTL_ADD, accepted_fd, &ev);
     if (ret == -1) {
@@ -302,7 +302,7 @@ int HTTP::handle_connections() {
                 std::cout << BLUE << "WRITING to client socket" << evlist[i].data.fd << RESET << std::endl;
    
                 this->write_socket(evlist[i]);
-            } else {
+            } else if (evlist[i].events & EPOLLRDHUP) {
                 std::cout << "++++++++++++++++++++EPOLLHUP" << std::endl;
             }
         }
@@ -342,19 +342,20 @@ void HTTP::read_socket(struct epoll_event &ev) {
     int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
     std::cout << RED << "**bytes_read: " << bytes_read << RESET << std::endl;
 
-    if (bytes_read == -1) {
-        print_error("failed to read socket");
+    if (bytes_read <= 0) {
+        print_error("read 0 bytes or failed to read. closing connection...");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
-    if (bytes_read == 0 && request.getRaw().size() == 0) {
-        print_error("read 0 bytes");
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
+    // if (bytes_read == 0) {
+    //     print_error("read 0 bytes");
+    //     this->close_connection(cfd, this->_epoll_fd, ev);
+    //     return;
+    // }
 
-    if (request.is_cgi) {       
+    if (request.is_cgi) {    
+        std::cout << "this request has CGI" << std::endl;
         request.request_body.write(buf, bytes_read);
 
         request.request_body_writes += bytes_read;
@@ -367,6 +368,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
             request.process_cgi(conn, this->_epoll_fd);
         }
 
+        return;
     }
 
   
