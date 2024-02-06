@@ -203,12 +203,13 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
                 std::cout << GREEN << "Removed CGI socket " << conn->cgi_fd << RESET << std::endl;
             } else {
                  perror("Close: ");
-            }
-
-            std::remove(request.body_file_name.c_str());
+            }   
         }
 
     }
+
+    if (request.body_file_name != "")
+        std::remove(request.body_file_name.c_str());
 
     delete this->_active_connects[cfd];
     this->_active_connects.erase(cfd);

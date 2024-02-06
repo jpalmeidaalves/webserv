@@ -451,7 +451,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
                 perror("Close: ");
         }
         conn->cgi_pid = pid;
-        
+        // std::cout << GREEN << "conn->cgi_pid: " << conn->cgi_pid << std::endl;
 
         // Add the socket in the parent end to the EPOLL
         /**
