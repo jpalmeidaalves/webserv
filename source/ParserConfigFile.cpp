@@ -54,7 +54,7 @@ int ParserConfFile::open_config_file() {
     }
     // printVector(this->tokens);
     if (this->extract_server()) {
-        std::cerr << "Error: Config File Invalid Sintax" << std::endl;
+        // std::cerr << "Error: Config File Invalid Sintax" << std::endl;
         return 1;
     }
     // printVector(tokens);
@@ -132,13 +132,44 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 s.root = *it;
             } else if (*it == "client_max_body_size") {
                 ++it;
-                std::stringstream ss((*it));
-                ss >> s.client_max_body_size;
+
+                std::string tmp = *it;
+
+                char unit = '\0';
+
+                try {
+                    unit = tmp.at(tmp.size() - 1);
+                    if (!isdigit(unit)) {
+                        tmp.erase(tmp.size() - 1);
+                    } else 
+                        unit = '\0';
+                } catch(const std::exception& e) {
+                    unit = '\0';
+                }
+                
+                if (tmp == "") {
+                    std::cerr << "Error: 'client_max_body_size' invalid format" << std::endl;
+                    return (1);
+                }
+
+                int size = ft_stoi(tmp);
+                unit = std::toupper(unit);
+                
+                if (unit == 'K') {
+                    size *= 1024;
+                } else if (unit == 'M') {
+                    size *= (1024 * 1024);
+                } else if (unit != '\0'){
+                    std::cerr << "Error: 'client_max_body_size' invalid unit" << std::endl;
+                    return 1;
+                }
+
+                s.client_max_body_size = size;
             }
             ++it;
         }
     } else {
-        std::cerr << "Invalid syntax" << std::endl;
+        std::cerr << "Error: Invalid syntax in config file" << std::endl;
         return 1;
     }
     return 0;
@@ -150,7 +181,7 @@ int ParserConfFile::extract_server() {
     int brackets_count = 0;
     for (it = tokens.begin(); it != tokens.end();) {
         if (*it == "http" && *(it + 1) == "{") {
-            inside_http = true;
+            inside_http = true; 
             it++;
             continue;
         }

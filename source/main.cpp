@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // config_file.printMembers();
+    config_file.printMembers();
 
     std::vector<struct sockaddr_in> unique_addrs = config_file.get_unique_addresses();
 

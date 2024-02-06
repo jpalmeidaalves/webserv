@@ -116,6 +116,23 @@ server {
 ```
 
 ## [❌] Limit client body size.
+```bash
+http {
+    client_max_body_size 4M;
+
+    server {
+        ...
+        client_max_body_size 20M; # We'll support only this (server scope)
+
+        location / {
+            ...
+            client_max_body_size 8M;
+        } 
+    }
+
+}
+```
+
 ## [❌] Setup routes with one or multiple of the following rules/configuration (routes wont be using regexp):
 ## [❌] Define a list of accepted HTTP methods for the route.
 ## [❌] Define a HTTP redirection.
