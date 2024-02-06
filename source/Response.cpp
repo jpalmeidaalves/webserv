@@ -1,3 +1,4 @@
+#include "../headers/StatusCode.hpp"
 #include "../headers/Response.hpp"
 #include "../headers/MimeTypes.hpp"
 #include "../headers/Server.hpp"
@@ -92,7 +93,7 @@ std::string Response::assemble_header() {
     // TODO missing status description after status code
     // TODO how to handle if we set an invalid status code in the header inside PHP
 
-    ss << "HTTP/1.1 " << this->_status_code << "\r\n";
+    ss << "HTTP/1.1 " << StatusCode::get_code(this->_status_code) << "\r\n";
 
     // std::cout << "assembling header" << std::endl;
 

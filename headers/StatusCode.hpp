@@ -11,7 +11,7 @@ class StatusCode {
   public:
     static status_codes codes;
     static status_codes init_codes();
-    static std::string get_code(const std::string &code);
+    static std::string get_code(std::string code);
 
   private:
     StatusCode();
