@@ -297,9 +297,9 @@ int HTTP::handle_connections() {
         }
         
         // Check for timeouts
-        std::cout << "after epoll_wait" << std::endl;
+        // std::cout << "after epoll_wait" << std::endl;
         this->handle_timeouts();
-        std::cout << "after handle_timeouts()" << std::endl;
+        // std::cout << "after handle_timeouts()" << std::endl;
         
 
         for (int i = 0; i < nfds; i++) {
@@ -540,7 +540,7 @@ void HTTP::process_request(struct epoll_event &ev) {
         if (conn->request.getMethod() == "GET") {
             conn->request.process_request(conn);
         } else {
-            conn->response.set_status_code("404", conn->server);
+            conn->response.set_status_code("405", conn->server);
         }
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {
