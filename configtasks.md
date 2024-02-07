@@ -115,7 +115,7 @@ server {
 ...
 ```
 
-## [❌] Limit client body size.
+## [✅] Limit client body size.
 ```bash
 http {
     client_max_body_size 4M;
@@ -134,11 +134,30 @@ http {
 ```
 
 ## [❌] Setup routes with one or multiple of the following rules/configuration (routes wont be using regexp):
-## [❌] Define a list of accepted HTTP methods for the route.
-## [❌] Define a HTTP redirection.
-## [❌] Define a directory or a file from where the file should be searched (for example, if url /kapouet is rooted to /tmp/www, url /kapouet/pouic/toto/pouet is /tmp/www/pouic/toto/pouet).
+```bash
+...
+server {
+    ...
+    location / {
+		...
+    }
 
-## [❌] Turn on or off directory listing.
+    location /uploads {
+		...
+    }
+
+    location /uploads/innerfolder {
+		...
+    }
+    ...
+}
+```
+
+### [❌] Define a list of accepted HTTP methods for the route.
+### [❌] Define a HTTP redirection.
+### [❌] Define a directory or a file from where the file should be searched (for example, if url /kapouet is rooted to /tmp/www, url /kapouet/pouic/toto/pouet is /tmp/www/pouic/toto/pouet).
+
+### [❌] Turn on or off directory listing.
 ```bash
 ...
 server {
@@ -154,12 +173,16 @@ server {
 }
 ```
 
-## [❌] Set a default file to answer if the request is a directory.
-## [❌] Execute CGI based on certain file extension (for example .php).
-## [❌] Make it work with POST and GET methods.
-## [❌] Make the route able to accept uploaded files and configure where they should be saved.
+### [❌] Set a default file to answer if the request is a directory.
+### [❌] Execute CGI based on certain file extension (for example .php).
+### [✅] Make it work with POST and GET methods.
+### [✅] Make the route able to accept uploaded files and configure where they should be saved.
 
 
+----
+
+
+```
 header ex:
 http GET /
 Host: one.com
@@ -205,3 +228,4 @@ Incomming Connections (new Connection())
 Request &
 Response &
 Server *
+```

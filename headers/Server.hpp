@@ -13,6 +13,15 @@
 
 struct Connection;
 
+struct LocationOptions {
+  bool autoindex; // TODO 
+  std::string cgi_pass; // TODO 
+  std::vector<std::string> allowed_methods; // TODO
+  std::pair<std::string, std::string> redirect; // TODO 
+  std::string root; // TODO 
+  std::vector<std::string> index_pages; // TODO
+};
+
 class Server {
 
   private:
@@ -21,6 +30,7 @@ class Server {
     int _sockfd;
     std::map<std::string, std::string> _error_pages;
     std::map<std::string, std::string> _default_error_pages;
+    std::map<std::string, std::string> _locations;
 
   public:
     Server(); // disable default constructer
