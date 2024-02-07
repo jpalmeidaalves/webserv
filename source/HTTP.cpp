@@ -96,7 +96,7 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     this->_active_connects[accepted_fd]->cgi_fd = 0;
     this->_active_connects[accepted_fd]->last_operation = get_timestamp();
     this->_active_connects[accepted_fd]->ev_ptr = &ev;
-    this->_active_connects[accepted_fd]->timedout = false;
+    // this->_active_connects[accepted_fd]->timedout = false;
     
     // extract the ip number and port from accepted socket, store in Connecetion struct
     get_port_host_from_sockfd(accepted_fd, this->_active_connects[accepted_fd]);
@@ -259,19 +259,28 @@ int HTTP::epoll_mod(struct epoll_event &ev, uint32_t flag) {
 void HTTP::handle_timeouts() {
     connects_map::iterator it;
 
+    std::cout << CYAN << "active connections: " << this->_active_connects.size() << RESET << std::endl;
+
     for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
         if ((get_timestamp() - it->second->last_operation) > TIMEOUT) {
 
             if (it->second->ev_ptr && it->second->ev_ptr->events & EPOLLIN) {
-                it->second->response.set_status_code("408", it->second->server);
+                Server *server;
+                
+                if (it->second->server) {
+                    server = it->second->server;
+                } else {
+                    server = &this->_servers[0];
+                }
+
+                it->second->response.set_status_code("408", server);
                 epoll_mod(*(it->second->ev_ptr), EPOLLOUT);
                 it->second->last_operation = it->second->last_operation + 5;
-                it->second->timedout = true;
+                // it->second->timedout = true;
             } else {
                 std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
                 this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
-                this->handle_timeouts();
-                break;
+                it = this->_active_connects.begin();
             }
 
         }
@@ -448,8 +457,6 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
-        if (conn->timedout)
-            this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
