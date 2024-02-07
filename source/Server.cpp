@@ -105,3 +105,33 @@ bool Server::server_dir_listing(Connection *conn) {
 
     return false;
 }
+
+bool Server::server_index_page_exists(Connection *conn) {
+    std::map<std::string, struct LocationOptions>::iterator it;
+
+    std::string full_path = conn->server->root + conn->request.getUrl();
+    if (full_path.size() && full_path.at(full_path.size() - 1) != '/')
+            full_path += "/";
+
+    for (it = this->locations.begin(); it != this->locations.end(); it++) {
+        if (it->first == conn->request.getUrl() || (it->first + "/") == conn->request.getUrl()) {
+
+            std::vector<std::string>::iterator pages_it;
+            for (pages_it = it->second.index_pages.begin(); pages_it != it->second.index_pages.end(); pages_it++) {
+                
+                // Check if the file exists in the FileSystem
+                std::string filename = full_path + *pages_it;
+                if (file_exists(filename.c_str()) == 0) {
+                    conn->request.setUrl(full_path + *pages_it);
+                    return true;
+                }
+
+            }
+
+        }
+    }
+
+    // TODO check server index pages
+
+    return false;
+}

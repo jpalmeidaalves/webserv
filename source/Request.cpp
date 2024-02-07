@@ -176,20 +176,18 @@ void Request::process_request(Connection *conn) {
             full_path += "/";
 
         // if index file is present
-        // TODO must check all index files defined in the configfile
-        std::cout << CYAN << "***************full_path: " << full_path + "index.html" << RESET << std::endl;
-        if (file_exists(full_path + "index.html")) {
+        if (conn->server->server_index_page_exists(conn)) {
             std::cout << CYAN << "has index file" << RESET << std::endl;
             // send file (must check permissions)
-            request.setUrl(request.getUrl() + "index.html"); // update url
-            full_path += "index.html";
+            // request.setUrl(request.getUrl() + "index.html"); // update url
+            full_path = request.getUrl();
+            std::cout << CYAN << "*************** found index page: " << full_path << RESET << std::endl;
+            // TODO if index file is for CGI process with CGI instead
             this->process_requested_file(conn, full_path);
         } else {
-            std::cout << CYAN << "does NOT have index file" << RESET << std::endl;
+            std::cout << CYAN << "does NOT have index page" << RESET << std::endl;
 
             bool is_dir_listing = conn->server->server_dir_listing(conn);
-
-            // TODO we must check the index files in the configfile and show them instead of
 
             if (!is_dir_listing) {
                 response.set_status_code("403", conn->server);

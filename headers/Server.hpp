@@ -40,6 +40,7 @@ class Server {
     std::string get_default_error_page(std::string code);
     // std::multimap<std::string, std::string> error_pages;
     bool server_dir_listing(Connection *conn);
+    bool server_index_page_exists(Connection *conn);
 };
 
 #endif/* SERVER_HPP */
