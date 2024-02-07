@@ -148,7 +148,8 @@ void get_port_host_from_sockfd(int sockfd, Connection *conn) {
     conn->port = ft_itos(ntohs(addr.sin_port));
 }
 
-int file_exists(std::string path) { return (access(path.c_str(), F_OK) == 0); }
+int file_exists(std::string path) { 
+    return (access(path.c_str(), F_OK) == 0); }
 
 bool is_listening_socket(int sockfd, std::vector<int> &_listening_sockets) {
     std::vector<int>::iterator it;

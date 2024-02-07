@@ -536,6 +536,10 @@ void HTTP::write_socket(struct epoll_event &ev) {
     }
 }
 
+// void HTTP::apply_server_location_rules(Connection *conn) {
+
+// }
+
 void HTTP::process_request(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Connection *conn = this->_active_connects[cfd];
@@ -557,6 +561,8 @@ void HTTP::process_request(struct epoll_event &ev) {
 
         return;
     }
+
+    // this->apply_server_location_rules(conn);
 
     if (conn->request.has_cgi()) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;

@@ -1,4 +1,6 @@
 #include "../headers/Server.hpp"
+#include "../headers/Connection.hpp"
+#include "../headers/Request.hpp"
 
 /* -------------------------------------------------------------------------- */
 /*                         Constructors & Desctructor                         */
@@ -90,4 +92,16 @@ std::string Server::get_default_error_page(std::string code) {
     std::cout << "DID NOT FOUND DEFAULT ERROR PAGE" << std::endl;
 
     return "";
+}
+
+bool Server::server_dir_listing(Connection *conn) {
+    std::map<std::string, struct LocationOptions>::iterator it;
+
+    for (it = this->locations.begin(); it != this->locations.end(); it++) {
+        if (it->first == conn->request.getUrl()) {
+            return it->second.autoindex;
+        }
+    }
+
+    return false;
 }

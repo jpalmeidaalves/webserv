@@ -172,21 +172,24 @@ void Request::process_request(Connection *conn) {
     } else if (curr_type == TYPE_DIR) {
         std::cout << "------- dir --------" << std::endl;
 
+        if (full_path.size() && full_path.at(full_path.size() - 1) != '/')
+            full_path += "/";
+
         // if index file is present
         // TODO must check all index files defined in the configfile
+        std::cout << CYAN << "***************full_path: " << full_path + "index.html" << RESET << std::endl;
         if (file_exists(full_path + "index.html")) {
+            std::cout << CYAN << "has index file" << RESET << std::endl;
             // send file (must check permissions)
             request.setUrl(request.getUrl() + "index.html"); // update url
             full_path += "index.html";
             this->process_requested_file(conn, full_path);
         } else {
-            // send list dir (must check permissions)
+            std::cout << CYAN << "does NOT have index file" << RESET << std::endl;
 
-            // TODO if dir listing is active, from config file
-            bool is_dir_listing = true; // TODO now
+            bool is_dir_listing = conn->server->server_dir_listing(conn);
 
             // TODO we must check the index files in the configfile and show them instead of
-            // listing dir
 
             if (!is_dir_listing) {
                 response.set_status_code("403", conn->server);

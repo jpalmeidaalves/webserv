@@ -39,6 +39,7 @@ class Server {
     void update_error_page(std::string error_code, std::string path);
     std::string get_default_error_page(std::string code);
     // std::multimap<std::string, std::string> error_pages;
+    bool server_dir_listing(Connection *conn);
 };
 
 #endif/* SERVER_HPP */
