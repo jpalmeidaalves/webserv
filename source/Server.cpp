@@ -9,10 +9,45 @@
 Server::Server() : client_max_body_size(4194304), s_addr(0), sin_port(0) {
 
     // init error pages
+    this->_default_error_pages["400"] = "./etc/default_pages/400.html";
+    this->_default_error_pages["401"] = "./etc/default_pages/401.html";
     this->_default_error_pages["403"] = "./etc/default_pages/403.html";
     this->_default_error_pages["404"] = "./etc/default_pages/404.html";
+    this->_default_error_pages["405"] = "./etc/default_pages/405.html";
+    this->_default_error_pages["406"] = "./etc/default_pages/406.html";
+    this->_default_error_pages["407"] = "./etc/default_pages/407.html";
+    this->_default_error_pages["408"] = "./etc/default_pages/408.html";
+    this->_default_error_pages["409"] = "./etc/default_pages/409.html";
+    this->_default_error_pages["410"] = "./etc/default_pages/410.html";
+    this->_default_error_pages["411"] = "./etc/default_pages/411.html";
+    this->_default_error_pages["412"] = "./etc/default_pages/412.html";
     this->_default_error_pages["413"] = "./etc/default_pages/413.html";
+    this->_default_error_pages["414"] = "./etc/default_pages/414.html";
+    this->_default_error_pages["415"] = "./etc/default_pages/415.html";
+    this->_default_error_pages["416"] = "./etc/default_pages/416.html";
+    this->_default_error_pages["417"] = "./etc/default_pages/417.html";
+    this->_default_error_pages["418"] = "./etc/default_pages/418.html";
+    this->_default_error_pages["421"] = "./etc/default_pages/421.html";
+    this->_default_error_pages["422"] = "./etc/default_pages/422.html";
+    this->_default_error_pages["423"] = "./etc/default_pages/423.html";
+    this->_default_error_pages["424"] = "./etc/default_pages/424.html";
+    this->_default_error_pages["426"] = "./etc/default_pages/426.html";
+    this->_default_error_pages["428"] = "./etc/default_pages/428.html";
+    this->_default_error_pages["429"] = "./etc/default_pages/429.html";
+    this->_default_error_pages["431"] = "./etc/default_pages/431.html";
+    this->_default_error_pages["451"] = "./etc/default_pages/451.html";
+
     this->_default_error_pages["500"] = "./etc/default_pages/500.html";
+    this->_default_error_pages["501"] = "./etc/default_pages/501.html";
+    this->_default_error_pages["502"] = "./etc/default_pages/502.html";
+    this->_default_error_pages["503"] = "./etc/default_pages/503.html";
+    this->_default_error_pages["504"] = "./etc/default_pages/504.html";
+    this->_default_error_pages["505"] = "./etc/default_pages/505.html";
+    this->_default_error_pages["506"] = "./etc/default_pages/506.html";
+    this->_default_error_pages["507"] = "./etc/default_pages/507.html";
+    this->_default_error_pages["508"] = "./etc/default_pages/508.html";
+    this->_default_error_pages["510"] = "./etc/default_pages/510.html";
+    this->_default_error_pages["511"] = "./etc/default_pages/511.html";
 }
 
 Server::~Server() {}
