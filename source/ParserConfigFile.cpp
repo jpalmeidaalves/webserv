@@ -165,6 +165,10 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 }
 
                 s.client_max_body_size = size;
+            } else if (*it == "location") {
+                it++;
+                if (this->extract_location(it, s))
+                    return 1;
             }
             ++it;
         }
@@ -172,6 +176,114 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
         std::cerr << "Error: Invalid syntax in config file" << std::endl;
         return 1;
     }
+    return 0;
+}
+
+int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Server &s) {
+    int brackets_count = 0;
+
+    if (it->find("/") != 0 && it->find("*") != 0)
+        return 1;
+
+    std::string location = *it;
+    s.locations[location] = LocationOptions();
+    s.locations[location].autoindex = false;
+    
+    
+    it++;
+
+    while(it != this->tokens.end()) {
+        if (*it == "{")
+            brackets_count++;
+        else if (*it == "}") {
+            brackets_count--;
+            if (brackets_count == 0)
+                break;
+        } else if (*it == "root") {
+            it++;
+            s.locations[location].root = *it;
+            it++;
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(0) ;" << std::endl;
+                return 1;
+            }
+        }else if (*it == "cgi_pass") {
+            it++;
+            s.locations[location].cgi_pass = *it;
+            it++;
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(2) ;" << std::endl;
+                return 1;
+            }
+        } else if (*it == "autoindex") {
+            it++;
+            if (*it == "on")
+                s.locations[location].autoindex = true;
+            else if (*it == "off")
+                s.locations[location].autoindex = false;
+            else {
+                std::cerr << "Error: invalid value in autoindex" << std::endl;
+                return 1;
+            }
+            it++;
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(3) ;" << std::endl;
+                return 1;
+            }
+        } else if (*it == "allowed_methods") {
+            it++;
+            while(it != this->tokens.end()) {
+                if (it->find_first_of("{};") != std::string::npos)
+                    break;
+                s.locations[location].allowed_methods.push_back(*it);
+                it++;
+            }
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(4) ;" << std::endl;
+                return 1;
+            }
+        } else if (*it == "return") {
+            it++;
+            if (it->size() == 0 || it->size() > 3 || it->find_first_not_of("0123456789") != std::string::npos) {
+                
+                std::cerr << "Error: invalid status code in redirect config file" << std::endl;
+                return 1;
+            }
+
+            s.locations[location].redirect.first = *it;
+            it++;
+
+            if (it->find_first_of("{};") != std::string::npos) {
+                std::cerr << "Error: syntax error in config file" << std::endl;
+                return 1;
+            }
+
+            s.locations[location].redirect.second = *it;
+            it++;
+
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(5) ;" << std::endl;
+                return 1;
+            }
+        } else if (*it == "index") {
+            it++;
+            while(it != this->tokens.end()) {
+                if (it->find_first_of("{};") != std::string::npos)
+                    break;
+                s.locations[location].index_pages.push_back(*it);
+                it++;
+            }
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(6) ;" << std::endl;
+                return 1;
+            }
+        }
+
+        it++;
+    }
+    
+    if (brackets_count != 0)
+        return 1;
     return 0;
 }
 
@@ -215,11 +327,28 @@ void ParserConfFile::printMembers(void) const {
         std::cout << "Host: " << ite->host << std::endl;
         std::cout << "Port: " << ite->port << std::endl;
         // std::cout << "test first: " << ite->server_names[0] << std::endl;
-        std::cout << "Server name: " << std::endl;
-        printVector(ite->server_names);
+        std::cout << "Server name: ";
+        print_vector_with_space(ite->server_names);
         std::cout << std::endl;
         std::cout << "Max body size: " << ite->client_max_body_size << std::endl;
         std::cout << "Root: " << ite->root << std::endl;
+
+        std::map<std::string, struct LocationOptions>::iterator loc_it;
+
+        for (loc_it = ite->locations.begin(); loc_it != ite->locations.end(); loc_it++) {
+            std::cout << "  location: " << loc_it->first << std::endl;
+            std::cout << "      autoindex: " << loc_it->second.autoindex << std::endl;
+            std::cout << "      cgi_pass: " << loc_it->second.cgi_pass << std::endl;
+        
+            std::cout << "      allowed_methods: ";
+            print_vector_with_space(loc_it->second.allowed_methods);
+
+            std::cout << "      redirect: " << loc_it->second.redirect.first << " to " << loc_it->second.redirect.second << std::endl;
+            std::cout << "      root: " << loc_it->second.root << std::endl; 
+            std::cout << "      index_pages: ";
+            print_vector_with_space(loc_it->second.index_pages);
+        
+        }
     }
 }
 

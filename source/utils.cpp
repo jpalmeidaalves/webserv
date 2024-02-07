@@ -236,3 +236,10 @@ std::size_t remaining_bytes(const std::stringstream &s) {
     buf->pubseekpos(pos, std::ios_base::in);
     return end - pos;
 }
+
+bool only_digits(std::string s)
+{
+    if (s.find_first_not_of("1234567890") != std::string::npos)
+        return false;
+    return true;
+}

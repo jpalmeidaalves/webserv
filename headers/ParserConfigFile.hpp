@@ -35,6 +35,7 @@ class ParserConfFile {
     void printMembers(void) const;
     void print_server_data();
     std::vector<Server> &extract_servers_data();
+    int extract_location(std::vector<std::string>::iterator &it, Server &s);
 };
 std::ostream &operator<<(std::ostream &out, const Server &obj);
 

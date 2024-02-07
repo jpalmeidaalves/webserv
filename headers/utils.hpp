@@ -22,6 +22,15 @@
 
 typedef enum file_types_t { TYPE_FILE, TYPE_DIR, TYPE_UNKOWN } file_types;
 
+struct LocationOptions {
+  bool autoindex; // TODO 
+  std::string cgi_pass; // TODO 
+  std::vector<std::string> allowed_methods; // TODO
+  std::pair<std::string, std::string> redirect; // TODO 
+  std::string root; // TODO 
+  std::vector<std::string> index_pages; // TODO
+};
+
 struct Connection;
 class Request;
 class Response;
@@ -51,6 +60,13 @@ void printVector(std::vector<T> v) {
     for (size_t i = 0; i < v.size(); i++)
         std::cout << v[i] << std::endl;
     std::cout << "size: " << v.size();
+}
+
+template <typename T>
+void print_vector_with_space(std::vector<T> v) {
+    for (size_t i = 0; i < v.size(); i++)
+        std::cout << v[i] << " | ";
+    std::cout << std::endl;
 }
 
 long get_timestamp();
