@@ -179,6 +179,15 @@ void Server::set_full_path(Connection *conn) {
 
             if (conn->request.url_path.find(it->first) == 0) {
 
+                // check if has redirect
+                if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
+                    // first = status code
+                    // second = redirect path
+                    conn->response.set_status_code(it->second.redirect.first, conn->server);
+                    conn->response.set_header("Location", it->second.redirect.second);
+                    return;
+                }
+
                 if (it->second.root != "") {
                     std::cout << YELLOW << "matched location: " << it->first << " with " << conn->request.url_path << RESET << std::endl;
                     std::string tmp = conn->request.url_path.erase(0, it->first.size());
@@ -197,6 +206,14 @@ void Server::set_full_path(Connection *conn) {
     }
 
     if (root_location && root_location->root != ""){
+        if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
+            // first = status code
+            // second = redirect path
+            conn->response.set_status_code(it->second.redirect.first, conn->server);
+            conn->response.set_header("Location", it->second.redirect.second);
+            return;
+        }
+
         if (has_suffix(root_location->root, "/")) {
             conn->request.url_path.erase(0, 1);
             conn->request.url_path = root_location->root + conn->request.url_path;

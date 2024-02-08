@@ -24,9 +24,9 @@ typedef enum file_types_t { TYPE_FILE, TYPE_DIR, TYPE_UNKOWN } file_types;
 
 struct LocationOptions {
   bool autoindex;
-  std::string cgi_pass; // TODO 
+  std::string cgi_pass; 
   std::vector<std::string> allowed_methods; // TODO
-  std::pair<std::string, std::string> redirect; // TODO 
+  std::pair<std::string, std::string> redirect;
   std::string root;
   std::vector<std::string> index_pages;
 };

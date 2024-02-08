@@ -607,6 +607,15 @@ void HTTP::process_request(struct epoll_event &ev) {
     // update url_path depending on the server root or location root
     conn->server->set_full_path(conn);
 
+    // If the request has been redirected change to EPOLLOUT
+    if (conn->response.get_status_code().find("3") == 0 ) {
+         if (epoll_mod(ev, EPOLLOUT) == -1) {
+            print_error("failed to set write mode in incomming socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
+        }
+        return;
+    }
+
     conn->server->server_index_page_exists(conn);
 
 
