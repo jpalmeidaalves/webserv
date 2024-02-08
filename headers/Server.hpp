@@ -35,12 +35,14 @@ class Server {
     uint16_t sin_port;
     std::vector<std::string> server_names;
     std::string root;
+    std::vector<std::string> index_pages;
     std::string get_error_page(std::string error_code);
     void update_error_page(std::string error_code, std::string path);
     std::string get_default_error_page(std::string code);
     // std::multimap<std::string, std::string> error_pages;
     bool server_dir_listing(Connection *conn);
-    bool server_index_page_exists(Connection *conn);
+    // bool server_index_page_exists(Connection *conn);
+    void update_url_with_index_page(Connection *conn);
 };
 
 #endif/* SERVER_HPP */

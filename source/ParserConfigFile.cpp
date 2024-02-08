@@ -165,6 +165,18 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 }
 
                 s.client_max_body_size = size;
+            } else if (*it == "index") {
+                it++;
+                while(it != this->tokens.end()) {
+                    if (it->find_first_of("{};") != std::string::npos)
+                        break;
+                    s.index_pages.push_back(*it);
+                    it++;
+                }
+                if (*it != ";") {
+                    std::cerr << "Error: invalid syntax, missing(6) ;" << std::endl;
+                    return 1;
+                }
             } else if (*it == "location") {
                 it++;
                 if (this->extract_location(it, s))

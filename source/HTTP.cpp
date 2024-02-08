@@ -451,6 +451,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "writing to socket: " << cfd << std::endl;
     std::cout << "active connects: " << this->_active_connects.size() << std::endl;
     std::cout << "request url is: " << request.getUrl() << std::endl;
+    std::cout << "request url_path: " << request.url_path << std::endl;
+    std::cout << "request url_query: " << request.url_query << std::endl;
+    std::cout << "request url_fragment: " << request.url_fragment << std::endl;
 
     // update time since last operation
     conn->last_operation = get_timestamp();
@@ -549,7 +552,40 @@ void HTTP::process_request(struct epoll_event &ev) {
     conn->request.parse_request_header(); // extract header info
     this->redirect_to_server(conn);
 
-    // TODO check request max body size
+/* ----------------------------------- ll ----------------------------------- */
+
+    // TODO update url if the request is a directory
+    // TODO add property to indicate if is a dir (bool)
+    conn->request.process_url();
+
+    std::string full_path = conn->server->root + conn->request.url_path;
+
+    std::cout << "[Request Header]" << conn->request.getRaw() << std::endl;
+    std::cout << GREEN << "ll full_path: " << full_path << RESET << std::endl;
+
+
+    // check if is a file or dir
+    file_types curr_type = get_file_type(full_path.c_str());
+
+    if (curr_type == TYPE_UNKOWN) {
+        print_error("failed to check if is a dir");
+
+        conn->response.set_status_code("404", conn->server);
+
+        if (epoll_mod(ev, EPOLLOUT) == -1) {
+            print_error("failed to set write mode in incomming socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
+        }
+
+        return;
+    } else if (curr_type == TYPE_DIR) {
+        std::cout << "------- dir --------" << std::endl;
+        conn->server->update_url_with_index_page(conn);
+    }
+
+/* ----------------------------------- ll ----------------------------------- */
+
+
     if (conn->request.get_content_length() > conn->server->client_max_body_size){
         conn->response.set_status_code("413", conn->server);
         conn->request.is_cgi = false;
@@ -576,7 +612,7 @@ void HTTP::process_request(struct epoll_event &ev) {
         std::cout << GREEN << "normal request" << RESET << std::endl;
 
         if (conn->request.getMethod() == "GET") {
-            conn->request.process_request(conn);
+            conn->request.process_request(conn, this->_epoll_fd);
         } else {
             conn->response.set_status_code("405", conn->server);
         }

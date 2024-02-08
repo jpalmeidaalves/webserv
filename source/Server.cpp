@@ -98,7 +98,7 @@ bool Server::server_dir_listing(Connection *conn) {
     std::map<std::string, struct LocationOptions>::iterator it;
 
     for (it = this->locations.begin(); it != this->locations.end(); it++) {
-        if (it->first == conn->request.getUrl()) {
+        if (it->first == conn->request.url_path) {
             return it->second.autoindex;
         }
     }
@@ -106,15 +106,64 @@ bool Server::server_dir_listing(Connection *conn) {
     return false;
 }
 
-bool Server::server_index_page_exists(Connection *conn) {
+// bool Server::server_index_page_exists(Connection *conn) {
+//     std::map<std::string, struct LocationOptions>::iterator it;
+
+//     std::string full_path = conn->server->root + conn->request.getUrl();
+//     if (full_path.size() && full_path.at(full_path.size() - 1) != '/')
+//             full_path += "/";
+
+//     for (it = this->locations.begin(); it != this->locations.end(); it++) {
+//         if (it->first == conn->request.getUrl() || (it->first + "/") == conn->request.getUrl()) {
+
+//             std::vector<std::string>::iterator pages_it;
+//             for (pages_it = it->second.index_pages.begin(); pages_it != it->second.index_pages.end(); pages_it++) {
+                
+//                 // Check if the file exists in the FileSystem
+//                 std::string filename = full_path + *pages_it;
+//                 if (file_exists(filename.c_str()) == 0) {
+//                     conn->request.setUrl(full_path + *pages_it);
+//                     if (conn->request.has_cgi()) {
+//                         conn->request.is_cgi = true;
+//                     }
+//                     return true;
+//                 }
+
+//             }
+
+//         }
+//     }
+
+//     // Check index pages in the Server scope
+//     std::vector<std::string>::iterator pages_it;
+//     for (pages_it = conn->server->index_pages.begin(); pages_it != conn->server->index_pages.end(); pages_it++) {
+//          // Check if the file exists in the FileSystem
+//         std::string filename = full_path + *pages_it;
+//         if (file_exists(filename.c_str()) == 0) {
+//             conn->request.setUrl(full_path + *pages_it);
+//             if (conn->request.has_cgi()) {
+//                 conn->request.is_cgi = true;
+//             }
+//             return true;
+//         }
+//     }
+//     return false;
+// }
+
+
+void Server::update_url_with_index_page(Connection *conn) {
     std::map<std::string, struct LocationOptions>::iterator it;
 
-    std::string full_path = conn->server->root + conn->request.getUrl();
+    std::string full_path = conn->server->root + conn->request.url_path;
     if (full_path.size() && full_path.at(full_path.size() - 1) != '/')
             full_path += "/";
 
+    std::string url_with_slash = conn->request.url_path;
+    if (url_with_slash.size() && url_with_slash.at(url_with_slash.size() - 1) != '/')
+            url_with_slash += "/";
+
     for (it = this->locations.begin(); it != this->locations.end(); it++) {
-        if (it->first == conn->request.getUrl() || (it->first + "/") == conn->request.getUrl()) {
+        if (it->first == conn->request.url_path || (it->first + "/") == conn->request.url_path) {
 
             std::vector<std::string>::iterator pages_it;
             for (pages_it = it->second.index_pages.begin(); pages_it != it->second.index_pages.end(); pages_it++) {
@@ -122,8 +171,8 @@ bool Server::server_index_page_exists(Connection *conn) {
                 // Check if the file exists in the FileSystem
                 std::string filename = full_path + *pages_it;
                 if (file_exists(filename.c_str()) == 0) {
-                    conn->request.setUrl(full_path + *pages_it);
-                    return true;
+                    conn->request.url_path = url_with_slash + *pages_it;
+                    return;
                 }
 
             }
@@ -131,7 +180,17 @@ bool Server::server_index_page_exists(Connection *conn) {
         }
     }
 
-    // TODO check server index pages
+    // Check index pages in the Server scope
+    std::vector<std::string>::iterator pages_it;
+    for (pages_it = conn->server->index_pages.begin(); pages_it != conn->server->index_pages.end(); pages_it++) {
+         // Check if the file exists in the FileSystem
+        std::string filename = full_path + *pages_it;
+        if (file_exists(filename.c_str()) == 0) {
+            conn->request.url_path = url_with_slash + *pages_it;
+            return;
+        }
+    }
 
-    return false;
+    // Indicates this is a dir
+    conn->request.is_dir = true;
 }

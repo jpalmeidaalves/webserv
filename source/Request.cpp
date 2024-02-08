@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false) {}
+Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), is_dir(false) {}
 
 Request::~Request() {}
 
@@ -96,6 +96,38 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
+void Request::process_url() {
+
+    // /upload.php?name=nuno&other=stuff
+    // /upload.html?name=.php&other=stuff
+    // /upload.html#section
+
+    std::string base_url;
+
+
+    std::string url = this->getUrl();
+    std::size_t has_query = url.find("?");
+    
+
+    if (has_query != std::string::npos) {
+        base_url = this->getUrl().substr(0, has_query);
+        this->url_query = this->getUrl().substr(has_query + 1); // TODO may segfault "index.html?"
+    } else {
+        base_url = this->getUrl();
+    }
+
+    std::size_t has_fragment = base_url.find("#");
+    if (has_fragment != std::string::npos) {
+        base_url = base_url.substr(0, has_fragment);
+        this->url_fragment = this->getUrl().substr(has_fragment + 1); // TODO may segfault "index.html#"
+    } else {
+        base_url = base_url;
+    }
+
+    this->url_path = base_url;
+
+}
+
 bool Request::has_cgi() {
 
     // HAS CGI
@@ -106,20 +138,20 @@ bool Request::has_cgi() {
     // /upload.html?name=.php&other=stuff
     // /upload.html
 
-    std::string url = this->getUrl();
-    std::size_t has_query = url.find("?");
+    // std::string url = this->getUrl();
+    // std::size_t has_query = url.find("?");
 
-    if (has_query != std::string::npos) {
-        this->short_url = this->getUrl().substr(0, has_query);
-        // std::cout << RED << short_url << RESET << std::endl;
-        this->query = this->getUrl().substr(has_query + 1);
-    } else {
-        this->short_url = this->getUrl();
-    }
+    // if (has_query != std::string::npos) {
+    //     this->url_path = this->getUrl().substr(0, has_query);
+    //     // std::cout << RED << url_path << RESET << std::endl;
+    //     this->url_query = this->getUrl().substr(has_query + 1);
+    // } else {
+    //     this->url_path = this->getUrl();
+    // }
 
-    std::cout << "checking if has CGI: short_url = " << this->short_url << std::endl;
+    std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
-    if (has_suffix(short_url, ".php")) {
+    if (has_suffix(this->url_path, ".php")) {
         this->is_cgi = true;
         return true;
     }
@@ -149,16 +181,16 @@ void Request::process_requested_file(Connection *conn, std::string full_path) {
     // response.set_req_file_fd(file_fd);
 }
 
-void Request::process_request(Connection *conn) {
-
+void Request::process_request(Connection *conn, int epfd) {
+    (void)epfd;
     // int cfd = ev.data.fd;
     Request &request = conn->request;
     Response &response = conn->response;
 
-    std::string full_path = conn->server->root + request.getUrl();
+    std::string full_path = conn->server->root + request.url_path;
 
-    std::cout << "[Request Header]" << request.getRaw() << std::endl;
-    std::cout << GREEN << "processing request full_path: " << full_path << RESET << std::endl;
+    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
+    // std::cout << GREEN << "processing request full_path: " << full_path << RESET << std::endl;
 
     // check if is a file or dir
     file_types curr_type = get_file_type(full_path.c_str());
@@ -169,32 +201,16 @@ void Request::process_request(Connection *conn) {
     } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn, full_path);
-    } else if (curr_type == TYPE_DIR) {
+    } else if (request.is_dir) {
         std::cout << "------- dir --------" << std::endl;
 
-        if (full_path.size() && full_path.at(full_path.size() - 1) != '/')
-            full_path += "/";
+        bool is_dir_listing = conn->server->server_dir_listing(conn);
 
-        // if index file is present
-        if (conn->server->server_index_page_exists(conn)) {
-            std::cout << CYAN << "has index file" << RESET << std::endl;
-            // send file (must check permissions)
-            // request.setUrl(request.getUrl() + "index.html"); // update url
-            full_path = request.getUrl();
-            std::cout << CYAN << "*************** found index page: " << full_path << RESET << std::endl;
-            // TODO if index file is for CGI process with CGI instead
-            this->process_requested_file(conn, full_path);
+        if (!is_dir_listing) {
+            response.set_status_code("403", conn->server);
         } else {
-            std::cout << CYAN << "does NOT have index page" << RESET << std::endl;
-
-            bool is_dir_listing = conn->server->server_dir_listing(conn);
-
-            if (!is_dir_listing) {
-                response.set_status_code("403", conn->server);
-            } else {
-                response.isdir = true;
-                this->list_directory(full_path, conn);
-            }
+            response.isdir = true;
+            this->list_directory(full_path, conn);
         }
     }
 }
@@ -272,8 +288,8 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
     std::stringstream ss;
 
-    ss << "<html><head><title>Index of " << request.getUrl() << "/</title></head><body><h1>Index of "
-       << request.getUrl() << "</h1><hr><pre>";
+    ss << "<html><head><title>Index of " << request.url_path << "/</title></head><body><h1>Index of "
+       << request.url_path << "</h1><hr><pre>";
 
     std::map<std::string, struct dir_entry>::iterator it;
     {
@@ -424,25 +440,25 @@ void Request::process_cgi(Connection *conn, int epfd) {
             close(fd);
         }
 
-        std::string file_path = conn->server->root + this->getUrl();
+        std::string file_path = conn->server->root + this->url_path;
 
         char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
 
-        std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->short_url;
+        std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->url_path;
         std::string server_port = "SERVER_PORT" + conn->server->port;
         std::string remote_host = "REMOTE_HOST" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
         std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
-        std::string script_name = "SCRIPT_FILENAME=" + conn->server->root + this->short_url;
-        std::string path_info = "PATH_INFO=" + conn->server->root + this->short_url;
+        std::string script_name = "SCRIPT_FILENAME=" + conn->server->root + this->url_path;
+        std::string path_info = "PATH_INFO=" + conn->server->root + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
-        std::string query = "QUERY_STRING=" + this->query;
+        std::string url_query = "QUERY_STRING=" + this->url_query;
 
         char *custom_envp[] = {
             (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200",  (char *)path_translated.c_str(),
             (char *)server_port.c_str(),     (char *)request_method.c_str(), (char *)script_name.c_str(),
-            (char *)path_info.c_str(),       (char *)query.c_str(),          (char *)content_length.c_str(),
+            (char *)path_info.c_str(),       (char *)url_query.c_str(),          (char *)content_length.c_str(),
             (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
 
         if (execve(cmd[0], cmd, custom_envp) == -1)

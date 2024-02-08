@@ -37,9 +37,13 @@ class Request {
     bool is_cgi;
     bool cgi_complete;
     bool read_complete;
-    std::string query; // TODO make pivate?
-    std::string short_url;
+    bool is_dir;
+    std::string url_query; // TODO make pivate?
+    std::string url_path;
+    std::string url_fragment;
     std::string body_file_name;
+    
+    
     Request();
     ~Request();
     std::string getMethod() const;
@@ -50,7 +54,7 @@ class Request {
     bool not_parsed();
     void setUrl(std::string url);
     void parse_request_header();
-    void process_request(Connection *conn);
+    void process_request(Connection *conn, int epfd);
     void process_requested_file(Connection *conn, std::string full_path);
     int list_directory(std::string full_path, Connection *conn);
     bool has_cgi();
@@ -66,6 +70,8 @@ class Request {
     // std::string extract_filename_from_body(size_t &bytes_read);
     // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
     void append_buffer(const char *buf, int len);
+    std::string url_without_query();
+    void process_url();
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 
