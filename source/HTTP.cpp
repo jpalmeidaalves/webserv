@@ -259,7 +259,7 @@ int HTTP::epoll_mod(struct epoll_event &ev, uint32_t flag) {
 void HTTP::handle_timeouts() {
     connects_map::iterator it;
 
-    std::cout << CYAN << "active connections: " << this->_active_connects.size() << RESET << std::endl;
+    // std::cout << CYAN << "active connections: " << this->_active_connects.size() << RESET << std::endl;
 
     for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
         if ((get_timestamp() - it->second->last_operation) > TIMEOUT) {
@@ -554,18 +554,65 @@ void HTTP::process_request(struct epoll_event &ev) {
 
 /* ----------------------------------- ll ----------------------------------- */
 
-    // TODO update url if the request is a directory
-    // TODO add property to indicate if is a dir (bool)
-    conn->request.process_url();
+    // TODO update path based on location if necessary
 
-    std::string full_path = conn->server->root + conn->request.url_path;
+    /*
+    
+    /
+    |-- /index.html
+    |-- /demo
+        |-- /subdemo
+            |-- /index.html
 
-    std::cout << "[Request Header]" << conn->request.getRaw() << std::endl;
-    std::cout << GREEN << "ll full_path: " << full_path << RESET << std::endl;
+
+    * rooted /subdemo in /demo/subdemo *
+
+    full_url =  /demo/subdemo/index.html
+    short_url=  /subdemo/index.html
+
+    /nuno -> /project/member/staff/nuno
+
+
+
+    server root -> /www/a
+    /kapouet -> /tmp/www
+
+    url requested -> /kapouet/pouic/toto/pouet
+
+
+    /tmp/www/pouic/toto/pouet
+
+    TODO replace matching part with the root url
+
+
+
+
+
+
+    TODO 
+
+    /kapouet/pouic/toto/pouet -> /tmp/www/pouic/toto/pouet
+    
+    location /kapouet {
+            root ./tmp/www;
+    }
+
+    for example, if url /kapouet is rooted to /tmp/www, 
+    url /kapouet/pouic/toto/pouet is /tmp/www/pouic/toto/pouet).
+
+    */
+
+    // extract url query and fragments from full url 
+    conn->request.process_url(conn);
+
+    // update url_path depending on the server root or location root
+    conn->server->set_full_path(conn);
+
+    conn->server->server_index_page_exists(conn);
 
 
     // check if is a file or dir
-    file_types curr_type = get_file_type(full_path.c_str());
+    file_types curr_type = get_file_type(conn->request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
         print_error("failed to check if is a dir");

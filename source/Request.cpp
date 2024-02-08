@@ -96,7 +96,7 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
-void Request::process_url() {
+void Request::process_url(Connection *conn) {
 
     // /upload.php?name=nuno&other=stuff
     // /upload.html?name=.php&other=stuff
@@ -125,6 +125,12 @@ void Request::process_url() {
     }
 
     this->url_path = base_url;
+
+    std::cout << "[Request Header]" << conn->request.getRaw() << std::endl;
+    std::cout << GREEN << "url_path: " << url_path << RESET << std::endl;
+
+    // std::string full_path = conn->server->root + conn->request.url_path;
+
 
 }
 
@@ -187,20 +193,18 @@ void Request::process_request(Connection *conn, int epfd) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    std::string full_path = conn->server->root + request.url_path;
-
     // std::cout << "[Request Header]" << request.getRaw() << std::endl;
     // std::cout << GREEN << "processing request full_path: " << full_path << RESET << std::endl;
 
     // check if is a file or dir
-    file_types curr_type = get_file_type(full_path.c_str());
+    file_types curr_type = get_file_type(request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
         print_error("failed to check if is a dir");
         response.set_status_code("404", conn->server);
     } else if (curr_type == TYPE_FILE) {
         std::cout << "------- file --------" << std::endl;
-        this->process_requested_file(conn, full_path);
+        this->process_requested_file(conn, request.url_path);
     } else if (request.is_dir) {
         std::cout << "------- dir --------" << std::endl;
 
@@ -210,7 +214,7 @@ void Request::process_request(Connection *conn, int epfd) {
             response.set_status_code("403", conn->server);
         } else {
             response.isdir = true;
-            this->list_directory(full_path, conn);
+            this->list_directory(request.url_path, conn);
         }
     }
 }
@@ -440,18 +444,18 @@ void Request::process_cgi(Connection *conn, int epfd) {
             close(fd);
         }
 
-        std::string file_path = conn->server->root + this->url_path;
+        // std::string file_path = this->url_path;
 
-        char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)file_path.c_str(), NULL};
+        char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)this->url_path.c_str(), NULL};
 
-        std::string path_translated = "PATH_TRANSLATED" + conn->server->root + this->url_path;
+        std::string path_translated = "PATH_TRANSLATED" + this->url_path;
         std::string server_port = "SERVER_PORT" + conn->server->port;
         std::string remote_host = "REMOTE_HOST" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
         std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
-        std::string script_name = "SCRIPT_FILENAME=" + conn->server->root + this->url_path;
-        std::string path_info = "PATH_INFO=" + conn->server->root + this->url_path;
+        std::string script_name = "SCRIPT_FILENAME=" + this->url_path;
+        std::string path_info = "PATH_INFO=" + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         std::string url_query = "QUERY_STRING=" + this->url_query;
 

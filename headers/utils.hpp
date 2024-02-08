@@ -27,8 +27,8 @@ struct LocationOptions {
   std::string cgi_pass; // TODO 
   std::vector<std::string> allowed_methods; // TODO
   std::pair<std::string, std::string> redirect; // TODO 
-  std::string root; // TODO 
-  std::vector<std::string> index_pages; // TODO
+  std::string root;
+  std::vector<std::string> index_pages;
 };
 
 struct Connection;
