@@ -35,6 +35,7 @@ class Request {
     std::ofstream request_body;
     std::size_t request_body_writes;
     bool is_cgi;
+    std::string cgi_path;
     bool cgi_complete;
     bool read_complete;
     bool is_dir;
@@ -57,7 +58,7 @@ class Request {
     void process_request(Connection *conn, int epfd);
     void process_requested_file(Connection *conn, std::string full_path);
     int list_directory(std::string full_path, Connection *conn);
-    bool has_cgi();
+    bool has_cgi(Connection *conn);
     int prepare_file_to_save_body(int fd, Connection *conn, int epfd);
     void set_content_type(const std::string type);
     void set_content_length(std::size_t length);

@@ -134,33 +134,44 @@ void Request::process_url(Connection *conn) {
 
 }
 
-bool Request::has_cgi() {
-
-    // HAS CGI
-    // /upload.php
-    // /upload.php?name=nuno&other=stuff
-
-    // DOES NOT HAVE CGI
-    // /upload.html?name=.php&other=stuff
-    // /upload.html
-
-    // std::string url = this->getUrl();
-    // std::size_t has_query = url.find("?");
-
-    // if (has_query != std::string::npos) {
-    //     this->url_path = this->getUrl().substr(0, has_query);
-    //     // std::cout << RED << url_path << RESET << std::endl;
-    //     this->url_query = this->getUrl().substr(has_query + 1);
-    // } else {
-    //     this->url_path = this->getUrl();
-    // }
+bool Request::has_cgi(Connection *conn) {
 
     std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
-    if (has_suffix(this->url_path, ".php")) {
-        this->is_cgi = true;
-        return true;
+    std::map<std::string, struct LocationOptions>::iterator it;
+
+    for (it = conn->server->locations.begin(); it != conn->server->locations.end(); it++) {
+
+        // *.php
+        // *.bla
+        // *.py
+
+        if (it->first.find("*.") ==  0 && it->first.size() > 2 ) {
+            std::string ext = it->first.substr(1);
+
+            if (has_suffix(conn->request.url_path, ext) && it->second.cgi_pass != "") {
+                this->is_cgi = true;
+                this->cgi_path = it->second.cgi_pass;
+                return true;
+            }
+        }
+
+        if (it->first == conn->request.url_path) {
+            return it->second.autoindex;
+
+            if (it->second.cgi_pass != "") {
+                this->is_cgi = true;
+                this->cgi_path = it->second.cgi_pass;
+                return true;
+            }
+
+        }
     }
+
+    // if (has_suffix(this->url_path, ".php")) {
+    //     this->is_cgi = true;
+    //     return true;
+    // }
     
     return false;
 }
@@ -446,7 +457,13 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         // std::string file_path = this->url_path;
 
-        char *cmd[] = {(char *)"/usr/bin/php-cgi", (char *)this->url_path.c_str(), NULL};
+
+        // /usr/bin/php-cgi
+        // cgi_pass /usr/bin/php8.1-cgi;
+        
+        std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
+
+        char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
 
         std::string path_translated = "PATH_TRANSLATED" + this->url_path;
         std::string server_port = "SERVER_PORT" + conn->server->port;
@@ -466,7 +483,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
             (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
 
         if (execve(cmd[0], cmd, custom_envp) == -1)
-            perror("execvp ls failed"); // TODO handle error and send it to client
+            perror("execvp ls failed"); // TODO handle error and send it to client Invalid READ OF SIZE 8
     } else if (pid > 0) {               // parent
 
         if (close(sockets[1]) == 0) {

@@ -473,7 +473,6 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    // TODO maybe improve this to use a boolean instead of inspecting the extension
     if (request.is_cgi) {
     std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
         std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
@@ -647,7 +646,7 @@ void HTTP::process_request(struct epoll_event &ev) {
 
     // this->apply_server_location_rules(conn);
 
-    if (conn->request.has_cgi()) {
+    if (conn->request.has_cgi(conn)) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;
         if (conn->request.prepare_file_to_save_body(cfd, conn, this->_epoll_fd) == -1) {
             // TODO handle error
