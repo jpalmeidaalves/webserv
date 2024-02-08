@@ -94,7 +94,7 @@ curl eg: `curl -X GET http://127.0.0.1:8000 -H "Host: third"`
 Notice that the page we'll get is the page from the first server because we have no host by that name.
 
 
-## [✅❌] Setup default error pages.
+## [✅] Setup default error pages.
 ```bash
 ...
 server {
@@ -174,7 +174,7 @@ server {
 ```
 
 ### [✅] Set a default file to answer if the request is a directory.
-### [❌] Execute CGI based on certain file extension (for example .php).
+### [✅] Execute CGI based on certain file extension (for example .php).
 ### [✅] Make it work with POST and GET methods.
 ### [✅❌] Make the route able to accept uploaded files and configure where they should be saved.
 
