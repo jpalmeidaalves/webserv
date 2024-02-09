@@ -276,6 +276,21 @@ void HTTP::handle_timeouts() {
                 it->second->response.set_status_code("408", server, it->second->request);
                 epoll_mod(*(it->second->ev_ptr), EPOLLOUT);
                 it->second->last_operation = it->second->last_operation + 5;
+                // %%
+                // if (it->second->request.is_cgi) {
+                //     // TODO remove cgi fd from epoll
+                //     struct epoll_event ev;
+                //     std::memset(&ev, 0, sizeof(ev));
+                //     int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, it->second->cgi_fd, &ev);
+                //     if (ret == -1) {
+                //         std::cerr << "failed to remove fd " << it->second->cgi_fd << " from EPOLL" << std::endl;
+                //         print_error(strerror(errno));
+                //     }
+                //     std::cout <<
+                //     // TODO close fd
+                //     close(it->second->cgi_fd);
+                //     it->second->request.is_cgi = false;
+                // }
                 // it->second->timedout = true;
             } else {
                 std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
@@ -455,11 +470,13 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "request url_query: " << request.url_query << std::endl;
     std::cout << "request url_fragment: " << request.url_fragment << std::endl;
 
-    // update time since last operation
+    // %% update time since last operation
     conn->last_operation = get_timestamp();
 
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
+        // update time since last operation
+        // %% conn->last_operation = get_timestamp();
         return;
     }
 
@@ -496,6 +513,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
             } else {
                 std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
             }
+
+            // update time since last operation
+            // %% conn->last_operation = get_timestamp();
         }
 
         if (request.cgi_complete && response._response_buffer.peek() == EOF) {
@@ -531,6 +551,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
             std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
             std::cout << buff << std::endl;
         }
+        // update time since last operation
+        // %% conn->last_operation = get_timestamp();
 
     } else {
         std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
@@ -607,8 +629,8 @@ void HTTP::process_request(struct epoll_event &ev) {
     // update url_path depending on the server root or location root
     conn->server->set_full_path(conn);
 
-    // If the request has been redirected change to EPOLLOUT
-    if (conn->response.get_status_code().find("3") == 0 ) {
+    // If the request has been redirected or Method is not allowed, change to EPOLLOUT
+    if (conn->response.get_status_code().find("3") == 0 || conn->response.get_status_code() == "405") {
          if (epoll_mod(ev, EPOLLOUT) == -1) {
             print_error("failed to set write mode in incomming socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
@@ -619,6 +641,9 @@ void HTTP::process_request(struct epoll_event &ev) {
     std::cout << YELLOW << "1 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
 
     conn->server->server_index_page_exists(conn);
+
+    if (conn->request.url_path.find("/") == 0)
+        conn->request.url_path = "." + conn->request.url_path;
 
     std::cout << YELLOW << "2 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
 

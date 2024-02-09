@@ -170,79 +170,87 @@ void Server::set_full_path(Connection *conn) {
     // location / {}
     LocationOptions *root_location = NULL;
     
-    if (conn->request.url_path != "/") {
-        for (it = this->locations.begin(); it != this->locations.end(); it++) {
-            if (it->first == "/") {
-                root_location = &it->second;
-                continue;
+    for (it = this->locations.begin(); it != this->locations.end(); it++) {
+        if (it->first == "/") {
+            root_location = &it->second;
+            continue;
+        }
+
+        if (conn->request.url_path.find(it->first) == 0) {
+
+            // check allowed methods
+            if (it->second.allowed_methods.size()) {
+                std::vector<std::string>::iterator method_it;
+
+                method_it = find (it->second.allowed_methods.begin(), it->second.allowed_methods.end(), conn->request.getMethod());
+                if (method_it == it->second.allowed_methods.end()) {
+                    conn->response.set_status_code("405", conn->server, conn->request);
+                    return;
+                }
             }
 
-            if (conn->request.url_path.find(it->first) == 0) {
+            // check if has redirect
+            if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
+                // first = status code
+                // second = redirect path
+                conn->response.set_status_code(it->second.redirect.first, conn->server, conn->request);
+                conn->response.set_header("Location", it->second.redirect.second);
+                return;
+            }
 
-                // check allowed methods
-                if (it->second.allowed_methods.size()) {
-                    std::vector<std::string>::iterator method_it;
-
-                    method_it = find (it->second.allowed_methods.begin(), it->second.allowed_methods.end(), conn->request.getMethod());
-                    if (method_it == it->second.allowed_methods.end()) {
-                        conn->response.set_status_code("405", conn->server, conn->request);
-                        return;
-                    }
-                }
-
-                // check if has redirect
-                if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
-                    // first = status code
-                    // second = redirect path
-                    conn->response.set_status_code(it->second.redirect.first, conn->server, conn->request);
-                    conn->response.set_header("Location", it->second.redirect.second);
-                    return;
-                }
-
-                if (it->second.root != "") {
-                    std::cout << YELLOW << "matched location: " << it->first << " with " << conn->request.url_path << RESET << std::endl;
-                    std::string tmp = conn->request.url_path.erase(0, it->first.size());
-                    std::cout << YELLOW << "remove matching portion: " << tmp << RESET << std::endl;
-                    if (has_suffix(it->second.root, "/")) {
-                        conn->request.url_path.erase(0, 1);
-                        conn->request.url_path = it->second.root + tmp;
-                    } else
-                        conn->request.url_path = it->second.root + tmp;
-                    
-                    std::cout << YELLOW << "final url_path1: " << conn->request.url_path << RESET << std::endl;
-                    return;
-                }
+            if (it->second.root != "") {
+                std::cout << YELLOW << "matched location: " << it->first << " with " << conn->request.url_path << RESET << std::endl;
+                std::string tmp = conn->request.url_path.erase(0, it->first.size());
+                std::cout << YELLOW << "remove matching portion: " << tmp << RESET << std::endl;
+                if (has_suffix(it->second.root, "/")) {
+                    conn->request.url_path.erase(0, 1);
+                    conn->request.url_path = it->second.root + tmp;
+                } else
+                    conn->request.url_path = it->second.root + tmp;
+                
+                std::cout << YELLOW << "final url_path1: " << conn->request.url_path << RESET << std::endl;
+                return;
             }
         }
     }
 
     // the root location "/" must be checked last because it will match every single request (all request have a leading "/")
-    if (root_location && root_location->root != ""){
+    if (root_location){
         // check allowed methods
-        if (it->second.allowed_methods.size()) {
+        if (root_location->allowed_methods.size()) {
             std::vector<std::string>::iterator method_it;
 
-            method_it = find (it->second.allowed_methods.begin(), it->second.allowed_methods.end(), conn->request.getMethod());
-            if (method_it == it->second.allowed_methods.end()) {
+            method_it = find (root_location->allowed_methods.begin(), root_location->allowed_methods.end(), conn->request.getMethod());
+            if (method_it == root_location->allowed_methods.end()) {
                 conn->response.set_status_code("405", conn->server, conn->request);
                 return;
             }
         }
 
         // check if has redirect
-        if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
+        if ((root_location->redirect.first != "") && (root_location->redirect.second != "")) {
             // first = status code
             // second = redirect path
-            conn->response.set_status_code(it->second.redirect.first, conn->server, conn->request);
-            conn->response.set_header("Location", it->second.redirect.second);
+            conn->response.set_status_code(root_location->redirect.first, conn->server, conn->request);
+            conn->response.set_header("Location", root_location->redirect.second);
             return;
         }
 
-        if (has_suffix(root_location->root, "/")) {
+        std::string prefix;
+
+        if (root_location->root == "")
+            prefix = conn->server->root;
+        else
+            prefix = root_location->root;
+
+        if (prefix.find("/") == 0)
+            prefix = "." + prefix;
+
+        if (has_suffix(prefix, "/")) {
             conn->request.url_path.erase(0, 1);
-            conn->request.url_path = root_location->root + conn->request.url_path;
+            conn->request.url_path = prefix + conn->request.url_path;
         } else
-            conn->request.url_path = root_location->root + conn->request.url_path;
+            conn->request.url_path = prefix + conn->request.url_path;
         std::cout << YELLOW << "final url_path2: " << conn->request.url_path << RESET << std::endl;
         return;
     }
@@ -257,6 +265,8 @@ void Server::set_full_path(Connection *conn) {
 
     correct: ./www/a/demo/subdemo/index.html
     */
+
+   std::cout << RED << "current status code " << conn->response.get_status_code() << RESET << std::endl;
 
     // TODO if server does not have root it will probably break the server
     if (has_suffix(conn->server->root, "/")) {
