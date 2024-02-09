@@ -78,7 +78,8 @@ void Response::set_status_code(std::string code, Server *server, Request &reques
             request.url_path = server->root + server->get_error_page(code);
             this->set_error_page_fd(request.url_path);
         } else {
-            
+            // update request url_path
+            request.url_path = server->get_default_error_page(code);
             // else use the default error page
             this->set_error_page_fd(server->get_default_error_page(code));
         }
