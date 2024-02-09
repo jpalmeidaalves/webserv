@@ -96,7 +96,7 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
     this->_active_connects[accepted_fd]->cgi_fd = 0;
     this->_active_connects[accepted_fd]->last_operation = get_timestamp();
     this->_active_connects[accepted_fd]->ev_ptr = &ev;
-    // this->_active_connects[accepted_fd]->timedout = false;
+    this->_active_connects[accepted_fd]->timedout = false;
     
     // extract the ip number and port from accepted socket, store in Connecetion struct
     get_port_host_from_sockfd(accepted_fd, this->_active_connects[accepted_fd]);
@@ -275,23 +275,10 @@ void HTTP::handle_timeouts() {
 
                 it->second->response.set_status_code("408", server, it->second->request);
                 epoll_mod(*(it->second->ev_ptr), EPOLLOUT);
-                it->second->last_operation = it->second->last_operation + 5;
-                // %%
-                // if (it->second->request.is_cgi) {
-                //     // TODO remove cgi fd from epoll
-                //     struct epoll_event ev;
-                //     std::memset(&ev, 0, sizeof(ev));
-                //     int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, it->second->cgi_fd, &ev);
-                //     if (ret == -1) {
-                //         std::cerr << "failed to remove fd " << it->second->cgi_fd << " from EPOLL" << std::endl;
-                //         print_error(strerror(errno));
-                //     }
-                //     std::cout <<
-                //     // TODO close fd
-                //     close(it->second->cgi_fd);
-                //     it->second->request.is_cgi = false;
-                // }
-                // it->second->timedout = true;
+                it->second->last_operation = it->second->last_operation + 2;
+                
+                it->second->timedout = true;
+
             } else {
                 std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
                 this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
@@ -471,12 +458,12 @@ void HTTP::write_socket(struct epoll_event &ev) {
     std::cout << "request url_fragment: " << request.url_fragment << std::endl;
 
     // %% update time since last operation
-    conn->last_operation = get_timestamp();
+    // conn->last_operation = get_timestamp();
 
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
         // update time since last operation
-        // %% conn->last_operation = get_timestamp();
+        conn->last_operation = get_timestamp();
         return;
     }
 
@@ -490,8 +477,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    if (request.is_cgi) {
-    std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
+    if (request.is_cgi && !conn->timedout) {
+        std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
         std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
         int bytes_read = 0;
 
@@ -515,7 +502,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
             }
 
             // update time since last operation
-            // %% conn->last_operation = get_timestamp();
+            conn->last_operation = get_timestamp();
         }
 
         if (request.cgi_complete && response._response_buffer.peek() == EOF) {
@@ -552,7 +539,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
             std::cout << buff << std::endl;
         }
         // update time since last operation
-        // %% conn->last_operation = get_timestamp();
+        conn->last_operation = get_timestamp();
 
     } else {
         std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
