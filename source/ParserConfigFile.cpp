@@ -289,6 +289,20 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
                 std::cerr << "Error: invalid syntax, missing(6) ;" << std::endl;
                 return 1;
             }
+        } else if (*it == "client_body_temp_path") {
+            it++;
+            if (it->find_first_of("{};") != std::string::npos) {
+                std::cerr << "Error: 'client_body_temp_path' has invalid value" << std::endl;
+                return 1;
+            }
+
+            s.locations[location].client_body_temp_path = *it;
+            it++;
+            
+            if (*it != ";") {
+                std::cerr << "Error: invalid syntax, missing(7) ;" << std::endl;
+                return 1;
+            }
         }
 
         it++;
@@ -349,6 +363,7 @@ void ParserConfFile::printMembers(void) const {
 
         for (loc_it = ite->locations.begin(); loc_it != ite->locations.end(); loc_it++) {
             std::cout << "  location: " << loc_it->first << std::endl;
+            std::cout << "      client_body_temp_path: " << loc_it->second.client_body_temp_path << std::endl;
             std::cout << "      autoindex: " << loc_it->second.autoindex << std::endl;
             std::cout << "      cgi_pass: " << loc_it->second.cgi_pass << std::endl;
         

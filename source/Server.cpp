@@ -198,6 +198,12 @@ void Server::set_full_path(Connection *conn) {
                 return;
             }
 
+            // check if this route supports uploads
+            if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
+                conn->request.url_path = "./etc/upload.php";
+                return;
+            }
+
             if (it->second.root != "") {
                 std::cout << YELLOW << "matched location: " << it->first << " with " << conn->request.url_path << RESET << std::endl;
                 std::string tmp = conn->request.url_path.erase(0, it->first.size());
@@ -233,6 +239,12 @@ void Server::set_full_path(Connection *conn) {
             // second = redirect path
             conn->response.set_status_code(root_location->redirect.first, conn->server, conn->request);
             conn->response.set_header("Location", root_location->redirect.second);
+            return;
+        }
+
+        // check if this route supports uploads
+        if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
+            conn->request.url_path = "./etc/upload.php";
             return;
         }
 

@@ -1,7 +1,5 @@
 <?php
 
-header("custom header: hello world!");
-
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -24,6 +22,7 @@ for( $i=0 ; $i < $total ; $i++ ) {
 
   //Make sure we have a file path
   if ($tmpFilePath != ""){
+    // TODO get uploaded file path here
     //Setup our new file path
     $newFilePath = "./uploads/" . $_FILES['files']['name'][$i];
 

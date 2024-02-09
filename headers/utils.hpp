@@ -29,6 +29,7 @@ struct LocationOptions {
   std::pair<std::string, std::string> redirect;
   std::string root;
   std::vector<std::string> index_pages;
+  std::string client_body_temp_path;
 };
 
 struct Connection;
