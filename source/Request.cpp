@@ -138,6 +138,9 @@ bool Request::has_cgi(Connection *conn) {
 
     std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
+    if (this->is_cgi)
+        return true;
+
     std::map<std::string, struct LocationOptions>::iterator it;
 
     for (it = conn->server->locations.begin(); it != conn->server->locations.end(); it++) {

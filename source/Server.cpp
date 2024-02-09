@@ -200,6 +200,8 @@ void Server::set_full_path(Connection *conn) {
 
             // check if this route supports uploads
             if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
+                conn->request.is_cgi = true;
+                conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
                 conn->request.url_path = "./etc/upload.php";
                 return;
             }
@@ -244,6 +246,8 @@ void Server::set_full_path(Connection *conn) {
 
         // check if this route supports uploads
         if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
+            conn->request.is_cgi = true;
+            conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
             conn->request.url_path = "./etc/upload.php";
             return;
         }

@@ -4,7 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-var_dump($_FILES);
+// var_dump($_FILES);
 
 $config['allowed_types'] = '*';
 
@@ -29,10 +29,10 @@ for( $i=0 ; $i < $total ; $i++ ) {
     //Upload the file into the temp dir
     if(move_uploaded_file($tmpFilePath, $newFilePath)) {
 
-      echo 'uploaded file!';
+      echo '<h1>🚀 Files uploaded!</h1>';
 
     } else {
-      echo 'failed to upload!';
+      echo '<h1>upload failed!</h1>';
     }
   }
 }
