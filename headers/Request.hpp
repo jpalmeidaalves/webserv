@@ -43,6 +43,7 @@ class Request {
     std::string url_path;
     std::string url_fragment;
     std::string body_file_name;
+    std::string upload_path;
     
     
     Request();

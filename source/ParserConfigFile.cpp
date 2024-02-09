@@ -297,8 +297,16 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
             }
 
             s.locations[location].client_body_temp_path = *it;
+            if (!has_suffix(s.locations[location].client_body_temp_path, "/"))
+                s.locations[location].client_body_temp_path += "/";
+
+            if (s.locations[location].client_body_temp_path.find("./") == 0) {
+                s.locations[location].client_body_temp_path = "." + s.locations[location].client_body_temp_path;
+            } else if (s.locations[location].client_body_temp_path.find("../") == 0) {
+                s.locations[location].client_body_temp_path = "../" + s.locations[location].client_body_temp_path;
+            }
             it++;
-            
+
             if (*it != ";") {
                 std::cerr << "Error: invalid syntax, missing(7) ;" << std::endl;
                 return 1;

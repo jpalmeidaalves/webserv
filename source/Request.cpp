@@ -470,7 +470,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
 
-        std::string path_translated = "PATH_TRANSLATED" + this->url_path;
+        std::string path_translated = "PATH_TRANSLATED" + this->url_path;        
         std::string server_port = "SERVER_PORT" + conn->server->port;
         std::string remote_host = "REMOTE_HOST" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
@@ -479,7 +479,16 @@ void Request::process_cgi(Connection *conn, int epfd) {
         std::string script_name = "SCRIPT_FILENAME=" + this->url_path;
         std::string path_info = "PATH_INFO=" + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
-        std::string url_query = "QUERY_STRING=" + this->url_query;
+        
+        std::string url_query;
+
+        if (conn->request.upload_path != "")
+            url_query = "QUERY_STRING=upload_path=" + conn->request.upload_path; // pass upload path here inside the query
+        else
+            url_query = "QUERY_STRING=" + this->url_query;
+
+        std::cout << YELLOW << "url_query" << url_query << RESET << std::endl;
+        
 
         char *custom_envp[] = {
             (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200",  (char *)path_translated.c_str(),

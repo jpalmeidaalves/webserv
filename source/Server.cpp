@@ -8,7 +8,8 @@
 
 /*  Constructor: Initialize the members of the struct sockaddr_in and its adress_len
     a atribute. Also intalls a signal handler  */
-Server::Server() : client_max_body_size(4194304), s_addr(0), sin_port(0) {
+    // client max body size is 200MB by default unless overritten by client_max_body_size directive in server block
+Server::Server() : client_max_body_size(209715200), s_addr(0), sin_port(0) {
 
     // init error pages
     this->_default_error_pages["400"] = "./etc/default_pages/400.html";
@@ -201,6 +202,7 @@ void Server::set_full_path(Connection *conn) {
             // check if this route supports uploads
             if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
                 conn->request.is_cgi = true;
+                conn->request.upload_path = it->second.client_body_temp_path;
                 conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
                 conn->request.url_path = "./etc/upload.php";
                 return;
@@ -247,6 +249,7 @@ void Server::set_full_path(Connection *conn) {
         // check if this route supports uploads
         if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
             conn->request.is_cgi = true;
+            conn->request.upload_path = it->second.client_body_temp_path;
             conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
             conn->request.url_path = "./etc/upload.php";
             return;
