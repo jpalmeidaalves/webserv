@@ -273,7 +273,7 @@ void HTTP::handle_timeouts() {
                     server = &this->_servers[0];
                 }
 
-                it->second->response.set_status_code("408", server);
+                it->second->response.set_status_code("408", server, it->second->request);
                 epoll_mod(*(it->second->ev_ptr), EPOLLOUT);
                 it->second->last_operation = it->second->last_operation + 5;
                 // it->second->timedout = true;
@@ -616,16 +616,20 @@ void HTTP::process_request(struct epoll_event &ev) {
         return;
     }
 
+    std::cout << YELLOW << "1 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
+
     conn->server->server_index_page_exists(conn);
+
+    std::cout << YELLOW << "2 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
 
 
     // check if is a file or dir
     file_types curr_type = get_file_type(conn->request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
-        print_error("failed to check if is a dir");
+        print_error("-- failed to check if is a dir");
 
-        conn->response.set_status_code("404", conn->server);
+        conn->response.set_status_code("404", conn->server, conn->request);
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {
             print_error("failed to set write mode in incomming socket");
@@ -642,7 +646,7 @@ void HTTP::process_request(struct epoll_event &ev) {
 
 
     if (conn->request.get_content_length() > conn->server->client_max_body_size){
-        conn->response.set_status_code("413", conn->server);
+        conn->response.set_status_code("413", conn->server, conn->request);
         conn->request.is_cgi = false;
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {
@@ -669,7 +673,7 @@ void HTTP::process_request(struct epoll_event &ev) {
         if (conn->request.getMethod() == "GET") {
             conn->request.process_request(conn, this->_epoll_fd);
         } else {
-            conn->response.set_status_code("405", conn->server);
+            conn->response.set_status_code("405", conn->server, conn->request);
         }
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {
@@ -724,7 +728,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
 
     if ((!conn->response._cgi_header_parsed && conn->response.has_header())) {
         // Only parse the header when the buffer has the "\r\n\r\n"
-        conn->response.parse_cgi_headers(conn->response._response_buffer, conn->server);
+        conn->response.parse_cgi_headers(conn);
 
         // Must wait until the cgi header is parsed to update client socket to EPOLLOUT
         // Update Client socket to EPOLLOUT

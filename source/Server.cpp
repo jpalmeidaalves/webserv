@@ -179,11 +179,22 @@ void Server::set_full_path(Connection *conn) {
 
             if (conn->request.url_path.find(it->first) == 0) {
 
+                // check allowed methods
+                if (it->second.allowed_methods.size()) {
+                    std::vector<std::string>::iterator method_it;
+
+                    method_it = find (it->second.allowed_methods.begin(), it->second.allowed_methods.end(), conn->request.getMethod());
+                    if (method_it == it->second.allowed_methods.end()) {
+                        conn->response.set_status_code("405", conn->server, conn->request);
+                        return;
+                    }
+                }
+
                 // check if has redirect
                 if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
                     // first = status code
                     // second = redirect path
-                    conn->response.set_status_code(it->second.redirect.first, conn->server);
+                    conn->response.set_status_code(it->second.redirect.first, conn->server, conn->request);
                     conn->response.set_header("Location", it->second.redirect.second);
                     return;
                 }
@@ -205,11 +216,24 @@ void Server::set_full_path(Connection *conn) {
         }
     }
 
+    // the root location "/" must be checked last because it will match every single request (all request have a leading "/")
     if (root_location && root_location->root != ""){
+        // check allowed methods
+        if (it->second.allowed_methods.size()) {
+            std::vector<std::string>::iterator method_it;
+
+            method_it = find (it->second.allowed_methods.begin(), it->second.allowed_methods.end(), conn->request.getMethod());
+            if (method_it == it->second.allowed_methods.end()) {
+                conn->response.set_status_code("405", conn->server, conn->request);
+                return;
+            }
+        }
+
+        // check if has redirect
         if ((it->second.redirect.first != "") && (it->second.redirect.second != "")) {
             // first = status code
             // second = redirect path
-            conn->response.set_status_code(it->second.redirect.first, conn->server);
+            conn->response.set_status_code(it->second.redirect.first, conn->server, conn->request);
             conn->response.set_header("Location", it->second.redirect.second);
             return;
         }

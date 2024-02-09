@@ -9,6 +9,8 @@
 
 class Server;
 class HTTP;
+class Connection;
+class Request;
 
 class Response {
   private:
@@ -37,7 +39,7 @@ class Response {
     int buffer_writes;
 
     void set_header(std::string key, std::string value);
-    void set_status_code(std::string code, Server *server);
+    void set_status_code(std::string code, Server *server, Request &request);
     // void set_content_data(unsigned char * data);
     void set_content_type(const std::string type);
     void set_content_length(std::size_t length);
@@ -49,7 +51,7 @@ class Response {
     // std::string get_content_data() const;
     std::size_t get_content_length() const;
     std::string assemble_header();
-    void parse_cgi_headers(std::stringstream &ss, Server *server);
+    void parse_cgi_headers(Connection *conn);
     void write_buffer(char *str, std::size_t len);
     int read_buffer(char *buf, std::size_t size);
     bool has_header();

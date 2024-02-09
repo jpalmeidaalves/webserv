@@ -3,6 +3,7 @@
 #include "../headers/MimeTypes.hpp"
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
+#include "../headers/Connection.hpp"
 
 Response::Response()
     : _version("HTTP/1.1"), _status_code("200"), _content_type("text/html"), _content_length(0),
@@ -61,7 +62,7 @@ void Response::set_header(std::string key, std::string value) {
     this->_headers.insert(std::pair<std::string, std::string>(key, value));
 }
 
-void Response::set_status_code(std::string code, Server *server) {
+void Response::set_status_code(std::string code, Server *server, Request &request) {
     // update status code
     std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
@@ -73,7 +74,9 @@ void Response::set_status_code(std::string code, Server *server) {
         std::cout << "+*+* server->get_error_page(code) " << server->get_error_page(code) << std::endl;
         if (server->get_error_page(code) != "") {
             std::cout << "using custom error page" << std::endl;
-            this->set_error_page_fd(server->root + server->get_error_page(code));
+            // update request url_path
+            request.url_path = server->root + server->get_error_page(code);
+            this->set_error_page_fd(request.url_path);
         } else {
             
             // else use the default error page
@@ -122,7 +125,11 @@ std::string Response::assemble_header() {
  * @param ss - stringstream with the headers from CGI
  * @param server - pointer to the server that handle this request
  */
-void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
+void Response::parse_cgi_headers(Connection *conn) {
+
+    std::stringstream &ss = conn->response._response_buffer;
+    Server *server = conn->server;
+
     // Update all the headers in the response with the header from CGI
 
     bool php_notices_in_header = false;
@@ -175,7 +182,7 @@ void Response::parse_cgi_headers(std::stringstream &ss, Server *server) {
         if (line.find(key_status) == 0) {
             status_code = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
             // std::cout << "status is " << value << std::endl;
-            this->set_status_code(status_code, server);
+            this->set_status_code(status_code, server, conn->request);
         } else {
 
             if (!php_notices_in_header) {
