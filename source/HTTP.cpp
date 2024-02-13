@@ -388,7 +388,17 @@ void HTTP::read_socket(struct epoll_event &ev) {
     int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
     std::cout << RED << "**bytes_read: " << bytes_read << RESET << std::endl;
 
-    if (bytes_read <= 0) {
+    if (bytes_read == -1) {
+        print_error("read 0 bytes or failed to read. closing connection...");
+        this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
+    }
+
+    if (bytes_read == 0) {
+        if (request.chunked) {
+            conn->request.process_request(conn, this->_epoll_fd);
+            return;
+        }
         print_error("read 0 bytes or failed to read. closing connection...");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
@@ -403,13 +413,18 @@ void HTTP::read_socket(struct epoll_event &ev) {
     //     return;
     // }
 
+    std::string tmp(buf);
+
     if (request.is_cgi) {    
         std::cout << "this request has CGI" << std::endl;
         request.request_body.write(buf, bytes_read);
 
         request.request_body_writes += bytes_read;
-
         std::cout << "request.request_body_writes " << request.request_body_writes << " request.get_content_length() " << request.get_content_length() << std::endl; 
+
+        if (request.chunked && tmp.find("\r\n") == std::string::npos) {
+            return;
+        }
 
         // When we wrote all bytes from the request to the request body file, process CGI
         if (request.request_body_writes >= request.get_content_length()) {
@@ -422,6 +437,15 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
   
     request.append_buffer(buf, bytes_read);
+
+    if (request.chunked && tmp.find("\r\n") != std::string::npos) {
+        std::cout << CYAN << "done reading socket" << RESET << std::endl;
+        if (conn->request.getMethod() == "GET") {
+            conn->request.process_request(conn, this->_epoll_fd);
+        } else {
+            conn->response.set_status_code("400", conn->server, conn->request);
+        }
+    }
 
     if (request.not_parsed()) {
         std::size_t end_header_pos = std::string(request.getRaw()).find("\r\n\r\n");
@@ -682,10 +706,13 @@ void HTTP::process_request(struct epoll_event &ev) {
 
         std::cout << GREEN << "normal request" << RESET << std::endl;
 
+        if (conn->request.chunked)
+            return;
+
         if (conn->request.getMethod() == "GET") {
             conn->request.process_request(conn, this->_epoll_fd);
         } else {
-            conn->response.set_status_code("405", conn->server, conn->request);
+            conn->response.set_status_code("400", conn->server, conn->request);
         }
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {

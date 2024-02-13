@@ -16,7 +16,7 @@ Response::Response()
     this->set_header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
     this->set_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
     this->set_header("Access-Control-Allow-Credentials", "true");
-    // this->set_header("Connection", "close");
+    this->set_header("Connection", "close");
 }
 
 Response::~Response() {}

@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), is_dir(false) {}
+Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), is_dir(false), chunked(false) {}
 
 Request::~Request() {}
 
@@ -53,6 +53,8 @@ void Request::parse_request_header() {
         } else if (line.find("Content-Type: ") == 0) {
             remove_char_from_string(line, '\r');
             this->_content_type = line.substr(line.find(" ") + 1);
+        } else if (line.find("Transfer-Encoding: chunked") == 0) {
+            this->chunked = true;
         }
     }
     // std::cout << "---------- end parsing header -----------" << std::endl;
