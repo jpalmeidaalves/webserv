@@ -452,6 +452,18 @@ void HTTP::read_socket(struct epoll_event &ev) {
     // request->_buffer ss
     // --------------
 
+    // POST / HTTP/1.1\r\n
+    // Content-Length: 12\r\n
+    // \r\n
+    // hello world!
+
+    // POST / HTTP/1.1\r\n
+    // Transfer-Encoding: chunked\r\n
+    // \r\n
+    // ola\r\n
+    // adeus\r\n
+    // \r\n
+
     if (request.chunked && (request.getRaw().find( "\r\n\r\n") != std::string::npos )) {
         request.chunked_complete = true;
     }
