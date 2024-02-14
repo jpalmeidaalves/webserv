@@ -40,6 +40,7 @@ class Request {
     bool read_complete;
     bool is_dir;
     bool chunked;
+    bool chunked_complete;
     std::string url_query; // TODO make pivate?
     std::string url_path;
     std::string url_fragment;

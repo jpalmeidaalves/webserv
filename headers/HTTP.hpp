@@ -30,6 +30,7 @@
 #define BUFFERSIZE 8000 // TODO increase buffersize
 #define BACKLOG 100000    // how many pending connections queue will hold
 #define TIMEOUT 30
+#define EOT 4
 
 struct Connection;
 class Server;

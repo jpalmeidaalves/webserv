@@ -382,27 +382,27 @@ void HTTP::read_socket(struct epoll_event &ev) {
     Connection *conn = this->_active_connects[cfd];
     Request &request = this->_active_connects[cfd]->request;
 
-    char buf[BUFFERSIZE];
+    char buf[BUFFERSIZE + 1];
     ft_memset(&buf, 0, BUFFERSIZE);
 
     int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
     std::cout << RED << "**bytes_read: " << bytes_read << RESET << std::endl;
 
-    if (bytes_read == -1) {
+    if (bytes_read <= 0) {
         print_error("read 0 bytes or failed to read. closing connection...");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
-    if (bytes_read == 0) {
-        if (request.chunked) {
-            conn->request.process_request(conn, this->_epoll_fd);
-            return;
-        }
-        print_error("read 0 bytes or failed to read. closing connection...");
-        this->close_connection(cfd, this->_epoll_fd, ev);
-        return;
-    }
+    // if (bytes_read == 0) {
+    //     if (request.chunked) {
+    //         conn->request.process_request(conn, this->_epoll_fd);
+    //         return;
+    //     }
+    //     print_error("read 0 bytes or failed to read. closing connection...");
+    //     this->close_connection(cfd, this->_epoll_fd, ev);
+    //     return;
+    // }
 
     // update time since last operation
     conn->last_operation = get_timestamp();
@@ -415,6 +415,8 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
     std::string tmp(buf);
 
+    // print_ascii(buf);
+
     if (request.is_cgi) {    
         std::cout << "this request has CGI" << std::endl;
         request.request_body.write(buf, bytes_read);
@@ -422,7 +424,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
         request.request_body_writes += bytes_read;
         std::cout << "request.request_body_writes " << request.request_body_writes << " request.get_content_length() " << request.get_content_length() << std::endl; 
 
-        if (request.chunked && tmp.find("\r\n") == std::string::npos) {
+        if (request.chunked && tmp == "\r\n") {
             return;
         }
 
@@ -438,12 +440,33 @@ void HTTP::read_socket(struct epoll_event &ev) {
   
     request.append_buffer(buf, bytes_read);
 
-    if (request.chunked && tmp.find("\r\n") != std::string::npos) {
+
+    // header\r\n
+    // header\r\n
+    // \r\n
+    // body\r\n
+    // body\r\n
+    // \r\n
+    std::cout << "request.getRaw() " << request.getRaw() << std::endl;
+
+    // request->_buffer ss
+    // --------------
+
+    if (request.chunked && (request.getRaw().find( "\r\n\r\n") != std::string::npos )) {
+        request.chunked_complete = true;
+    }
+
+    if (request.chunked_complete) {
         std::cout << CYAN << "done reading socket" << RESET << std::endl;
         if (conn->request.getMethod() == "GET") {
             conn->request.process_request(conn, this->_epoll_fd);
         } else {
-            conn->response.set_status_code("400", conn->server, conn->request);
+            conn->response.set_status_code("405", conn->server, conn->request);
+        }
+
+        if (epoll_mod(ev, EPOLLOUT) == -1) {
+            print_error("failed to set write mode in incomming socket");
+            this->close_connection(cfd, this->_epoll_fd, ev);
         }
     }
 
@@ -584,6 +607,9 @@ void HTTP::process_request(struct epoll_event &ev) {
     conn->request.parse_request_header(); // extract header info
     this->redirect_to_server(conn);
 
+    if (conn->request.chunked && !conn->request.chunked_complete)
+        return;
+
 /* ----------------------------------- ll ----------------------------------- */
 
     // TODO update path based on location if necessary
@@ -705,9 +731,6 @@ void HTTP::process_request(struct epoll_event &ev) {
     } else {
 
         std::cout << GREEN << "normal request" << RESET << std::endl;
-
-        if (conn->request.chunked)
-            return;
 
         if (conn->request.getMethod() == "GET") {
             conn->request.process_request(conn, this->_epoll_fd);

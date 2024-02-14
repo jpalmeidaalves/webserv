@@ -6,7 +6,7 @@
 #include "../headers/Server.hpp"
 #include "../headers/utils.hpp"
 
-Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), is_dir(false), chunked(false) {}
+Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), cgi_complete(false), read_complete(false), is_dir(false), chunked(false), chunked_complete(false) {}
 
 Request::~Request() {}
 
@@ -23,7 +23,7 @@ Request::Request(const Request &src) { *this = src; }
 
 void Request::parse_request_header() {
     std::cout << RED << "parsed request" << RESET << std::endl;
-    std::cout << CYAN << this->_buffer.str() << RESET << std::endl;
+    std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
     // parse request
     // std::stringstream ss(this->_buffer.str());
     std::string line;
@@ -54,9 +54,40 @@ void Request::parse_request_header() {
             remove_char_from_string(line, '\r');
             this->_content_type = line.substr(line.find(" ") + 1);
         } else if (line.find("Transfer-Encoding: chunked") == 0) {
+            std::cout << YELLOW << "request is chunked++++++++" << RESET << std::endl;
             this->chunked = true;
         }
     }
+
+    std::stringstream tmp;
+    tmp << _buffer.rdbuf();
+    _buffer.str(std::string()); // clear the underlying buffer
+    _buffer << tmp.str();
+
+  
+
+    std::cout << MAGENTA << "buffer content:" << std::endl;
+    // size_t pos = _buffer.str().find("\r\n\r\n");
+    // _buffer.ignore(pos + 4);
+    // std::cout << this->_buffer.str() << std::endl;
+
+    std::cout << _buffer.str() << std::endl;
+    std::cout << "-- end buffer content --" << RESET << std::endl;
+
+    // std::string tmp = this->_buffer.rdbuf();
+     
+    if (_buffer.str().find( "\r\n\r\n") != std::string::npos) {
+        this->chunked_complete = true;
+        std::cout << "read complete body with the request" << std::endl;
+       
+    }
+
+
+
+    
+
+    // all subsequent reads on that client socket will be written in request_body too
+
     // std::cout << "---------- end parsing header -----------" << std::endl;
 }
 
