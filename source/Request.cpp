@@ -500,6 +500,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         // cgi_pass /usr/bin/php8.1-cgi;
         
         std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
+        std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
 
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
 
@@ -509,7 +510,8 @@ void Request::process_cgi(Connection *conn, int epfd) {
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
         std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
-        std::string script_name = "SCRIPT_FILENAME=" + this->url_path;
+        std::string script_filename = "SCRIPT_FILENAME=" + this->url_path;
+        std::string script_name = "SCRIPT_NAME=" + this->url_path;
         std::string path_info = "PATH_INFO=" + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         
@@ -524,6 +526,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         
 
         char *custom_envp[] = {
+            (char *)script_filename.c_str(),
             (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200",  (char *)path_translated.c_str(),
             (char *)server_port.c_str(),     (char *)request_method.c_str(), (char *)script_name.c_str(),
             (char *)path_info.c_str(),       (char *)url_query.c_str(),          (char *)content_length.c_str(),
