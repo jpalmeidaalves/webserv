@@ -502,17 +502,21 @@ void Request::process_cgi(Connection *conn, int epfd) {
         // std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
         // std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
 
+        // chdir("./YoupiBanane");
+
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
 
-        std::string path_translated = "PATH_TRANSLATED" + this->url_path;        
-        std::string server_port = "SERVER_PORT" + conn->server->port;
-        std::string remote_host = "REMOTE_HOST" + conn->server->host;
+        // std::string path_translated = "PATH_TRANSLATED=" + this->url_path;        
+        std::string server_port = "SERVER_PORT=" + conn->server->port;
+        std::string remote_host = "REMOTE_HOST=" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
         std::string content_length = "CONTENT_LENGTH=" + ft_itos((int)(this->get_content_length()));
         std::string request_method = "REQUEST_METHOD=" + conn->request.getMethod();
         std::string script_filename = "SCRIPT_FILENAME=" + this->url_path;
         std::string script_name = "SCRIPT_NAME=" + this->url_path;
         std::string path_info = "PATH_INFO=" + this->url_path;
+        // std::string script_name = "SCRIPT_NAME=/youpi.bla"; // + this->url_path;
+        // std::string path_info = "PATH_INFO=./YoupiBanane/youpi.bla"; // + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         
         std::string url_query;
@@ -527,7 +531,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         char *custom_envp[] = {
             (char *)script_filename.c_str(),
-            (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200",  (char *)path_translated.c_str(),
+            (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200", //(char *)path_translated.c_str(),
             (char *)server_port.c_str(),     (char *)request_method.c_str(), (char *)script_name.c_str(),
             (char *)path_info.c_str(),       (char *)url_query.c_str(),          (char *)content_length.c_str(),
             (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
