@@ -499,8 +499,8 @@ void Request::process_cgi(Connection *conn, int epfd) {
         // /usr/bin/php-cgi
         // cgi_pass /usr/bin/php8.1-cgi;
         
-        std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
-        std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
+        // std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
+        // std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
 
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
 
@@ -522,7 +522,7 @@ void Request::process_cgi(Connection *conn, int epfd) {
         else
             url_query = "QUERY_STRING=" + this->url_query;
 
-        std::cout << YELLOW << "url_query" << url_query << RESET << std::endl;
+        // std::cout << YELLOW << "url_query" << url_query << RESET << std::endl;
         
 
         char *custom_envp[] = {

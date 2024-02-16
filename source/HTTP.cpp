@@ -779,7 +779,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
     if (bytes_read <= 0) {
         conn->request.cgi_complete = true;
 
-
+       
         // Remove CGI fd from Epoll
         if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev) == -1) {
             print_error(strerror(errno));
@@ -794,13 +794,11 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         }
         std::remove(conn->request.body_file_name.c_str());
         conn->cgi_fd = 0;
-
-        return;
     }
 
     conn->response.write_buffer(buffer, bytes_read);
 
-    if ((!conn->response._cgi_header_parsed && conn->response.has_header())) {
+    if (conn->request.cgi_complete) {
         // Only parse the header when the buffer has the "\r\n\r\n"
         conn->response.parse_cgi_headers(conn);
 

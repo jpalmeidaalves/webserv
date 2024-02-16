@@ -131,6 +131,12 @@ void Response::parse_cgi_headers(Connection *conn) {
     std::stringstream &ss = conn->response._response_buffer;
     Server *server = conn->server;
 
+    // Show python cgi errors
+    if (ss.str().find("  File") == 0) {
+        this->_cgi_header_parsed = true;
+        return;
+    }
+
     // Update all the headers in the response with the header from CGI
 
     bool php_notices_in_header = false;
