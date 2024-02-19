@@ -22,7 +22,6 @@ for( $i=0 ; $i < $total ; $i++ ) {
 
   //Make sure we have a file path
   if ($tmpFilePath != ""){
-    // TODO get uploaded file path here
     //Setup our new file path
     $newFilePath = $_GET["upload_path"] . $_FILES['files']['name'][$i];
 

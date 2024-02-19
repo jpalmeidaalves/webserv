@@ -27,7 +27,7 @@
 #include <vector>
 
 #define MAXEPOLLSIZE SOMAXCONN
-#define BUFFERSIZE 8000 // TODO increase buffersize
+#define BUFFERSIZE 8000
 #define BACKLOG 100000    // how many pending connections queue will hold
 #define TIMEOUT 30
 #define EOT 4
