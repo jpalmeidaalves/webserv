@@ -17,6 +17,6 @@
 ## [✅] You can’t use fork for something else than CGI (like PHP, or Python, and so forth).
 ## [✅] You must be able to serve a fully static website.
 ## [✅] Clients must be able to upload files.
-## [ ] You need at least GET, POST, and DELETE methods.
+## [✅] You need at least GET, POST, and DELETE methods.
 ## [✅] Stress tests your server. It must stay available at all cost.
 ## [✅] Your server must be able to listen to multiple ports (see Configuration file).
