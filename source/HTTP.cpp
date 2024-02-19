@@ -139,7 +139,6 @@ void HTTP::redirect_to_server(Connection *conn) {
     conn->server = default_server;
 
     if (!conn->server) {
-        // TODO this should never happen but if somehow did, close the connection
         print_error("FAILED TO REDIRECT TO SERVER");
     } else {
         std::cout << "redirected sucessfuly to " << conn->server->host << ":" << conn->server->port << std::endl;
@@ -167,7 +166,6 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
     return 0;
 }
 
-// TODO remove the part where we delete from epoll from this function
 void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
     std::cout << "Closing connection for socket " << cfd << " ..." << std::endl;
@@ -199,7 +197,6 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
                 print_error(strerror(errno));
             }
 
-            // TODO kill process
             kill(this->_active_connects[cfd]->cgi_pid, SIGKILL);
 
             if (close(conn->cgi_fd) == 0) {
@@ -499,10 +496,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
     // if the connection has been removed in this happens to be in the list of FDs ready to read
     // stop here
-    // TODO remove this
     if (!this->_active_connects[cfd]) {
-        std::cout << "Ooopss" << std::endl;
-        exit(1);
+        std::cout << RED << "CGI socket entered in write_socket" << std::endl;
+        return;
     }
 
     Request &request = this->_active_connects[cfd]->request;
@@ -624,54 +620,6 @@ void HTTP::process_request(struct epoll_event &ev) {
 
 /* ----------------------------------- ll ----------------------------------- */
 
-    // TODO update path based on location if necessary
-
-    /*
-    
-    /
-    |-- /index.html
-    |-- /demo
-        |-- /subdemo
-            |-- /index.html
-
-
-    * rooted /subdemo in /demo/subdemo *
-
-    full_url =  /demo/subdemo/index.html
-    short_url=  /subdemo/index.html
-
-    /nuno -> /project/member/staff/nuno
-
-
-
-    server root -> /www/a
-    /kapouet -> /tmp/www
-
-    url requested -> /kapouet/pouic/toto/pouet
-
-
-    /tmp/www/pouic/toto/pouet
-
-    TODO replace matching part with the root url
-
-
-
-
-
-
-    TODO 
-
-    /kapouet/pouic/toto/pouet -> /tmp/www/pouic/toto/pouet
-    
-    location /kapouet {
-            root ./tmp/www;
-    }
-
-    for example, if url /kapouet is rooted to /tmp/www, 
-    url /kapouet/pouic/toto/pouet is /tmp/www/pouic/toto/pouet).
-
-    */
-
     // extract url query and fragments from full url 
     conn->request.process_url(conn);
 
@@ -736,9 +684,15 @@ void HTTP::process_request(struct epoll_event &ev) {
     if (conn->request.has_cgi(conn)) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;
         if (conn->request.prepare_file_to_save_body(cfd, conn, this->_epoll_fd) == -1) {
-            // TODO handle error
-            std::cout << "handle error opening file" << std::endl;
-            exit (1);
+            std::cout << "Missing directory /etc/cgi/tmp. Must be present to work.";
+            std::cout << "If the directory is missing, create it manually." << std::endl;
+            conn->response.set_status_code("500", conn->server, conn->request);
+            conn->request.is_cgi = false;
+
+            if (epoll_mod(ev, EPOLLOUT) == -1) {
+                print_error("failed to set write mode in incomming socket");
+                this->close_connection(cfd, this->_epoll_fd, ev);
+            }
         }
     } else {
 
@@ -756,13 +710,6 @@ void HTTP::process_request(struct epoll_event &ev) {
         }
     }
 }
-
-
-// TODO BEFORE MOVING ON TO THE CGI, USE IFSTREAM IN FILES TO AVOID USING AN FD
-
-/* -------------------------------------------------------------------------- */
-/*                         REFACTOR BELLOW THIS POINT                         */
-/* -------------------------------------------------------------------------- */
 
 void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
     (void)conn_ev;
@@ -810,7 +757,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
         new_ev.events = EPOLLOUT;
         int ret = epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, conn->fd, &new_ev);
         if (ret == -1) {
-            print_error(strerror(errno)); // TODO check this case
+            print_error(strerror(errno));
             std::cout << "failed to modify from EPOLL" << std::endl;
             close(conn->fd);
         }

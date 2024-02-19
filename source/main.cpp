@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 
     HTTP http(config_file.get_servers());
     http.open_listening_sockets(unique_addrs);
-    // TODO list of servers to http
+   
     http.handle_connections();
 
     return (0);
