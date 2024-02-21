@@ -1,0 +1,412 @@
+==366336== Memcheck, a memory error detector
+==366336== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==366336== Using Valgrind-3.19.0 and LibVEX; rerun with -h for copyright info
+==366336== Command: ./webserv configFile.conf
+==366336== 
+pid: 366336
+----------------------------------------------------------
+Host: 127.0.0.1
+Port: 8084
+Server name: one | 
+
+Max body size: 209715200
+Root: ./www/a
+  location: *.php
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: /usr/bin/php-cgi
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: index.php | index.htm | 
+  location: /42porto
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect: 301 to https://42porto.com
+      root: 
+      index_pages: 
+  location: /google
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect: 301 to https://google.com
+      root: 
+      index_pages: 
+  location: /php-cgi/
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: /usr/bin/php-cgi
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /redirect
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect: 301 to /about.html
+      root: 
+      index_pages: 
+  location: /subdemo
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: ./www/a/demo/subdemo
+      index_pages: 
+  location: /submit
+      client_body_temp_path: ../etc/uploads/
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /uploads
+      client_body_temp_path: 
+      autoindex: 1
+      cgi_pass: 
+      allowed_methods: GET | POST | 
+      redirect:  to 
+      root: 
+      index_pages: 
+----------------------------------------------------------
+Host: 127.0.0.1
+Port: 8085
+Server name: two | alt | 
+
+Max body size: 209715200
+Root: ./www/b
+  location: *.py
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: /usr/bin/python3
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /submit
+      client_body_temp_path: ../newuploads/
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+----------------------------------------------------------
+Host: 127.0.0.1
+Port: 8084
+Server name: three | 
+
+Max body size: 209715200
+Root: ./www/c
+----------------------------------------------------------
+Host: 127.0.0.2
+Port: 8087
+Server name: three | 
+
+Max body size: 1048576
+Root: ./www/a
+  location: /uploads
+      client_body_temp_path: 
+      autoindex: 1
+      cgi_pass: 
+      allowed_methods: GET | 
+      redirect:  to 
+      root: 
+      index_pages: 
+----------------------------------------------------------
+Host: 127.0.0.1
+Port: 8080
+Server name: tester | 
+
+Max body size: 209715200
+Root: ./YoupiBanane
+  location: *.bla
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: ./ubuntu_cgi_tester
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: GET | 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /directory
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: ./YoupiBanane
+      index_pages: youpi.bad_extension | 
+  location: /post_body
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: 
+      redirect:  to 
+      root: 
+      index_pages: 
+  location: /put_test
+      client_body_temp_path: 
+      autoindex: 0
+      cgi_pass: 
+      allowed_methods: PUT | 
+      redirect:  to 
+      root: 
+      index_pages: 
+Server listening on 127.0.0.1:8084, sockfd: 3
+Server listening on 127.0.0.1:8085, sockfd: 4
+Server listening on 127.0.0.2:8087, sockfd: 5
+Server listening on 127.0.0.1:8080, sockfd: 6
+accepted connection in listing socket: 3 for incoming socket: 8
+accepted connection in listing socket: 3 for incoming socket: 9
+READING
+NORMAL read in fd: 8
+**bytes_read: 699
+appended data in the request buffer
+request.getRaw() GET /greet.php? HTTP/1.1
+Host: 127.0.0.1:8084
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+sec-ch-ua: "Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+
+parsed request
+GET /greet.php? HTTP/1.1
+Host: 127.0.0.1:8084
+Connection: keep-alive
+Pragma: no-cache
+Cache-Control: no-cache
+sec-ch-ua: "Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Linux"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+
+
+buffer content:
+
+-- end buffer content --
+redirecting to server 127.0.0.1:8084
+host from header 127.0.0.1:8084
+redirected sucessfuly to 127.0.0.1:8084
+[Request Header]
+url_path: /greet.php
+final url_path2: ./www/a/greet.php
+1 url_path: ./www/a/greet.php
+2 url_path: ./www/a/greet.php
+checking if has CGI: url_path = ./www/a/greet.php
+cgi request
+processing CGI
+content-length from request: 0
+content-type from request: 
+added new FDs from socketspair: 10 11
+Removed unused socket 11
+added cgi socket to epoll 10
+ENTROU AQUI!
+READING
+CGI read in fd:10
+content from CGI
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST
+Access-Control-Allow-Headers: X-Requested-With
+custom header: hello world!
+Content-type: text/html; charset=UTF-8
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<h1>hello world</h1>
+
+array(0) {
+}
+
+array(0) {
+}
+
+
+</body>
+</html>
+recv returned 450
+READING
+CGI read in fd:10
+content from CGI
+
+recv returned 0
+Removed CGI socket 10
+parsing CGI headers
+###content: Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST
+Access-Control-Allow-Headers: X-Requested-With
+custom header: hello world!
+Content-type: text/html; charset=UTF-8
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+<h1>hello world</h1>
+
+array(0) {
+}
+
+array(0) {
+}
+
+
+</body>
+</html>
+[parsing line header]: Access-Control-Allow-Origin: *
+[parsing line header]: Access-Control-Allow-Methods: GET, POST
+[parsing line header]: Access-Control-Allow-Headers: X-Requested-With
+[parsing line header]: custom header: hello world!
+[parsing line header]: Content-type: text/html; charset=UTF-8
+[parsing line header]: 
+FOUND end of header
+_cgi_header_parsed = true;
+WRITING to client socket8
+writing to socket: 8
+active connects: 2
+request url is: /greet.php?
+request url_path: ./www/a/greet.php
+request url_query: 
+request url_fragment: 
+Will send this header
+HTTP/1.1 200 OK
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: X-Requested-With
+Access-Control-Allow-Methods: GET, POST
+Access-Control-Allow-Origin: *
+Connection: close
+Content-Type: text/html; charset=UTF-8
+custom header: hello world!
+
+
+WRITING to client socket8
+writing to socket: 8
+active connects: 2
+request url is: /greet.php?
+request url_path: ./www/a/greet.php
+request url_query: 
+request url_fragment: 
+CGI OUTPUT TO CLIENT
+CGI COMPLETE? 1
+wrote to socket 8 258 bytes
+will close connection now
+Closing connection for socket 8 ...
+Connection closed for socket 8!
+updated status code: 408
++*+* server->get_error_page(code) 
+searching default page with code: 408
+found defualt error page: ./etc/default_pages/408.html
+searching default page with code: 408
+found defualt error page: ./etc/default_pages/408.html
+setting error page: ./etc/default_pages/408.html
+found mimetype, ext: .html
+Changed fd 9 to [EPOLLOUT] 
+WRITING to client socket9
+writing to socket: 9
+active connects: 1
+request url is: 
+request url_path: ./etc/default_pages/408.html
+request url_query: 
+request url_fragment: 
+Will send this header
+HTTP/1.1 408 Request Timeout
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE
+Access-Control-Allow-Origin: *
+Connection: close
+Content-Type: text/html
+
+
+WRITING to client socket9
+writing to socket: 9
+active connects: 1
+request url is: 
+request url_path: ./etc/default_pages/408.html
+request url_query: 
+request url_fragment: 
+bytes read from inputfilestream268
+read sucessfully from inputfilestream
+wrote to socket 9 268 bytes
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>408 Request Timeout</title>
+</head>
+
+<body>
+    <h1>408 Request Timeout (default error page)</h1>
+</body>
+
+</html>
+WRITING to client socket9
+writing to socket: 9
+active connects: 1
+request url is: 
+request url_path: ./etc/default_pages/408.html
+request url_query: 
+request url_fragment: 
+No inputfilestream, will close this connection
+Closing connection for socket 9 ...
+Connection closed for socket 9!

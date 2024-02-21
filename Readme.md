@@ -1,3 +1,7 @@
+# Requirements
+php-cgi must be installed at `/usr/bin/php-cgi` 
+
+
 Client <-----> HTTP Server <-------> CGI PROcess
                                       BBBBBBBBBBBBBBB 
 

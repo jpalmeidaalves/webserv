@@ -144,7 +144,7 @@ void Request::process_url(Connection *conn) {
 
     if (has_query != std::string::npos) {
         base_url = this->getUrl().substr(0, has_query);
-        this->url_query = this->getUrl().substr(has_query + 1); // TODO may segfault "index.html?"
+        this->url_query = this->getUrl().substr(has_query + 1);
     } else {
         base_url = this->getUrl();
     }
@@ -152,7 +152,7 @@ void Request::process_url(Connection *conn) {
     std::size_t has_fragment = base_url.find("#");
     if (has_fragment != std::string::npos) {
         base_url = base_url.substr(0, has_fragment);
-        this->url_fragment = this->getUrl().substr(has_fragment + 1); // TODO may segfault "index.html#"
+        this->url_fragment = this->getUrl().substr(has_fragment + 1);
     } else {
         base_url = base_url;
     }
@@ -383,20 +383,13 @@ int Request::list_directory(std::string full_path, Connection *conn) {
     response.dir_data = ss.str();
 
     return 0;
-
-    // TODO maybe change all writes to send and read to recv
-    // https://stackoverflow.com/questions/21687695/getting-sigpipe-with-non-blocking-sockets-is-this-normal
-    // if (send(cfd, ss.str().c_str(), ss.str().size(), MSG_NOSIGNAL) == -1) {
-    //     print_error("failed to write");
-    // }
-
-    // this->close_connection(cfd, this->_epoll_fd, ev);
 }
 
 
 int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     if (this->getMethod() == "GET"){
-        process_cgi(conn, epfd);
+        if (process_cgi(conn, epfd) == -1)
+            return -1;
         std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
     }
@@ -437,15 +430,11 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     return 0;
 }
 
-void Request::process_cgi(Connection *conn, int epfd) {
+int Request::process_cgi(Connection *conn, int epfd) {
     std::cout << "processing CGI" << std::endl;
 
     if (this->request_body.is_open())
         this->request_body.close();
-
-    // TODO verify if request buffer has more content than just the header
-    // TODO if it has, than we must write the remaining bytes to the CGI socket
-    // TODO redirect the input from socket to the output of CGI socket (dup2 the incomming socket to the CGI)
 
     // std::size_t bytes_left = remaining_bytes(this->_buffer);
     // std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
@@ -460,13 +449,17 @@ void Request::process_cgi(Connection *conn, int epfd) {
     int sockets[2];
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
         print_error("opening stream socket pair");
-        return;
+        return -1;
     }
 
     std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
 
     pid_t pid = fork();
-    // TODO handle fork failed
+    if (pid == -1) {
+        // conn->response.set_status_code("500", conn->server, conn->request);
+        this->cgi_complete = true;
+        return -1;
+    }
 
     if (pid == 0) { // child 1
 
@@ -478,13 +471,10 @@ void Request::process_cgi(Connection *conn, int epfd) {
         int fd = 0;
 
         if (this->request_body_writes) {
-            // Open with open() to get a fd
             fd = open(this->body_file_name.c_str(), O_RDONLY);
-
             if (!fd) {
-                // TODO handle error
                 std::cout << "error oping body_file_name" << std::endl;
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
 
@@ -536,15 +526,17 @@ void Request::process_cgi(Connection *conn, int epfd) {
             (char *)path_info.c_str(),       (char *)url_query.c_str(),          (char *)content_length.c_str(),
             (char *)content_type.c_str(),    (char *)remote_host.c_str(),    NULL};
 
-        if (execve(cmd[0], cmd, custom_envp) == -1)
-            perror("execvp ls failed"); // TODO handle error and send it to client Invalid READ OF SIZE 8
+        if (execve(cmd[0], cmd, custom_envp) == -1) {
+            perror(strerror(errno));
+            exit(EXIT_FAILURE);
+        }
     } else if (pid > 0) {               // parent
 
         if (close(sockets[1]) == 0) {
             std::cout << GREEN << "Removed unused socket " << sockets[1] << RESET << std::endl;
 
         } else {
-                perror("Close: ");
+                print_error("Close: ");
         }
         conn->cgi_pid = pid;
         // std::cout << GREEN << "conn->cgi_pid: " << conn->cgi_pid << std::endl;
@@ -563,18 +555,20 @@ void Request::process_cgi(Connection *conn, int epfd) {
 
         conn->cgi_fd = sockets[0];
 
-        ev.events = EPOLLIN | EPOLLHUP; // TODO check EPOLLHUP
+        ev.events = EPOLLIN | EPOLLHUP;
         ev.data.fd = conn->cgi_fd;
         int ret = epoll_ctl(epfd, EPOLL_CTL_ADD, conn->cgi_fd, &ev);
         if (ret == -1) {
             close(conn->cgi_fd);
             print_error("failed epoll_ctl ------");
-            return;
+            return -1;
         }
 
         std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
 
     }
+
+    return 0;
 }
 
 std::string Request::getline_from_body(std::size_t &bytes_read) {

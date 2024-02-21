@@ -41,7 +41,7 @@ class Request {
     bool is_dir;
     bool chunked;
     bool chunked_complete;
-    std::string url_query; // TODO make pivate?
+    std::string url_query;
     std::string url_path;
     std::string url_fragment;
     std::string body_file_name;
@@ -68,7 +68,7 @@ class Request {
     std::string get_content_type() const;
     std::size_t get_content_length() const;
 
-    void process_cgi(Connection *conn, int epfd);
+    int process_cgi(Connection *conn, int epfd);
     // std::string upload_files(Server *server);
     std::string getline_from_body(std::size_t &bytes_read);
     // std::string extract_filename_from_body(size_t &bytes_read);

@@ -203,7 +203,7 @@ void Server::set_full_path(Connection *conn) {
             if(it->second.client_body_temp_path != "" && conn->request.getMethod() == "POST") {
                 conn->request.is_cgi = true;
                 conn->request.upload_path = it->second.client_body_temp_path;
-                conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
+                conn->request.cgi_path = "/usr/bin/php-cgi"; // Must have php-cgi to support this
                 conn->request.url_path = "./etc/upload.php";
                 return;
             }
@@ -251,7 +251,7 @@ void Server::set_full_path(Connection *conn) {
         if(root_location->client_body_temp_path != "" && conn->request.getMethod() == "POST") {
             conn->request.is_cgi = true;
             conn->request.upload_path = root_location->client_body_temp_path;
-            conn->request.cgi_path = "/usr/bin/php-cgi"; // TODO Must have php-cgi to support this
+            conn->request.cgi_path = "/usr/bin/php-cgi"; // Must have php-cgi to support this
             conn->request.url_path = "./etc/upload.php";
             return;
         }
@@ -288,7 +288,6 @@ void Server::set_full_path(Connection *conn) {
 
    std::cout << RED << "current status code " << conn->response.get_status_code() << RESET << std::endl;
 
-    // TODO if server does not have root it will probably break the server
     if (has_suffix(conn->server->root, "/")) {
         conn->request.url_path.erase(0, 1);
         conn->request.url_path = conn->server->root + conn->request.url_path;

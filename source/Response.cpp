@@ -67,7 +67,7 @@ void Response::set_status_code(std::string code, Server *server, Request &reques
     std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
 
-    // TODO check if is a error code
+    // check if is a error code
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
 
@@ -98,9 +98,6 @@ std::size_t Response::get_content_length() const { return (this->_content_length
 
 std::string Response::assemble_header() {
     std::ostringstream ss;
-
-    // TODO missing status description after status code
-    // TODO how to handle if we set an invalid status code in the header inside PHP
 
     // ss << "HTTP/1.1 " << this->_status_code << "\r\n";
     ss << "HTTP/1.1 " << StatusCode::get_code(this->_status_code) << "\r\n";
@@ -230,8 +227,6 @@ void Response::write_buffer(char *str, std::size_t len) {
             this->buffer_writes++;
         }
     }
-
-    // TODO check for errors
 }
 
 bool Response::has_header() {

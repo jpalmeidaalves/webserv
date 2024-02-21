@@ -13,7 +13,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <sys/time.h> // TODO remove
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
