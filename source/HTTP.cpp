@@ -692,7 +692,7 @@ void HTTP::process_request(struct epoll_event &ev) {
     if (conn->request.has_cgi(conn)) {
         std::cout << GREEN << "cgi request" << RESET << std::endl;
         if (conn->request.prepare_file_to_save_body(cfd, conn, this->_epoll_fd) == -1) {
-            std::cout << "Missing directory /etc/cgi/tmp. Must be present to work.";
+            std::cout << "Missing directory /tmp. Must be present to work.";
             std::cout << "If the directory is missing, create it manually." << std::endl;
             conn->response.set_status_code("500", conn->server, conn->request);
             conn->request.is_cgi = false;
