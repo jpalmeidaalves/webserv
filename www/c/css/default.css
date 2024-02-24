@@ -7506,16 +7506,6 @@ body {
     border-top-color: inherit; }
   .section-angle.top-right:before {
     border-left-color: inherit; }
-  @media (min-width: 992px) {
-    .section-angle.bottom-right:after, .section-angle.top-right:before {
-      border-bottom-width: 2rem; }
-    .section-angle.bottom-left:after, .section-angle.top-left:before {
-      border-top-width: 2rem; } }
-  @media (max-width: 767.98px) {
-    .section-angle.bottom-right:after, .section-angle.top-right:before {
-      border-bottom-width: 1rem; }
-    .section-angle.bottom-left:after, .section-angle.top-left:before {
-      border-top-width: 1rem; } }
 
 /*smart scrolling*/
 .smart-scroll {

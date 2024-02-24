@@ -1,0 +1,8 @@
+.modal-content {
+    background-color: #11171a;
+    border-color: transparent;
+}
+
+.modal-header, .modal-footer {
+    border-color: #11171a;
+}
