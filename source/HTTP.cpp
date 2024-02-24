@@ -258,31 +258,39 @@ void HTTP::handle_timeouts() {
 
     // std::cout << CYAN << "active connections: " << this->_active_connects.size() << RESET << std::endl;
 
+    // fds = [5,6] 
+    std::vector<Connection *> timedout_fds;
+
+    // 5,6 - client socket
     for (it = this->_active_connects.begin(); it != this->_active_connects.end(); it++) {
         if ((get_timestamp() - it->second->last_operation) > TIMEOUT) {
 
             if (it->second->ev_ptr && it->second->ev_ptr->events & EPOLLIN) {
-                Server *server;
-                
-                if (it->second->server) {
-                    server = it->second->server;
-                } else {
-                    server = &this->_servers[0];
-                }
+                // assing the server server to handle the timeout if the connection has no server yet
+                if (!it->second->server)
+                    it->second->server = &this->_servers[0];
 
-                it->second->response.set_status_code("408", server, it->second->request);
+                it->second->response.set_status_code("408", it->second->server, it->second->request);
                 epoll_mod(*(it->second->ev_ptr), EPOLLOUT);
                 it->second->last_operation = it->second->last_operation + 2;
                 
                 it->second->timedout = true;
 
             } else {
+
                 std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
-                this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
-                it = this->_active_connects.begin();
+                timedout_fds.push_back(it->second);
+                // this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
+                // it--;
+                // it = this->_active_connects.begin();
             }
 
         }
+    }
+
+    std::vector<Connection *>::iterator fd_it;
+    for (fd_it = timedout_fds.begin(); fd_it != timedout_fds.end(); fd_it++) {
+        this->close_connection((*fd_it)->fd, this->_epoll_fd, *((*fd_it)->ev_ptr));
     }
 }
 
@@ -307,7 +315,7 @@ int HTTP::handle_connections() {
     while (!g_stop) {
         // put the epoll instance waiting for events(requests) until a fd delivers an event
         int nfds = epoll_wait(this->_epoll_fd, evlist, MAXEPOLLSIZE, 2000);
-        
+
         if (nfds == -1) {
             print_error("epoll_wait failed");
             continue;
