@@ -1,7 +1,7 @@
 webserv
 *.o
 
-etc/cgi/tmp/*
+etc/cgi/tmp/.*
 www/a/uploads/*
 z_upload_files/
 
