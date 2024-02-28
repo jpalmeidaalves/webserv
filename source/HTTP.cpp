@@ -156,7 +156,7 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
     std::cout << BLUE << "Will send this header" << RESET << std::endl;
     std::cout << BLUE << header << RESET << std::endl;
 
-    if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) == -1) {
+    if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) <= 0) {
         print_error("failed to write in write_socket");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return 1;
@@ -533,7 +533,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     if (response.isdir) {
         std::cout << "response will be a dir" << std::endl;
         // TODO use the response buffer instead of dir_data
-        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) == -1) {
+        if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) <= 0) {
             print_error("failed to send directory response");
         }
         this->close_connection(cfd, this->_epoll_fd, ev);
@@ -556,7 +556,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
 
         if (bytes_read) {
 
-            if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
+            if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) <= 0) {
                 print_error("failed to write in write_socket");
                 this->close_connection(cfd, this->_epoll_fd, ev);
                 return;
@@ -594,7 +594,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     if (bytes_read) {
         std::cout << "read sucessfully from inputfilestream" << std::endl;
 
-        if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) == -1) {
+        if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) <= 0) {
             print_error("failed to write in write_socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
         } else {
