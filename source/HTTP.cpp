@@ -126,7 +126,9 @@ void HTTP::redirect_to_server(Connection *conn) {
 
             std::vector<std::string>::iterator it;
             for (it = ite->server_names.begin(); it != ite->server_names.end(); it++) {
-                if (*it == conn->request.getHost()) {
+                size_t pos = conn->request.getHost().find(":");
+                std::string curr_host = conn->request.getHost().substr(0, pos);
+                if (*it == curr_host) {
                     // found the correct server name (host from header)
                     conn->server = &(*ite);
                     return;
