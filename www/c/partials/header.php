@@ -41,7 +41,7 @@
                         <a class="nav-link page-scroll" href="/about.php">About</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link page-scroll" href="/requests.php">Requests</a>
+                        <a class="nav-link page-scroll" href="/requests.php">Uploads</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link page-scroll d-flex flex-row align-items-center text-primary" href="#">

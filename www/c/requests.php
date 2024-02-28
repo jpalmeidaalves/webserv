@@ -1,11 +1,11 @@
 <?php include "partials/header.php" ?>
 
 <!--hero header-->
-<section class="py-7 py-md-0 bg-hero" id="home">
+<!-- <section class="py-7 py-md-0 bg-hero" id="home">
     <div class="container">
         <div class="row vh-md-100">
             <div class="col-md-8 col-sm-10 col-12 mx-auto my-auto text-center">
-                <h1 class="heading-black text-capitalize">Requests</h1>
+                <h1 class="heading-black text-capitalize">Uploads</h1>
                 <p class="lead py-3">This project is part of the 42Porto Common Core Curriculum.</p>
                 <button class="btn btn-primary d-inline-flex flex-row align-items-center">
                     See it in action
@@ -14,10 +14,10 @@
             </div>
         </div>
     </div>
-</section>
+</section> -->
 
-<section>
-<div class="container">
+<section class="py-7">
+    <div class="container">
         <div class="row">
             <div class="col-md-6 mx-auto text-center">
                 <h2 class="heading-black" id="uploads">Uploaded files</h2>
