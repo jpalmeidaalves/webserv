@@ -42,3 +42,5 @@ int main(int argc, char **argv) {
 
     return (0);
 }
+
+//verify weird request using telnet

@@ -97,7 +97,11 @@
             ?>
         <div class="row mt-6">
             <div class="col-md-6 mx-auto text-center">
-                <a href="#" class="btn btn-primary">View all posts</a>
+            <form action="upload.php" method="post" enctype="multipart/form-data">
+                Select image to upload:
+                <input type="file" name="files[]" id="files" multiple />
+                <input type="submit" value="Upload Image" name="submit">
+            </form>
             </div>
         </div>
     </div>
