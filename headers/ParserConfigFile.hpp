@@ -31,6 +31,7 @@ class ParserConfFile {
     std::vector<Server> &get_servers();
     std::vector<struct sockaddr_in> get_unique_addresses();
     int get_serv_data(std::vector<std::string>::iterator &it, Server &s);
+    int check_brackets_integrity();
 
     void printMembers(void) const;
     void print_server_data();

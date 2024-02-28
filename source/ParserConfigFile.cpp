@@ -52,12 +52,13 @@ int ParserConfFile::open_config_file() {
                 tokens.push_back(curr);
         }
     }
-    // printVector(this->tokens);
+    print_vector(this->tokens);
+    if (check_brackets_integrity())
+        return 1;
     if (this->extract_server()) {
         // std::cerr << "Error: Config File Invalid Sintax" << std::endl;
         return 1;
     }
-    // printVector(tokens);
     // exit(0);
     // std::cout << "host=>" << servers[0].host << std::endl;
     // std::cout << "port=>" << servers[1].port << std::endl;
@@ -114,6 +115,10 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
 
             } else if (*it == "listen") {
                 ++it;
+                if (*(it + 1 ) != ";") {
+                    std::cerr << "Error: invalid syntax, missing(1) ;" << std::endl;
+                    return 1;
+                }
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
@@ -426,4 +431,24 @@ std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
     }
 
     return uniques;
+}
+
+int ParserConfFile::check_brackets_integrity() {
+    int brackets_count = 0;
+    std::vector<std::string>::iterator it;
+    for (it = tokens.begin(); it != tokens.end(); it++) {
+        if (*it == "{")
+            brackets_count++;
+        else if (*it == "}")
+            brackets_count--;
+        if (brackets_count < 0) {
+            std::cerr << "Error: Config File Invalid Sintax" << std::endl;
+            return 1;
+        }
+    }
+    if (brackets_count != 0) {
+        std::cerr << "Error: Config File Invalid Sintax" << std::endl;
+        return 1;
+    }
+    return 0;
 }

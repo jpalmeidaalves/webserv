@@ -57,10 +57,11 @@ bool ft_strcmp_insensitive(std::string str1, std::string str2);
 std::size_t remaining_bytes(const std::stringstream &s);
 
 template <typename T>
-void printVector(std::vector<T> v) {
+void print_vector(std::vector<T> v) {
     for (size_t i = 0; i < v.size(); i++)
         std::cout << v[i] << std::endl;
-    std::cout << "size: " << v.size();
+    std::cout << "size: " << v.size() << std::endl;
+    std::cout << "Finished printing vector\n";
 }
 
 template <typename T>
