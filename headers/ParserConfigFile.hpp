@@ -16,12 +16,12 @@ class ParserConfFile {
   private:
     int fd;
     std::string _path;
-    std::vector<Server> servers;
-    int servers_count;
+    std::vector<Server> _servers;
+    int _servers_count;
     ParserConfFile(const ParserConfFile &src);
     ParserConfFile &operator=(const ParserConfFile &src);
     ParserConfFile();
-    std::vector<std::string> tokens;
+    std::vector<std::string> _tokens;
 
   public:
     ParserConfFile(std::string path);
@@ -37,6 +37,7 @@ class ParserConfFile {
     void print_server_data();
     std::vector<Server> &extract_servers_data();
     int extract_location(std::vector<std::string>::iterator &it, Server &s);
+    bool is_directive(const std::string &line);
 };
 std::ostream &operator<<(std::ostream &out, const Server &obj);
 

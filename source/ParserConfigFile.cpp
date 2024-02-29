@@ -5,7 +5,7 @@
 /*                          Constructors & Destructor                          */
 /* -------------------------------------------------------------------------- */
 
-ParserConfFile::ParserConfFile(std::string path) : _path(path) { servers_count = 0; }
+ParserConfFile::ParserConfFile(std::string path) : _path(path), _servers_count(0) {}
 ParserConfFile::~ParserConfFile() {}
 ParserConfFile::ParserConfFile() {}
 ParserConfFile::ParserConfFile(const ParserConfFile &src) { (void)src; }
@@ -13,7 +13,7 @@ ParserConfFile::ParserConfFile(const ParserConfFile &src) { (void)src; }
 /* -------------------------------------------------------------------------- */
 /*                              Getters & Setters                             */
 /* -------------------------------------------------------------------------- */
-std::vector<Server> &ParserConfFile::get_servers() { return this->servers; }
+std::vector<Server> &ParserConfFile::get_servers() { return this->_servers; }
 
 /* -------------------------------------------------------------------------- */
 /*                                   Methods                                  */
@@ -37,11 +37,11 @@ int ParserConfFile::open_config_file() {
             while (found != std::string::npos) {
                 if (found == 0) {
                     // if brackets are at the start of the string
-                    tokens.push_back(curr.substr(0, 1));
+                    _tokens.push_back(curr.substr(0, 1));
                     curr.erase(0, 1);
                 } else {
                     // brackets are in the middle of the string
-                    tokens.push_back(curr.substr(0, found));
+                    _tokens.push_back(curr.substr(0, found));
                     curr.erase(0, found);
                 }
                 // find the next occurrence
@@ -49,10 +49,10 @@ int ParserConfFile::open_config_file() {
             }
 
             if (curr.size())
-                tokens.push_back(curr);
+                _tokens.push_back(curr);
         }
     }
-    print_vector(this->tokens);
+    print_vector(this->_tokens);
     if (check_brackets_integrity())
         return 1;
     if (this->extract_server()) {
@@ -65,7 +65,7 @@ int ParserConfFile::open_config_file() {
     return 0;
 }
 
-std::vector<Server> &ParserConfFile::extract_servers_data() { return (this->servers); }
+std::vector<Server> &ParserConfFile::extract_servers_data() { return (this->_servers); }
 
 int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server &s) {
     int brackets_count = 0;
@@ -83,31 +83,33 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 while (*it != ";") {
                     s.server_names.push_back(*it);
                     ++it;
+                    if (is_directive(*(it + 1)) && *it != ";") {
+                        std::cerr << "Error: syntax error(;)" << std::endl;
+                        return 1;
+                    }
                 }
             } else if (*it == "error_page") {
                 ++it;
-
-                // error_page 404 custom.html;
                 std::vector<std::string> temp;
                 while (*it != ";") {
                     temp.push_back(*it);
                     ++it;
+                    if (is_directive(*(it + 1)) && *it != ";") {
+                        std::cerr << "Error: syntax error(;)" << std::endl;
+                        return 1;
+                    }
                 }
-
                 if (temp.size() < 2) {
                     print_error("invalid error_page");
                     return 1;
                 }
-
                 // get the last word
                 std::string error_file_path = temp.back();
                 // remove from the vector
                 temp.pop_back();
-
                 // we're dealing with something like this
                 // temp = [500, 502, 503]
                 // error_file_path = "404.html"
-
                 std::vector<std::string>::iterator it2;
                 for (it2 = temp.begin(); it2 != temp.end(); it2++) {
                     s.update_error_page(*it2, error_file_path);
@@ -119,6 +121,10 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                     std::cerr << "Error: invalid syntax, missing(1) ;" << std::endl;
                     return 1;
                 }
+                if (is_directive(*(it + 1)) && *it != ";") {
+                        std::cerr << "Error: syntax error(;)" << std::endl;
+                        return 1;
+                    }
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
@@ -134,14 +140,19 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
 
             } else if (*it == "root") {
                 ++it;
+                if (is_directive(*(it + 1)) && *it != ";") {
+                        std::cerr << "Error: syntax error(;)" << std::endl;
+                        return 1;
+                }
                 s.root = *it;
             } else if (*it == "client_max_body_size") {
                 ++it;
-
+                if (is_directive(*(it + 1)) && *it != ";") {
+                        std::cerr << "Error: syntax error(;)" << std::endl;
+                        return 1;
+                }
                 std::string tmp = *it;
-
                 char unit = '\0';
-
                 try {
                     unit = tmp.at(tmp.size() - 1);
                     if (!isdigit(unit)) {
@@ -151,12 +162,10 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 } catch(const std::exception& e) {
                     unit = '\0';
                 }
-                
                 if (tmp == "") {
                     std::cerr << "Error: 'client_max_body_size' invalid format" << std::endl;
                     return (1);
                 }
-
                 int size = ft_stoi(tmp);
                 unit = std::toupper(unit);
                 
@@ -172,7 +181,7 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 s.client_max_body_size = size;
             } else if (*it == "index") {
                 it++;
-                while(it != this->tokens.end()) {
+                while(it != this->_tokens.end()) {
                     if (it->find_first_of("{};") != std::string::npos)
                         break;
                     s.index_pages.push_back(*it);
@@ -209,7 +218,7 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
     
     it++;
 
-    while(it != this->tokens.end()) {
+    while(it != this->_tokens.end()) {
         if (*it == "{")
             brackets_count++;
         else if (*it == "}") {
@@ -249,7 +258,7 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
             }
         } else if (*it == "allowed_methods") {
             it++;
-            while(it != this->tokens.end()) {
+            while(it != this->_tokens.end()) {
                 if (it->find_first_of("{};") != std::string::npos)
                     break;
                 s.locations[location].allowed_methods.push_back(*it);
@@ -284,7 +293,7 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
             }
         } else if (*it == "index") {
             it++;
-            while(it != this->tokens.end()) {
+            while(it != this->_tokens.end()) {
                 if (it->find_first_of("{};") != std::string::npos)
                     break;
                 s.locations[location].index_pages.push_back(*it);
@@ -333,7 +342,7 @@ int ParserConfFile::extract_server() {
     std::vector<std::string>::iterator it;
     bool inside_http = false;
     int brackets_count = 0;
-    for (it = tokens.begin(); it != tokens.end();) {
+    for (it = _tokens.begin(); it != _tokens.end();) {
         if (*it == "http" && *(it + 1) == "{") {
             inside_http = true; 
             it++;
@@ -349,8 +358,8 @@ int ParserConfFile::extract_server() {
             Server s;
             if (get_serv_data(it, s))
                 return 1;
-            servers_count++;
-            servers.push_back(s);
+            _servers_count++;
+            _servers.push_back(s);
         } else
             it++;
         if (brackets_count < 0)
@@ -361,7 +370,7 @@ int ParserConfFile::extract_server() {
 void ParserConfFile::print_server_data() {}
 
 void ParserConfFile::printMembers(void) const {
-    std::vector<Server> tmp = servers;
+    std::vector<Server> tmp = _servers;
     std::vector<Server>::iterator ite;
 
     for (ite = tmp.begin(); ite != tmp.end(); ite++) {
@@ -374,7 +383,8 @@ void ParserConfFile::printMembers(void) const {
         std::cout << std::endl;
         std::cout << "Max body size: " << ite->client_max_body_size << std::endl;
         std::cout << "Root: " << ite->root << std::endl;
-
+        std::cout << "Index pages: ";
+        print_vector_with_space(ite->index_pages);
         std::map<std::string, struct LocationOptions>::iterator loc_it;
 
         for (loc_it = ite->locations.begin(); loc_it != ite->locations.end(); loc_it++) {
@@ -409,7 +419,7 @@ std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
     std::vector<struct sockaddr_in> uniques;
 
     std::vector<Server>::iterator it;
-    for (it = this->servers.begin(); it != this->servers.end(); it++) {
+    for (it = this->_servers.begin(); it != this->_servers.end(); it++) {
         struct sockaddr_in curr;
 
         ft_memset(&(curr), 0, sizeof(curr));
@@ -436,7 +446,7 @@ std::vector<struct sockaddr_in> ParserConfFile::get_unique_addresses() {
 int ParserConfFile::check_brackets_integrity() {
     int brackets_count = 0;
     std::vector<std::string>::iterator it;
-    for (it = tokens.begin(); it != tokens.end(); it++) {
+    for (it = _tokens.begin(); it != _tokens.end(); it++) {
         if (*it == "{")
             brackets_count++;
         else if (*it == "}")
@@ -451,4 +461,15 @@ int ParserConfFile::check_brackets_integrity() {
         return 1;
     }
     return 0;
+}
+
+bool ParserConfFile::is_directive(const std::string &to_find) {
+    std::vector<std::string> directives = {"listen", "server_name", "error_page",
+    "location", "root", "client_max_body_size", "index", "autoindex", "allowed_methods", 
+    "cgi_pass", "client_body_temp_path"};
+    if (std::find(directives.begin(), directives.end(), to_find) != directives.end()){
+        std::cout << RED << "INSIDE" << RESET << std::endl;
+        return true;
+    }
+    return false;
 }
