@@ -80,24 +80,16 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 brackets_count--;
             else if (*it == "server_name") {
                 ++it;
-                while (*it != ";") {
+                while (it != this->_tokens.end() && *it != ";") {
                     s.server_names.push_back(*it);
                     ++it;
-                    if (is_directive(*(it + 1)) && *it != ";") {
-                        std::cerr << "Error: syntax error(;)" << std::endl;
-                        return 1;
-                    }
                 }
             } else if (*it == "error_page") {
                 ++it;
                 std::vector<std::string> temp;
-                while (*it != ";") {
+                while (it != this->_tokens.end() && *it != ";") {
                     temp.push_back(*it);
                     ++it;
-                    if (is_directive(*(it + 1)) && *it != ";") {
-                        std::cerr << "Error: syntax error(;)" << std::endl;
-                        return 1;
-                    }
                 }
                 if (temp.size() < 2) {
                     print_error("invalid error_page");
@@ -117,14 +109,6 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
 
             } else if (*it == "listen") {
                 ++it;
-                if (*(it + 1 ) != ";") {
-                    std::cerr << "Error: invalid syntax, missing(1) ;" << std::endl;
-                    return 1;
-                }
-                if (is_directive(*(it + 1)) && *it != ";") {
-                        std::cerr << "Error: syntax error(;)" << std::endl;
-                        return 1;
-                    }
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
                     s.port = *it;
@@ -137,20 +121,14 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                     s.port = (*it).substr(pos + 1);
                     s.sin_port = htons(ft_stoi(s.port));
                 }
+                ++it;
 
             } else if (*it == "root") {
                 ++it;
-                if (is_directive(*(it + 1)) && *it != ";") {
-                        std::cerr << "Error: syntax error(;)" << std::endl;
-                        return 1;
-                }
                 s.root = *it;
+                ++it;
             } else if (*it == "client_max_body_size") {
                 ++it;
-                if (is_directive(*(it + 1)) && *it != ";") {
-                        std::cerr << "Error: syntax error(;)" << std::endl;
-                        return 1;
-                }
                 std::string tmp = *it;
                 char unit = '\0';
                 try {
@@ -179,6 +157,7 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 }
 
                 s.client_max_body_size = size;
+                ++it;
             } else if (*it == "index") {
                 it++;
                 while(it != this->_tokens.end()) {
@@ -187,14 +166,18 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                     s.index_pages.push_back(*it);
                     it++;
                 }
-                if (*it != ";") {
-                    std::cerr << "Error: invalid syntax, missing(6) ;" << std::endl;
-                    return 1;
-                }
+
             } else if (*it == "location") {
                 it++;
                 if (this->extract_location(it, s))
                     return 1;
+            } else {
+                std::cerr << "Error: unknown directive " << *it << std::endl;
+                return 1;
+            }
+            if (it == this->_tokens.end() || it->find_first_of("{};") == std::string::npos) {
+                std::cerr << "Error: invalid syntax after " << *(it - 1) << std::endl;
+                return 1;
             }
             ++it;
         }
@@ -464,11 +447,13 @@ int ParserConfFile::check_brackets_integrity() {
 }
 
 bool ParserConfFile::is_directive(const std::string &to_find) {
-    std::vector<std::string> directives = {"listen", "server_name", "error_page",
+    std::string arr[] = {"listen", "server_name", "error_page",
     "location", "root", "client_max_body_size", "index", "autoindex", "allowed_methods", 
     "cgi_pass", "client_body_temp_path"};
+    std::vector<std::string> directives;
+    directives.assign(arr, arr + sizeof(arr) / sizeof(arr[0])); 
     if (std::find(directives.begin(), directives.end(), to_find) != directives.end()){
-        std::cout << RED << "INSIDE" << RESET << std::endl;
+        // std::cout << RED << "INSIDE" << RESET << std::endl;
         return true;
     }
     return false;
