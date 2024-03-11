@@ -6,6 +6,10 @@ int main(int ac, char **av) {
         return 1;
     }
     ParserConfFile obj(av[1]);
+    if (obj.open_config_file()) {
+        std::cerr << "Finishing program" << std::endl;
+        return 1;
+    }
     obj.open_config_file();
     obj.printMembers();
 }

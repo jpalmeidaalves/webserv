@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
 
     ParserConfFile config_file(config_file_path);
     if (config_file.open_config_file()) {
+        std::cerr << "Finishing program" << std::endl;
         return 1;
     }
 
