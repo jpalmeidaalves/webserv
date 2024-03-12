@@ -34,7 +34,7 @@ Response::Response(const Response &src) { *this = src; }
 
 void Response::set_error_page_fd(std::string full_path) {
 
-    std::cout << "setting error page: " << full_path << std::endl;
+    // std::cout << "setting error page: " << full_path << std::endl;
 
     this->set_content_type(MimeTypes::identify(full_path));
 
@@ -64,16 +64,16 @@ void Response::set_header(std::string key, std::string value) {
 
 void Response::set_status_code(std::string code, Server *server, Request &request) {
     // update status code
-    std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
+    // std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
 
     // check if is a error code
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
 
-        std::cout << "+*+* server->get_error_page(code) " << server->get_error_page(code) << std::endl;
+        // std::cout << "+*+* server->get_error_page(code) " << server->get_error_page(code) << std::endl;
         if (server->get_error_page(code) != "") {
-            std::cout << "using custom error page" << std::endl;
+            // std::cout << "using custom error page" << std::endl;
             // update request url_path
             request.url_path = server->root + server->get_error_page(code);
             this->set_error_page_fd(request.url_path);
@@ -142,7 +142,7 @@ void Response::parse_cgi_headers(Connection *conn) {
         php_notices_in_header = true;
     }
 
-    std::cout << "parsing CGI headers" << std::endl;
+    // std::cout << "parsing CGI headers" << std::endl;
     std::string key_status = "Status: ";
     std::string status_code;
     std::string line;
@@ -159,21 +159,21 @@ void Response::parse_cgi_headers(Connection *conn) {
 
     bool has_status_header = ss.str().find(key_status) != std::string::npos;
 
-    std::cout << CYAN << "###content: " << ss.str() << RESET << std::endl;
+    // std::cout << CYAN << "###content: " << ss.str() << RESET << std::endl;
 
     int i = 0;
     while (1) {
 
         std::getline(ss, line, '\n');
-        std::cout << "[parsing line header]: " << line << std::endl;
+        // std::cout << "[parsing line header]: " << line << std::endl;
         i++;
         if (ss.bad()) {
-            std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
+            // std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
             break;
         }
 
         if (line == "\r" || line == "") {
-            std::cout << "FOUND end of header" << std::endl;
+            // std::cout << "FOUND end of header" << std::endl;
             break;
         }
 
@@ -215,7 +215,7 @@ void Response::parse_cgi_headers(Connection *conn) {
 
         line = "";
     }
-    std::cout << YELLOW << "_cgi_header_parsed = true;" << RESET << std::endl;
+    // std::cout << YELLOW << "_cgi_header_parsed = true;" << RESET << std::endl;
     this->_cgi_header_parsed = true;
 }
 

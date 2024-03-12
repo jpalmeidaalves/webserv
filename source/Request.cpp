@@ -22,8 +22,8 @@ Request::Request(const Request &src) { *this = src; }
 /* -------------------------------------------------------------------------- */
 
 void Request::parse_request_header() {
-    std::cout << RED << "parsed request" << RESET << std::endl;
-    std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
+    // std::cout << RED << "parsed request" << RESET << std::endl;
+    // std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
     // parse request
     // std::stringstream ss(this->_buffer.str());
     std::string line;
@@ -54,7 +54,7 @@ void Request::parse_request_header() {
             remove_char_from_string(line, '\r');
             this->_content_type = line.substr(line.find(" ") + 1);
         } else if (line.find("Transfer-Encoding: chunked") == 0) {
-            std::cout << YELLOW << "request is chunked++++++++" << RESET << std::endl;
+            // std::cout << YELLOW << "request is chunked++++++++" << RESET << std::endl;
             this->chunked = true;
         }
     }
@@ -66,19 +66,19 @@ void Request::parse_request_header() {
 
   
 
-    std::cout << MAGENTA << "buffer content:" << std::endl;
+    // std::cout << MAGENTA << "buffer content:" << std::endl;
     // size_t pos = _buffer.str().find("\r\n\r\n");
     // _buffer.ignore(pos + 4);
     // std::cout << this->_buffer.str() << std::endl;
 
-    std::cout << _buffer.str() << std::endl;
-    std::cout << "-- end buffer content --" << RESET << std::endl;
+    // std::cout << _buffer.str() << std::endl;
+    // std::cout << "-- end buffer content --" << RESET << std::endl;
 
     // std::string tmp = this->_buffer.rdbuf();
      
     if (_buffer.str().find( "\r\n\r\n") != std::string::npos) {
         this->chunked_complete = true;
-        std::cout << "read complete body with the request" << std::endl;
+        // std::cout << "read complete body with the request" << std::endl;
        
     }
 
@@ -116,7 +116,7 @@ void Request::set_content_length(std::size_t length) { this->_content_length = l
 
 void Request::append_buffer(const char *buf, int len) {
     this->_buffer.write(buf, len);
-    std::cout << "appended data in the request buffer" << std::endl;
+    // std::cout << "appended data in the request buffer" << std::endl;
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -129,7 +129,7 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
-void Request::process_url(Connection *conn) {
+void Request::process_url(void) {
 
     // /upload.php?name=nuno&other=stuff
     // /upload.html?name=.php&other=stuff
@@ -158,18 +158,11 @@ void Request::process_url(Connection *conn) {
     }
 
     this->url_path = base_url;
-
-    std::cout << "[Request Header]" << conn->request.getRaw() << std::endl;
-    std::cout << GREEN << "url_path: " << url_path << RESET << std::endl;
-
-    // std::string full_path = conn->server->root + conn->request.url_path;
-
-
 }
 
 bool Request::has_cgi(Connection *conn) {
 
-    std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
+    // std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
     if (this->is_cgi)
         return true;
@@ -249,13 +242,13 @@ void Request::process_request(Connection *conn, int epfd) {
     file_types curr_type = get_file_type(request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
-        print_error("failed to check if is a dir");
+        // print_error("failed to check if is a dir");
         response.set_status_code("404", conn->server, request);
     } else if (curr_type == TYPE_FILE) {
-        std::cout << "------- file --------" << std::endl;
+        // std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn, request.url_path);
     } else if (request.is_dir) {
-        std::cout << "------- dir --------" << std::endl;
+        // std::cout << "------- dir --------" << std::endl;
 
         bool is_dir_listing = conn->server->server_dir_listing(conn);
 
@@ -390,7 +383,7 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     if (this->getMethod() == "GET"){
         if (process_cgi(conn, epfd) == -1)
             return -1;
-        std::cout << "ENTROU AQUI!" << std::endl;
+        // std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
     }
     this->body_file_name = "./tmp/.tmp-req-body-" + ft_itos(fd);
@@ -425,13 +418,13 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         process_cgi(conn, epfd);
     }
 
-    std::cout << YELLOW << "number of bytes left in request buffer: " << bytes_read  << std::endl << buf << RESET << std::endl;
+    // std::cout << YELLOW << "number of bytes left in request buffer: " << bytes_read  << std::endl << buf << RESET << std::endl;
 
     return 0;
 }
 
 int Request::process_cgi(Connection *conn, int epfd) {
-    std::cout << "processing CGI" << std::endl;
+    std::cout << "Processing CGI" << std::endl;
 
     if (this->request_body.is_open())
         this->request_body.close();
@@ -443,8 +436,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
     // std::cout << this->getRaw() << std::endl;
     // std::cout << "[end request]" << std::endl;
 
-    std::cout << "content-length from request: " << this->get_content_length() << std::endl;
-    std::cout << "content-type from request: " << this->get_content_type() << std::endl;
+    // std::cout << "content-length from request: " << this->get_content_length() << std::endl;
+    // std::cout << "content-type from request: " << this->get_content_type() << std::endl;
 
     int sockets[2];
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
@@ -452,7 +445,7 @@ int Request::process_cgi(Connection *conn, int epfd) {
         return -1;
     }
 
-    std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
+    // std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
 
     pid_t pid = fork();
     if (pid == -1) {
@@ -532,11 +525,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
         }
     } else if (pid > 0) {               // parent
 
-        if (close(sockets[1]) == 0) {
-            std::cout << GREEN << "Removed unused socket " << sockets[1] << RESET << std::endl;
-
-        } else {
-                print_error("Close: ");
+        if (!close(sockets[1]) == 0) {
+            print_error("Close: ");
         }
         conn->cgi_pid = pid;
         // std::cout << GREEN << "conn->cgi_pid: " << conn->cgi_pid << std::endl;
@@ -564,7 +554,7 @@ int Request::process_cgi(Connection *conn, int epfd) {
             return -1;
         }
 
-        std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
+        // std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
 
     }
 

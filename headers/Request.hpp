@@ -75,7 +75,7 @@ class Request {
     // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
     void append_buffer(const char *buf, int len);
     std::string url_without_query();
-    void process_url(Connection *conn);
+    void process_url(void);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 

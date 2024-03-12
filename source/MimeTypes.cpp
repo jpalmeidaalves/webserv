@@ -129,7 +129,7 @@ std::string MimeTypes::identify(const std::string &original_path) {
 
         std::string ext = path.substr(found);
 
-        std::cout << "found mimetype, ext: " << ext << std::endl;
+        // std::cout << "found mimetype, ext: " << ext << std::endl;
 
         it = MimeTypes::types.find(ext);
         if (it != MimeTypes::types.end())

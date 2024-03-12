@@ -81,11 +81,11 @@ void Server::update_error_page(std::string error_code, std::string path) {
 }
 
 std::string Server::get_default_error_page(std::string code) {
-    std::cout << "searching default page with code: " << code << std::endl;
+    // std::cout << "searching default page with code: " << code << std::endl;
     std::map<std::string, std::string>::iterator it;
     for (it = this->_default_error_pages.begin(); it != this->_default_error_pages.end(); it++) {
         if (it->first == code) {
-            std::cout << "found defualt error page: " << it->second << std::endl;
+            // std::cout << "found defualt error page: " << it->second << std::endl;
             return it->second;
         }
     }
@@ -218,7 +218,7 @@ void Server::set_full_path(Connection *conn) {
                 } else
                     conn->request.url_path = it->second.root + tmp;
                 
-                std::cout << YELLOW << "final url_path1: " << conn->request.url_path << RESET << std::endl;
+                // std::cout << YELLOW << "final url_path1: " << conn->request.url_path << RESET << std::endl;
                 return;
             }
         }
@@ -271,7 +271,7 @@ void Server::set_full_path(Connection *conn) {
             conn->request.url_path = prefix + conn->request.url_path;
         } else
             conn->request.url_path = prefix + conn->request.url_path;
-        std::cout << YELLOW << "final url_path2: " << conn->request.url_path << RESET << std::endl;
+        // std::cout << YELLOW << "final url_path2: " << conn->request.url_path << RESET << std::endl;
         return;
     }
 
@@ -286,7 +286,7 @@ void Server::set_full_path(Connection *conn) {
     correct: ./www/a/demo/subdemo/index.html
     */
 
-   std::cout << RED << "current status code " << conn->response.get_status_code() << RESET << std::endl;
+//    std::cout << RED << "current status code " << conn->response.get_status_code() << RESET << std::endl;
 
     if (has_suffix(conn->server->root, "/")) {
         conn->request.url_path.erase(0, 1);
@@ -294,12 +294,12 @@ void Server::set_full_path(Connection *conn) {
     } else {
         conn->request.url_path = conn->server->root + conn->request.url_path;
     }
-    std::cout << YELLOW << "final url_path3: " << conn->request.url_path << RESET << std::endl;
+    // std::cout << YELLOW << "final url_path3: " << conn->request.url_path << RESET << std::endl;
 }
 
 
 void Server::update_url_with_index_page(Connection *conn) {
-    std::cout << "update_url_with_index_page" << std::endl;
+    // std::cout << "update_url_with_index_page" << std::endl;
     std::map<std::string, struct LocationOptions>::iterator it;
 
     std::string full_path = conn->server->root + conn->request.url_path;

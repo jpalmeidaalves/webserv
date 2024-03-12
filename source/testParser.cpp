@@ -10,7 +10,6 @@ int main(int ac, char **av) {
         std::cerr << "Finishing program" << std::endl;
         return 1;
     }
-    obj.open_config_file();
     obj.printMembers();
 }
 

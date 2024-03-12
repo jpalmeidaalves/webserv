@@ -52,7 +52,7 @@ int ParserConfFile::open_config_file() {
                 _tokens.push_back(curr);
         }
     }
-    print_vector(this->_tokens);
+    // print_vector(this->_tokens);
     if (check_brackets_integrity())
         return 1;
     if (this->extract_server()) {
@@ -198,7 +198,6 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
     s.locations[location] = LocationOptions();
     s.locations[location].autoindex = false;
     
-    
     it++;
 
     while(it != this->_tokens.end()) {
@@ -343,8 +342,11 @@ int ParserConfFile::extract_server() {
                 return 1;
             _servers_count++;
             _servers.push_back(s);
-        } else
+        } else if (*it == "{" || *it == "}")
             it++;
+        else {
+            std::cout << "Error: bad syntax" << std::endl;
+            return 1;}
         if (brackets_count < 0)
             return 1;
     }
@@ -457,4 +459,8 @@ bool ParserConfFile::is_directive(const std::string &to_find) {
         return true;
     }
     return false;
+}
+
+int ParserConfFile::get_server_count(void) {
+    return this->_servers.size();
 }

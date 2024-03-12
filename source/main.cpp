@@ -24,11 +24,16 @@ int main(int argc, char **argv) {
 
     ParserConfFile config_file(config_file_path);
     if (config_file.open_config_file()) {
-        std::cerr << "Finishing program" << std::endl;
+        std::cerr << "Invalid Config file. Finishing program" << std::endl;
         return 1;
     }
 
-    config_file.printMembers();
+    // config_file.printMembers();
+
+    if (config_file.get_server_count() == 0) {
+        std::cout << "No servers in the config file. Must set atleast one server!" << std::endl;
+        return 1;
+    }
 
     std::vector<struct sockaddr_in> unique_addrs = config_file.get_unique_addresses();
 
