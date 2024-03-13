@@ -33,6 +33,8 @@ void Request::parse_request_header() {
     getline(this->_buffer, this->_url, ' ');
     getline(this->_buffer, line); // ignore the rest of the line
 
+    this->_url = urlDecode(this->_url);
+
     // std::cout << "---------- parsing header -----------" << std::endl;
 
     while (getline(this->_buffer, line)) {

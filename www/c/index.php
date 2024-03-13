@@ -7,10 +7,12 @@
             <div class="col-md-8 col-sm-10 col-12 mx-auto my-auto text-center">
                 <h1 class="heading-black text-capitalize">Welcome to webserv</h1>
                 <p class="lead py-3">This project is part of the 42Porto Common Core Curriculum.</p>
-                <button class="btn btn-primary d-inline-flex flex-row align-items-center">
-                    See it in action
-                    <em class="ml-2" data-feather="arrow-right"></em>
-                </button>
+                <a href="/requests.php"> 
+                    <button class="btn btn-primary d-inline-flex flex-row align-items-center">
+                        See it in action
+                        <em class="ml-2" data-feather="arrow-right"></em>
+                    </button>
+                </a>
             </div>
         </div>
     </div>
@@ -21,9 +23,8 @@
     <div class="container">
         <div class="row">
             <div class="col-md-6 mx-auto text-center">
-                <h2 class="heading-black">Knight offers everything you need.</h2>
-                <p class="text-muted lead">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum in nisi
-                    commodo, tempus odio a, vestibulum nibh.</p>
+                <h2 class="heading-black">Our webserver offers everything you need.</h2>
+                <p class="text-muted lead">We can serve your sites as nobody</p>
             </div>
         </div>
         <div class="row mt-5">
@@ -35,9 +36,9 @@
                                 <span data-feather="edit-3" width="35" height="35"></span>
                             </div>
                         </div>
-                        <h5>Create once. Share everywhere.</h5>
-                        <p class="text-muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum in
-                            nisi commodo, tempus odio a, vestibulum nibh.</p>
+                        <h5>High performance server!</h5>
+                        <p class="text-muted">Proficiently adept at seamlessly juggling an extensive array of requests
+                             simultaneously, ensuring efficient management and timely resolution.</p>
                     </div>
                     <div class="col-md-6 box">
                         <div class="icon-box box-success">
@@ -45,9 +46,9 @@
                                 <span data-feather="monitor" width="35" height="35"></span>
                             </div>
                         </div>
-                        <h5>Unlimited devices</h5>
-                        <p class="text-muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum in
-                            nisi commodo, tempus odio a, vestibulum nibh.</p>
+                        <h5>Faster than ever!</h5>
+                        <p class="text-muted">Capable of promptly addressing and swiftly responding to all incoming requests in real-time,
+                             ensuring seamless and immediate assistance.</p>
                     </div>
                     <div class="col-md-6 box">
                         <div class="icon-box box-danger">
@@ -55,9 +56,8 @@
                                 <span data-feather="layout" width="35" height="35"></span>
                             </div>
                         </div>
-                        <h5>Beautiful tempates & layouts</h5>
-                        <p class="text-muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum in
-                            nisi commodo, tempus odio a, vestibulum nibh.</p>
+                        <h5>Easy to use and configure</h5>
+                        <p class="text-muted">Simple configuration and instalation unlike Nginx!</p>
                     </div>
                     <div class="col-md-6 box">
                         <div class="icon-box box-info">
@@ -72,7 +72,7 @@
                 </div>
             </div>
         </div>
-        <div class="row mt-6">
+        <!-- <div class="row mt-6">
             <div class="col-md-6 mr-auto">
                 <h2>Knight is more than just a page builder.</h2>
                 <p class="mb-5">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla convallis pulvinar vestibulum. Donec eleifend, sem sed dictum mattis, turpis purus placerat eros.</p>
@@ -87,21 +87,21 @@
                     <img src="img/blog-3.jpg" class="img-fluid rounded d-block mx-auto" alt="Work 3"/>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 </section>
 
 <!--pricing section-->
-<section class="py-7 bg-dark section-angle top-right bottom-right" id="pricing">
+<!-- <section class="py-7 bg-dark section-angle top-right bottom-right" id="pricing">
     <div class="container">
         <div class="row">
             <div class="col-md-6 mx-auto text-center">
                 <h2 class="text-white heading-black">Choose your pricing plan.</h2>
                 <p class="text-light lead">Simply pricing - 7 Days free trial</p>
             </div>
-        </div>
+        </div> -->
         <!--pricing tables-->
-        <div class="row pt-5 pricing-table">
+        <!-- <div class="row pt-5 pricing-table">
             <div class="col-12 mx-auto">
                 <div class="card-deck pricing-table">
                     <div class="card">
@@ -186,10 +186,10 @@
             </div>
         </div>
     </div>
-</section>
+</section> -->
 
 <!--faq section-->
-<section class="py-7" id="faq">
+<!-- <section class="py-7" id="faq">
     <div class="container">
         <div class="row">
             <div class="col-md-6 mx-auto text-center">
@@ -234,10 +234,10 @@
             </div>
         </div>
     </div>
-</section>
+</section> -->
 
 <!--news section-->
-<section class="py-7 bg-dark section-angle top-left bottom-left" id="blog">
+<!-- <section class="py-7 bg-dark section-angle top-left bottom-left" id="blog">
     <div class="container">
         <div class="row">
             <div class="col-md-6 mx-auto text-center">
@@ -292,6 +292,6 @@
             </div>
         </div>
     </div>
-</section>
+</section> -->
 
 <?php include "partials/footer.php" ?>

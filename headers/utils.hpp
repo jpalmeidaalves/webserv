@@ -75,4 +75,6 @@ long get_timestamp();
 void start_timer(struct timeval *begin);
 void end_timer(struct timeval *begin, struct timeval *end);
 
+std::string urlDecode(const std::string& encoded);
+
 #endif /* UTILS_HPP */

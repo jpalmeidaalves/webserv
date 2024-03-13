@@ -4,7 +4,7 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Knight - Free Bootstrap 4 Product Landing Page Template</title>
+    <title>Webserv Project - 42 Porto</title>
     <meta name="description"
           content="Knight is a beautiful Bootstrap 4 template for product landing pages."/>
 
@@ -24,7 +24,7 @@
 <section class="smart-scroll">
     <div class="container-fluid">
         <nav class="navbar navbar-expand-md navbar-dark">
-            <a class="navbar-brand heading-black" href="/">
+            <a class="navbar-brand heading-black" href="https://www.42porto.com/">
                 <img src="img/logo.svg" alt="" height="60" />
             </a>
             <button class="navbar-toggler navbar-toggler-right border-0" type="button" data-toggle="collapse"
@@ -43,12 +43,12 @@
                     <li class="nav-item">
                         <a class="nav-link page-scroll" href="/requests.php">Uploads</a>
                     </li>
-                    <li class="nav-item">
+                    <!-- <li class="nav-item">
                         <a class="nav-link page-scroll d-flex flex-row align-items-center text-primary" href="#">
                             <em data-feather="layout" width="18" height="18" class="mr-2"></em>
                             Try Generator
                         </a>
-                    </li>
+                    </li> -->
                 </ul>
             </div>
         </nav>

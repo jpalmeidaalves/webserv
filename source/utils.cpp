@@ -244,3 +244,37 @@ bool only_digits(std::string s)
         return false;
     return true;
 }
+
+std::string urlDecode(const std::string& encoded) {
+    std::ostringstream decoded;
+    std::string::size_type i = 0;
+
+    while (i < encoded.length()) {
+        if (encoded[i] == '%') {
+            // If we find a percent sign, we decode the following two characters
+            if (i + 2 < encoded.length()) {
+                std::istringstream iss(encoded.substr(i + 1, 2));
+                int c;
+                if (iss >> std::hex >> c) {
+                    decoded << static_cast<char>(c);
+                    i += 3; // Move to the next character after the decoded sequence
+                } else {
+                    decoded << encoded[i]; // If decoding fails, keep the '%'
+                    ++i;
+                }
+            } else {
+                // Incomplete percent-encoded sequence, keep the '%' as is
+                decoded << encoded[i++];
+            }
+        } else if (encoded[i] == '+') {
+            // Convert '+' to space
+            decoded << ' ';
+            ++i;
+        } else {
+            // Keep the character as is
+            decoded << encoded[i++];
+        }
+    }
+
+    return decoded.str();
+}
