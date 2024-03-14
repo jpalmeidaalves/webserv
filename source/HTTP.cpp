@@ -177,14 +177,14 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     Response &response = this->_active_connects[cfd]->response;
     Connection *conn = this->_active_connects[cfd];
 
-    if (response.inputfilestream.is_open())
+    if (conn && response.inputfilestream.is_open())
         response.inputfilestream.close();
 
-    if (request.request_body.is_open())
+    if (conn && request.request_body.is_open())
         request.request_body.close();
 
     // check if the client socket has a CGI socket active
-    if (request.is_cgi) {
+    if (conn && request.is_cgi) {
 
         if (conn->cgi_fd) {
 
@@ -211,7 +211,7 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
     }
 
-    if (request.body_file_name != "")
+    if (conn && request.body_file_name != "")
         std::remove(request.body_file_name.c_str());
 
     delete this->_active_connects[cfd];
@@ -602,6 +602,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
         if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) <= 0) {
             print_error("failed to write in write_socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
+            return;
         } 
         // else {
         //     std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
@@ -611,8 +612,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
         conn->last_operation = get_timestamp();
 
     } else {
-        std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
+        // std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
     }
 }
 

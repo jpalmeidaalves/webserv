@@ -8,12 +8,12 @@
             "name": "C++ Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/home/joaoalme/Projetcs42/webserv/source/a.out", // Update this with your compiled executable path
+            "program": "/home/joaoalme/Projetcs42/webserv/webserv", // Update this with your compiled executable path
             "args": [
-                "../testConfigFile.conf"
+                "./configFile.conf"
             ],
             "stopAtEntry": false,
-            "cwd": "/home/joaoalme/Projetcs42/webserv/source/",
+            "cwd": "/home/joaoalme/Projetcs42/webserv/",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

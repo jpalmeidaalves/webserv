@@ -468,7 +468,7 @@ int Request::process_cgi(Connection *conn, int epfd) {
         if (this->request_body_writes) {
             fd = open(this->body_file_name.c_str(), O_RDONLY);
             if (!fd) {
-                std::cout << "error oping body_file_name" << std::endl;
+                std::cout << "error openning body_file_name" << std::endl;
                 exit(EXIT_FAILURE);
             }
         }
