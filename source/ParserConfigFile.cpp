@@ -108,6 +108,7 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 }
 
             } else if (*it == "listen") {
+                s.has_listen = true;
                 ++it;
                 std::size_t pos = (*it).find(':');
                 if (pos == std::string::npos) {
@@ -124,6 +125,7 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 ++it;
 
             } else if (*it == "root") {
+                s.has_root = true;
                 ++it;
                 s.root = *it;
                 ++it;
@@ -159,6 +161,7 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                 s.client_max_body_size = size;
                 ++it;
             } else if (*it == "index") {
+                s.has_index = true;
                 it++;
                 while(it != this->_tokens.end()) {
                     if (it->find_first_of("{};") != std::string::npos)
@@ -185,7 +188,12 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
         std::cerr << "Error: Invalid syntax in config file" << std::endl;
         return 1;
     }
-    return 0;
+    if(s.has_listen && s.has_root && s.has_index && s.server_names.size() > 0)
+        return 0;
+    else {
+        std::cerr << "Error: missing directive in server block" << std::endl;
+        return 1;
+    }
 }
 
 int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Server &s) {
@@ -208,6 +216,7 @@ int ParserConfFile::extract_location(std::vector<std::string>::iterator &it, Ser
             if (brackets_count == 0)
                 break;
         } else if (*it == "root") {
+            s.has_root = true;
             it++;
             s.locations[location].root = *it;
             it++;

@@ -9,7 +9,8 @@
 /*  Constructor: Initialize the members of the struct sockaddr_in and its adress_len
     a atribute. Also intalls a signal handler  */
     // client max body size is 200MB by default unless overritten by client_max_body_size directive in server block
-Server::Server() : client_max_body_size(209715200), s_addr(0), sin_port(0) {
+Server::Server() : client_max_body_size(209715200), s_addr(0), sin_port(0), has_listen(false),
+                   has_server_name(false), has_root(false), has_index(false){
 
     // init error pages
     this->_default_error_pages["400"] = "./etc/default_pages/400.html";

@@ -39,11 +39,14 @@ class Server {
     std::string get_error_page(std::string error_code);
     void update_error_page(std::string error_code, std::string path);
     std::string get_default_error_page(std::string code);
-    // std::multimap<std::string, std::string> error_pages;
     bool server_dir_listing(Connection *conn);
     bool server_index_page_exists(Connection *conn);
     void update_url_with_index_page(Connection *conn);
     void set_full_path(Connection *conn);
+    bool has_listen;
+    bool has_server_name;
+    bool has_root;
+    bool has_index;
 };
 
 #endif/* SERVER_HPP */
