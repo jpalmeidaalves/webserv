@@ -27,6 +27,9 @@ int ParserConfFile::open_config_file() {
     }
     std::string line;
     while (std::getline(in_file_stream, line)) {
+        if (line.find("#") != std::string::npos) {
+            line = line.substr(0, line.find("#"));
+        }
         std::istringstream ss(line);
         std::string member;
         std::string curr;
@@ -52,7 +55,7 @@ int ParserConfFile::open_config_file() {
                 _tokens.push_back(curr);
         }
     }
-    // print_vector(this->_tokens);
+    print_vector(this->_tokens);
     if (check_brackets_integrity())
         return 1;
     if (this->extract_server()) {
