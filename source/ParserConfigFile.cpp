@@ -25,6 +25,7 @@ int ParserConfFile::open_config_file() {
         std::cerr << "Error opening config file" << std::endl;
         return 1;
     }
+
     std::string line;
     while (std::getline(in_file_stream, line)) {
         if (line.find("#") != std::string::npos) {
@@ -55,16 +56,15 @@ int ParserConfFile::open_config_file() {
                 _tokens.push_back(curr);
         }
     }
-    print_vector(this->_tokens);
+
+    // print_vector(this->_tokens);
+
     if (check_brackets_integrity())
         return 1;
     if (this->extract_server()) {
-        // std::cerr << "Error: Config File Invalid Sintax" << std::endl;
         return 1;
     }
-    // exit(0);
-    // std::cout << "host=>" << servers[0].host << std::endl;
-    // std::cout << "port=>" << servers[1].port << std::endl;
+
     return 0;
 }
 
@@ -126,7 +126,6 @@ int ParserConfFile::get_serv_data(std::vector<std::string>::iterator &it, Server
                     s.sin_port = htons(ft_stoi(s.port));
                 }
                 ++it;
-
             } else if (*it == "root") {
                 s.has_root = true;
                 ++it;
@@ -364,7 +363,6 @@ int ParserConfFile::extract_server() {
     }
     return 0;
 }
-void ParserConfFile::print_server_data() {}
 
 void ParserConfFile::printMembers(void) const {
     std::vector<Server> tmp = _servers;
@@ -467,7 +465,6 @@ bool ParserConfFile::is_directive(const std::string &to_find) {
     std::vector<std::string> directives;
     directives.assign(arr, arr + sizeof(arr) / sizeof(arr[0])); 
     if (std::find(directives.begin(), directives.end(), to_find) != directives.end()){
-        // std::cout << RED << "INSIDE" << RESET << std::endl;
         return true;
     }
     return false;
