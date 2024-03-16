@@ -129,8 +129,6 @@ std::string MimeTypes::identify(const std::string &original_path) {
 
         std::string ext = path.substr(found);
 
-        // std::cout << "found mimetype, ext: " << ext << std::endl;
-
         it = MimeTypes::types.find(ext);
         if (it != MimeTypes::types.end())
             return it->second;
@@ -148,8 +146,6 @@ bool MimeTypes::is_binary_file(const std::string &mime) {
         return true;
     if (mime.find("pdf") != std::string::npos)
         return true;
-    // if (mime.find("json") != std::string::npos)
-    //     return true;
-
+        
     return false;
 }

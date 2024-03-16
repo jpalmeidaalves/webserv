@@ -227,8 +227,6 @@ void Request::process_requested_file(Connection *conn, std::string full_path) {
     std::string file_type = MimeTypes::identify(full_path);
     // std::cout << RED << "file mimetype: " << file_type << RESET << std::endl;
     response.set_content_type(file_type);
-
-    // response.set_req_file_fd(file_fd);
 }
 
 void Request::process_request(Connection *conn, int epfd) {
@@ -555,6 +553,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
             print_error("failed epoll_ctl ------");
             return -1;
         }
+
+        std::cout << "cgi fd " << conn->cgi_fd << std::endl;
 
         // std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
 

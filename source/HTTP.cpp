@@ -506,6 +506,8 @@ void HTTP::read_socket(struct epoll_event &ev) {
 void HTTP::write_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
 
+    std::cout << "inside write_socket" << std::endl;
+
     // if the connection has been removed in this happens to be in the list of FDs ready to read
     // stop here
     if (!this->_active_connects[cfd]) {
@@ -530,6 +532,7 @@ void HTTP::write_socket(struct epoll_event &ev) {
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
         // update time since last operation
+        std::cout << YELLOW << "sent header to client" << RESET << std::endl;
         conn->last_operation = get_timestamp();
         return;
     }
@@ -544,8 +547,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    if (request.is_cgi && !conn->timedout) {
-        // std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
+    if (request.is_cgi && !conn->timedout && !(response.get_status_code()[0] == '4' || response.get_status_code()[0] == '5')) {
+        std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
         // std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
         int bytes_read = 0;
 
@@ -781,7 +784,10 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
             print_error(strerror(errno));
             std::cout << "failed to modify from EPOLL" << std::endl;
             close(conn->fd);
+            return ;
         }
+
+        std::cout << "changed client fd " << conn->fd << " to EPOLLOUT" << std::endl;
     }
 }
 

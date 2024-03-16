@@ -28,21 +28,13 @@ Response &Response::operator=(const Response &rhs) {
 }
 Response::Response(const Response &src) { *this = src; }
 
-// int Response::get_requested_fd() { return (this->_req_file_fd); }
-
-// void Response::set_req_file_fd(int ffd) { this->_req_file_fd = ffd; }
-
 void Response::set_error_page_fd(std::string full_path) {
-
-    // std::cout << "setting error page: " << full_path << std::endl;
-
     this->set_content_type(MimeTypes::identify(full_path));
 
     if (this->inputfilestream.is_open())
         this->inputfilestream.close();
 
     this->inputfilestream.open(full_path.c_str());
-
 }
 
 void Response::set_header(std::string key, std::string value) {
@@ -64,20 +56,21 @@ void Response::set_header(std::string key, std::string value) {
 
 void Response::set_status_code(std::string code, Server *server, Request &request) {
     // update status code
-    // std::cout << GREEN << "updated status code: " << code << RESET << std::endl;
     this->_status_code = code;
 
     // check if is a error code
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
 
-        // std::cout << "+*+* server->get_error_page(code) " << server->get_error_page(code) << std::endl;
+        std::cout << RED << "error page..." << RESET << std::endl;
+
         if (server->get_error_page(code) != "") {
-            // std::cout << "using custom error page" << std::endl;
             // update request url_path
             request.url_path = server->root + server->get_error_page(code);
+            std::cout << BLUE << "using server error page..." << request.url_path << RESET << std::endl;
             this->set_error_page_fd(request.url_path);
         } else {
+            std::cout << RED << "using default error page..." << RESET << std::endl;
             // update request url_path
             request.url_path = server->get_default_error_page(code);
             // else use the default error page
@@ -96,21 +89,18 @@ void Response::set_content_length(std::size_t length) {
 
 std::size_t Response::get_content_length() const { return (this->_content_length); }
 
+/**
+ * Create a stringstream based on the previously defined headers with set_header function
+*/
 std::string Response::assemble_header() {
     std::ostringstream ss;
 
-    // ss << "HTTP/1.1 " << this->_status_code << "\r\n";
     ss << "HTTP/1.1 " << StatusCode::get_code(this->_status_code) << "\r\n";
-
-    // std::cout << "assembling header" << std::endl;
 
     std::map<std::string, std::string>::iterator it;
     for (it = this->_headers.begin(); it != this->_headers.end(); ++it) {
         ss << it->first << ": " << it->second << "\r\n";
-        // std::cout << it->first << ": " << it->second << std::endl;
     }
-
-    // std::cout << "done assembling" << std::endl;
 
     ss << "\r\n";
 
@@ -128,6 +118,8 @@ void Response::parse_cgi_headers(Connection *conn) {
     std::stringstream &ss = conn->response._response_buffer;
     Server *server = conn->server;
 
+    std::cout << ss.str() << std::endl;
+
     // Show python cgi errors
     if (ss.str().find("  File") == 0) {
         this->_cgi_header_parsed = true;
@@ -142,30 +134,17 @@ void Response::parse_cgi_headers(Connection *conn) {
         php_notices_in_header = true;
     }
 
-    // std::cout << "parsing CGI headers" << std::endl;
     std::string key_status = "Status: ";
     std::string status_code;
     std::string line;
 
-    /*
-    PHP Fatal error:  Uncaught TypeError: array_filter(): Argument #1 ($array) must be of type array, string given in /home/nuno/Documents/webserv/www/a/upload.php:14
-    Stack trace:
-    #0 /home/nuno/Documents/webserv/www/a/upload.php(14): array_filter()
-    #1 {main}
-        thrown in /home/nuno/Documents/webserv/www/a/upload.php on line 14
-    custom header: hello world!
-    Content-type: text/html; charset=UTF-8
-    */
 
     bool has_status_header = ss.str().find(key_status) != std::string::npos;
-
-    // std::cout << CYAN << "###content: " << ss.str() << RESET << std::endl;
 
     int i = 0;
     while (1) {
 
         std::getline(ss, line, '\n');
-        // std::cout << "[parsing line header]: " << line << std::endl;
         i++;
         if (ss.bad()) {
             // std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
@@ -185,7 +164,6 @@ void Response::parse_cgi_headers(Connection *conn) {
 
         if (line.find(key_status) == 0) {
             status_code = line.substr(key_status.size(), 3); // extract error code (3 bytes size)
-            // std::cout << "status is " << value << std::endl;
             this->set_status_code(status_code, server, conn->request);
         } else {
 
@@ -204,9 +182,6 @@ void Response::parse_cgi_headers(Connection *conn) {
                     if (value.size() && value.at(value.size() - 1) == '\r') {
                         value.erase(value.size() - 1);
                     }
-
-                    // std::cout << "1) key is >" << key << "<" << std::endl;
-                    // std::cout << "2) value is >" << value << "<" << std::endl;
 
                     this->set_header(key, value);
                 }

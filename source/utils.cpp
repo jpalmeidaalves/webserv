@@ -219,17 +219,6 @@ void end_timer(struct timeval *begin, struct timeval *end) {
 
     std::cout << YELLOW << "Time elapsed: " << elapsed << RESET << std::endl;
 }
-
-// void print_nonprintables(std::string str) {
-//     for (char c : str) {
-//         if (!isprint(static_cast<unsigned char>(c))) {
-//             // Print the non-printable character as its ASCII code
-//             std::cout << static_cast<int>(c) << " ";
-//         }
-//     }
-//     std::cout << std::endl;
-// }
-
 std::size_t remaining_bytes(const std::stringstream &s) {
     std::streambuf *buf = s.rdbuf();
     std::streampos pos = buf->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
