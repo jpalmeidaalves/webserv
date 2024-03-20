@@ -36,3 +36,5 @@
             whether to serve a file, list a directory, or ... //TODO continue diferent reponses
         b - If serving a file, it opens the file and sends the appropriate headers => process_requested_file(ev)
         c - If its a directory, generates an HTML page listing the contents of a directory and sends it to the client.
+
+TEST
