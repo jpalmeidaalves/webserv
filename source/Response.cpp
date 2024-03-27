@@ -21,11 +21,11 @@ Response::Response()
 
 Response::~Response() {}
 
-/* -------------------------------- Disabled -------------------------------- */
 Response &Response::operator=(const Response &rhs) {
     (void)rhs;
     return *this;
 }
+
 Response::Response(const Response &src) { *this = src; }
 
 void Response::set_error_page_fd(std::string full_path) {
@@ -62,7 +62,7 @@ void Response::set_status_code(std::string code, Server *server, Request &reques
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
 
-        std::cout << RED << "error page..." << RESET << std::endl;
+        // std::cout << RED << "error page..." << RESET << std::endl;
 
         if (server->get_error_page(code) != "") {
             // update request url_path
@@ -118,7 +118,7 @@ void Response::parse_cgi_headers(Connection *conn) {
     std::stringstream &ss = conn->response._response_buffer;
     Server *server = conn->server;
 
-    std::cout << ss.str() << std::endl;
+    // std::cout << ss.str() << std::endl;
 
     // Show python cgi errors
     if (ss.str().find("  File") == 0) {

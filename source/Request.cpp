@@ -10,7 +10,6 @@ Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), 
 
 Request::~Request() {}
 
-/* -------------------------------- Disabled -------------------------------- */
 Request &Request::operator=(const Request &rhs) {
     (void)rhs;
     return *this;
@@ -25,7 +24,6 @@ void Request::parse_request_header() {
     // std::cout << RED << "parsed request" << RESET << std::endl;
     // std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
     // parse request
-    // std::stringstream ss(this->_buffer.str());
     std::string line;
 
     // process first line
@@ -298,9 +296,9 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
         std::string item_path = full_path + "/" + dp->d_name;
 
-        std::cout << "full_path: " << full_path << std::endl;
-        std::cout << "dp->d_name: " << dp->d_name << std::endl;
-        std::cout << "item_path: " << item_path << std::endl;
+        // std::cout << "full_path: " << full_path << std::endl;
+        // std::cout << "dp->d_name: " << dp->d_name << std::endl;
+        // std::cout << "item_path: " << item_path << std::endl;
 
         std::string href = item_path.substr(5);
 
@@ -387,11 +385,10 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         return 0;
     }
     this->body_file_name = "./tmp/.tmp-req-body-" + ft_itos(fd);
-    std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
+    // std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
 
     if (!this->request_body.is_open()) {
-        std::cout << "this" << std::endl;
         return -1;
     }
 
@@ -424,7 +421,7 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
 }
 
 int Request::process_cgi(Connection *conn, int epfd) {
-    std::cout << "Processing CGI" << std::endl;
+    // std::cout << "Processing CGI" << std::endl;
 
     if (this->request_body.is_open())
         this->request_body.close();
@@ -554,7 +551,7 @@ int Request::process_cgi(Connection *conn, int epfd) {
             return -1;
         }
 
-        std::cout << "cgi fd " << conn->cgi_fd << std::endl;
+        // std::cout << "cgi fd " << conn->cgi_fd << std::endl;
 
         // std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
 
