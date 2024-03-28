@@ -421,7 +421,7 @@ void HTTP::read_socket(struct epoll_event &ev) {
     if (request.chunked_complete) {
         // std::cout << CYAN << "done reading socket" << RESET << std::endl;
         if (conn->request.getMethod() == "GET") {
-            conn->request.process_request(conn, this->_epoll_fd);
+            conn->request.process_request(conn);
         } else {
             conn->response.set_status_code("405", conn->server, conn->request);
         }
@@ -637,7 +637,7 @@ void HTTP::process_request(struct epoll_event &ev) {
     } else {
         // std::cout << GREEN << "normal request" << RESET << std::endl;
         if (conn->request.getMethod() == "GET") {
-            conn->request.process_request(conn, this->_epoll_fd);
+            conn->request.process_request(conn);
         } else {
             conn->response.set_status_code("400", conn->server, conn->request);
         }

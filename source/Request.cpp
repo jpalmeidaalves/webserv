@@ -21,8 +21,7 @@ Request::Request(const Request &src) { *this = src; }
 /* -------------------------------------------------------------------------- */
 
 void Request::parse_request_header() {
-    // std::cout << RED << "parsed request" << RESET << std::endl;
-    // std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
+    // std::cout << MAGENTA << "Request buffer" this->_buffer.str() << RESET << std::endl;
     // parse request
     std::string line;
 
@@ -33,8 +32,6 @@ void Request::parse_request_header() {
 
     this->_url = urlDecode(this->_url);
 
-    // std::cout << "---------- parsing header -----------" << std::endl;
-
     while (getline(this->_buffer, line)) {
 
         // has reach the end of the header
@@ -42,7 +39,6 @@ void Request::parse_request_header() {
             break;
 
         // std::cout << line << std::endl;
-        // print_ascii(line.c_str());
 
         if (line.find("Host:") == 0) {
             remove_char_from_string(line, '\r');
@@ -64,8 +60,6 @@ void Request::parse_request_header() {
     _buffer.str(std::string()); // clear the underlying buffer
     _buffer << tmp.str();
 
-  
-
     // std::cout << MAGENTA << "buffer content:" << std::endl;
     // size_t pos = _buffer.str().find("\r\n\r\n");
     // _buffer.ignore(pos + 4);
@@ -79,16 +73,9 @@ void Request::parse_request_header() {
     if (_buffer.str().find( "\r\n\r\n") != std::string::npos) {
         this->chunked_complete = true;
         // std::cout << "read complete body with the request" << std::endl;
-       
     }
 
-
-
-    
-
     // all subsequent reads on that client socket will be written in request_body too
-
-    // std::cout << "---------- end parsing header -----------" << std::endl;
 }
 
 std::string Request::getMethod() const { return (this->_method); }
@@ -161,7 +148,6 @@ void Request::process_url(void) {
 }
 
 bool Request::has_cgi(Connection *conn) {
-
     // std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
     if (this->is_cgi)
@@ -171,9 +157,7 @@ bool Request::has_cgi(Connection *conn) {
 
     for (it = conn->server->locations.begin(); it != conn->server->locations.end(); it++) {
 
-        // *.php
-        // *.bla
-        // *.py
+        // *.php | *.bla | *.py
 
         if (it->first.find("*.") ==  0 && it->first.size() > 2 ) {
             std::string ext = it->first.substr(1);
@@ -196,11 +180,6 @@ bool Request::has_cgi(Connection *conn) {
 
         }
     }
-
-    // if (has_suffix(this->url_path, ".php")) {
-    //     this->is_cgi = true;
-    //     return true;
-    // }
     
     return false;
 }
@@ -227,9 +206,7 @@ void Request::process_requested_file(Connection *conn, std::string full_path) {
     response.set_content_type(file_type);
 }
 
-void Request::process_request(Connection *conn, int epfd) {
-    (void)epfd;
-    // int cfd = ev.data.fd;
+void Request::process_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
@@ -246,17 +223,60 @@ void Request::process_request(Connection *conn, int epfd) {
         // std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn, request.url_path);
     } else if (request.is_dir) {
-        // std::cout << "------- dir --------" << std::endl;
-
+        std::cout << "------- dir --------" << std::endl;
         bool is_dir_listing = conn->server->server_dir_listing(conn);
 
         if (!is_dir_listing) {
+            std::cout << "1" << std::endl;
             response.set_status_code("403", conn->server, request);
         } else {
+            std::cout << "2" << std::endl;
             response.isdir = true;
             this->list_directory(request.url_path, conn);
         }
     }
+}
+
+std::string Request::create_html_dir(std::map<std::string, struct dir_entry> &dir_entries) {
+    std::stringstream ss;
+
+    ss << "<html><head><title>Index of " << this->url_path << "/</title></head><body><h1>Index of "
+       << this->url_path << "</h1><hr><pre>";
+
+    std::map<std::string, struct dir_entry>::iterator it;
+    {
+        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
+            if (it->second.is_file == false) {
+
+                std::string folder_name = it->first + "/";
+
+                ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
+                   << std::setw(51 - folder_name.size()) << " ";
+
+                // parent folder has no modified date and size
+                if (it->first == "..") {
+                    ss << "\n";
+                } else {
+                    ss << it->second.last_modified << " ";
+                    ss << std::right << std::setw(20) << "-\n";
+                }
+            }
+        }
+        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
+            if (it->second.is_file == true) {
+
+                ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
+                   << std::setw(51 - it->first.size()) << " ";
+
+                ss << it->second.last_modified << " ";
+                ss << std::right << std::setw(19) << it->second.size << "\n";
+            }
+        }
+    }
+
+    ss << "</pre><hr></body></html>";
+
+    return ss.str();
 }
 
 int Request::list_directory(std::string full_path, Connection *conn) {
@@ -330,48 +350,10 @@ int Request::list_directory(std::string full_path, Connection *conn) {
         return -1;
     }
 
-    std::stringstream ss;
-
-    ss << "<html><head><title>Index of " << request.url_path << "/</title></head><body><h1>Index of "
-       << request.url_path << "</h1><hr><pre>";
-
-    std::map<std::string, struct dir_entry>::iterator it;
-    {
-        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-            if (it->second.is_file == false) {
-
-                std::string folder_name = it->first + "/";
-
-                ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
-                   << std::setw(51 - folder_name.size()) << " ";
-
-                // parent folder has no modified date and size
-                if (it->first == "..") {
-                    ss << "\n";
-                } else {
-                    ss << it->second.last_modified << " ";
-                    ss << std::right << std::setw(20) << "-\n";
-                }
-            }
-        }
-        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-            if (it->second.is_file == true) {
-
-                ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
-                   << std::setw(51 - it->first.size()) << " ";
-
-                ss << it->second.last_modified << " ";
-                ss << std::right << std::setw(19) << it->second.size << "\n";
-            }
-        }
-    }
-
-    ss << "</pre><hr></body></html>";
+    response.dir_data = create_html_dir(dir_entries);
 
     response.set_status_code("200", conn->server, conn->request);
-    response.set_content_length(ss.str().size());
-
-    response.dir_data = ss.str();
+    response.set_content_length(response.dir_data.size());
 
     return 0;
 }
@@ -381,7 +363,6 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     if (this->getMethod() == "GET"){
         if (process_cgi(conn, epfd) == -1)
             return -1;
-        // std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
     }
     this->body_file_name = "./tmp/.tmp-req-body-" + ft_itos(fd);
@@ -482,11 +463,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
         // std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
         // std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
 
-        // chdir("./YoupiBanane");
-
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
-
-        // std::string path_translated = "PATH_TRANSLATED=" + this->url_path;        
+      
         std::string server_port = "SERVER_PORT=" + conn->server->port;
         std::string remote_host = "REMOTE_HOST=" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
@@ -495,8 +473,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
         std::string script_filename = "SCRIPT_FILENAME=" + this->url_path;
         std::string script_name = "SCRIPT_NAME=" + this->url_path;
         std::string path_info = "PATH_INFO=" + this->url_path;
-        // std::string script_name = "SCRIPT_NAME=/youpi.bla"; // + this->url_path;
-        // std::string path_info = "PATH_INFO=./YoupiBanane/youpi.bla"; // + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         
         std::string url_query;
@@ -560,29 +536,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
     return 0;
 }
 
-std::string Request::getline_from_body(std::size_t &bytes_read) {
-    std::stringstream line;
-
-    // stop reading when reach the end of content length
-    while (bytes_read < this->get_content_length()) {
-        char buf[1];
-        this->_buffer.read(buf, 1);
-        if (this->_buffer.fail()) {
-            print_error("Failed to extract line from request body");
-            this->_buffer.clear();
-            return line.str();
-        }
-        bytes_read++;
-        line << buf;
-        if (*buf == '\n' && line.str().find("\r\n") != std::string::npos)
-            break;
-    }
-
-    // std::string tmp = line.str();
-    // tmp.erase(tmp.size() - 2); // remove \r\n from string
-
-    return line.str();
-}
 
 // SERVER_PROTOCOL -The name and revision of the information protcol this request came
 // in with. Format: protocol/revision
@@ -647,18 +600,3 @@ std::string Request::getline_from_body(std::size_t &bytes_read) {
 // CONTENT_LENGTH
 
 // The length of the said content as given by the client.
-
-// std::cout << "size of envp " << i << std::endl;
-
-// export GATEWAY_INTERFACE="CGI/1.1"
-// export SCRIPT_FILENAME="/home/xzhttpd/htdocs/test.php"
-// export REQUEST_METHOD="POST"
-// export REDIRECT_STATUS=200
-// export SERVER_PROTOCOL="HTTP/1.1"
-// export REMOTE_HOST="127.0.0.1"
-// export CONTENT_LENGHT=3
-// export HTTP_ACCEPT="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-// export CONTENT_TYPE="application/x-www-form-urlencoded"
-// export BODY="t=1"
-
-// url: http:127.0.0.1:8084?name=testing&age=35

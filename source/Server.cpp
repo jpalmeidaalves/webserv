@@ -96,8 +96,11 @@ std::string Server::get_default_error_page(std::string code) {
 bool Server::server_dir_listing(Connection *conn) {
     std::map<std::string, struct LocationOptions>::iterator it;
 
+    std::cout << "path: " << conn->request.getUrl() << std::endl;
+
     for (it = this->locations.begin(); it != this->locations.end(); it++) {
-        if (it->first == conn->request.url_path) {
+        std::cout << "check location: " << it->first << std::endl;
+        if (it->first == conn->request.getUrl()) {
             return it->second.autoindex;
         }
     }
