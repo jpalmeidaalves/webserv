@@ -43,6 +43,9 @@
                     <li class="nav-item">
                         <a class="nav-link page-scroll" href="/requests.php">Uploads</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link page-scroll" href="/contact.php">Contact Us</a>
+                    </li>
                 </ul>
             </div>
         </nav>
