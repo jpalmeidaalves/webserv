@@ -76,7 +76,6 @@ class HTTP {
     static void add_cgi_socket(int sock, int connection_socket);
     void process_request(struct epoll_event &ev);
     void handle_timeouts();
-    // void apply_server_location_rules(Connection *conn);
 };
 
 #endif/* HTTP_HPP */

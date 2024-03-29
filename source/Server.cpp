@@ -273,7 +273,6 @@ void Server::set_full_path(Connection *conn) {
  * Update the url path if necessary
 */
 void Server::update_url_with_index_page(Connection *conn) {
-    // std::cout << "update_url_with_index_page" << std::endl;
     std::map<std::string, struct LocationOptions>::iterator it;
 
     std::string full_path = conn->server->root + conn->request.url_path;

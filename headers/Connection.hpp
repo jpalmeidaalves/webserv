@@ -6,10 +6,6 @@
 #include "Server.hpp"
 #include <sys/epoll.h>
 
-// class Request;
-// class Response;
-// class Server;
-
 struct Connection {
     Request request;
     Response response;

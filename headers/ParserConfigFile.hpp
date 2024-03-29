@@ -14,7 +14,6 @@
 
 class ParserConfFile {
   private:
-    int fd;
     std::string _path;
     std::vector<Server> _servers;
     int _servers_count;

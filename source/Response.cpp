@@ -62,8 +62,6 @@ void Response::set_status_code(std::string code, Server *server, Request &reques
     if (code[0] == '4' || code[0] == '5') {
         // check if has custom error page
 
-        // std::cout << RED << "error page..." << RESET << std::endl;
-
         if (server->get_error_page(code) != "") {
             // update request url_path
             request.url_path = server->root + server->get_error_page(code);
@@ -118,8 +116,6 @@ void Response::parse_cgi_headers(Connection *conn) {
     std::stringstream &ss = conn->response._response_buffer;
     Server *server = conn->server;
 
-    // std::cout << ss.str() << std::endl;
-
     // Show python cgi errors
     if (ss.str().find("  File") == 0) {
         this->_cgi_header_parsed = true;
@@ -127,7 +123,6 @@ void Response::parse_cgi_headers(Connection *conn) {
     }
 
     // Update all the headers in the response with the header from CGI
-
     bool php_notices_in_header = false;
 
     if (ss.str().find("PHP") == 0) {
@@ -147,12 +142,10 @@ void Response::parse_cgi_headers(Connection *conn) {
         std::getline(ss, line, '\n');
         i++;
         if (ss.bad()) {
-            // std::cout << CYAN << " STOPED getline in parsing headers " << i << RESET << std::endl;
             break;
         }
 
         if (line == "\r" || line == "") {
-            // std::cout << "FOUND end of header" << std::endl;
             break;
         }
 
@@ -190,7 +183,6 @@ void Response::parse_cgi_headers(Connection *conn) {
 
         line = "";
     }
-    // std::cout << YELLOW << "_cgi_header_parsed = true;" << RESET << std::endl;
     this->_cgi_header_parsed = true;
 }
 

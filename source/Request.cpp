@@ -21,7 +21,6 @@ Request::Request(const Request &src) { *this = src; }
 /* -------------------------------------------------------------------------- */
 
 void Request::parse_request_header() {
-    // std::cout << MAGENTA << "Request buffer" this->_buffer.str() << RESET << std::endl;
     // parse request
     std::string line;
 
@@ -38,8 +37,6 @@ void Request::parse_request_header() {
         if (line == "\r")
             break;
 
-        // std::cout << line << std::endl;
-
         if (line.find("Host:") == 0) {
             remove_char_from_string(line, '\r');
             this->_host = line.substr(line.find(" ") + 1);
@@ -50,7 +47,6 @@ void Request::parse_request_header() {
             remove_char_from_string(line, '\r');
             this->_content_type = line.substr(line.find(" ") + 1);
         } else if (line.find("Transfer-Encoding: chunked") == 0) {
-            // std::cout << YELLOW << "request is chunked++++++++" << RESET << std::endl;
             this->chunked = true;
         }
     }
@@ -60,19 +56,8 @@ void Request::parse_request_header() {
     _buffer.str(std::string()); // clear the underlying buffer
     _buffer << tmp.str();
 
-    // std::cout << MAGENTA << "buffer content:" << std::endl;
-    // size_t pos = _buffer.str().find("\r\n\r\n");
-    // _buffer.ignore(pos + 4);
-    // std::cout << this->_buffer.str() << std::endl;
-
-    // std::cout << _buffer.str() << std::endl;
-    // std::cout << "-- end buffer content --" << RESET << std::endl;
-
-    // std::string tmp = this->_buffer.rdbuf();
-     
     if (_buffer.str().find( "\r\n\r\n") != std::string::npos) {
         this->chunked_complete = true;
-        // std::cout << "read complete body with the request" << std::endl;
     }
 
     // all subsequent reads on that client socket will be written in request_body too
@@ -103,7 +88,6 @@ void Request::set_content_length(std::size_t length) { this->_content_length = l
 
 void Request::append_buffer(const char *buf, int len) {
     this->_buffer.write(buf, len);
-    // std::cout << "appended data in the request buffer" << std::endl;
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -140,15 +124,13 @@ void Request::process_url(void) {
     if (has_fragment != std::string::npos) {
         base_url = base_url.substr(0, has_fragment);
         this->url_fragment = this->getUrl().substr(has_fragment + 1);
-    } else {
-        base_url = base_url;
-    }
+    } 
+
 
     this->url_path = base_url;
 }
 
 bool Request::has_cgi(Connection *conn) {
-    // std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
     if (this->is_cgi)
         return true;
@@ -202,7 +184,6 @@ void Request::process_requested_file(Connection *conn, std::string full_path) {
         }
     }
     std::string file_type = MimeTypes::identify(full_path);
-    // std::cout << RED << "file mimetype: " << file_type << RESET << std::endl;
     response.set_content_type(file_type);
 }
 
@@ -210,27 +191,19 @@ void Request::process_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
 
-    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
-    // std::cout << GREEN << "processing request full_path: " << request.url_path.c_str() << RESET << std::endl;
-
     // check if is a file or dir
     file_types curr_type = get_file_type(request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
-        // print_error("failed to check if is a dir");
         response.set_status_code("404", conn->server, request);
     } else if (curr_type == TYPE_FILE) {
-        // std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn, request.url_path);
     } else if (request.is_dir) {
-        std::cout << "------- dir --------" << std::endl;
         bool is_dir_listing = conn->server->server_dir_listing(conn);
 
         if (!is_dir_listing) {
-            std::cout << "1" << std::endl;
             response.set_status_code("403", conn->server, request);
         } else {
-            std::cout << "2" << std::endl;
             response.isdir = true;
             this->list_directory(request.url_path, conn);
         }
@@ -316,10 +289,6 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
         std::string item_path = full_path + "/" + dp->d_name;
 
-        // std::cout << "full_path: " << full_path << std::endl;
-        // std::cout << "dp->d_name: " << dp->d_name << std::endl;
-        // std::cout << "item_path: " << item_path << std::endl;
-
         std::string href = item_path.substr(5);
 
         ft_memset(&struc_st, 0, sizeof(struc_st));
@@ -366,7 +335,6 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         return 0;
     }
     this->body_file_name = "./tmp/.tmp-req-body-" + ft_itos(fd);
-    // std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
 
     if (!this->request_body.is_open()) {
@@ -396,26 +364,13 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         process_cgi(conn, epfd);
     }
 
-    // std::cout << YELLOW << "number of bytes left in request buffer: " << bytes_read  << std::endl << buf << RESET << std::endl;
-
     return 0;
 }
 
 int Request::process_cgi(Connection *conn, int epfd) {
-    // std::cout << "Processing CGI" << std::endl;
 
     if (this->request_body.is_open())
         this->request_body.close();
-
-    // std::size_t bytes_left = remaining_bytes(this->_buffer);
-    // std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
-
-    // std::cout << "[request]" << std::endl;
-    // std::cout << this->getRaw() << std::endl;
-    // std::cout << "[end request]" << std::endl;
-
-    // std::cout << "content-length from request: " << this->get_content_length() << std::endl;
-    // std::cout << "content-type from request: " << this->get_content_type() << std::endl;
 
     int sockets[2];
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
@@ -423,11 +378,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
         return -1;
     }
 
-    // std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
-
     pid_t pid = fork();
     if (pid == -1) {
-        // conn->response.set_status_code("500", conn->server, conn->request);
         this->cgi_complete = true;
         return -1;
     }
@@ -454,15 +406,9 @@ int Request::process_cgi(Connection *conn, int epfd) {
             close(fd);
         }
 
-        // std::string file_path = this->url_path;
-
-
         // /usr/bin/php-cgi
         // cgi_pass /usr/bin/php8.1-cgi;
         
-        // std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
-        // std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
-
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
       
         std::string server_port = "SERVER_PORT=" + conn->server->port;
@@ -482,9 +428,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
         else
             url_query = "QUERY_STRING=" + this->url_query;
 
-        // std::cout << YELLOW << "url_query" << url_query << RESET << std::endl;
-        
-
         char *custom_envp[] = {
             (char *)script_filename.c_str(),
             (char *)server_protocol.c_str(), (char *)"REDIRECT_STATUS=200", //(char *)path_translated.c_str(),
@@ -498,11 +441,10 @@ int Request::process_cgi(Connection *conn, int epfd) {
         }
     } else if (pid > 0) {               // parent
 
-        if (!close(sockets[1]) == 0) {
+        if (!(close(sockets[1]) == 0)) {
             print_error("Close: ");
         }
         conn->cgi_pid = pid;
-        // std::cout << GREEN << "conn->cgi_pid: " << conn->cgi_pid << std::endl;
 
         // Add the socket in the parent end to the EPOLL
         /**
@@ -526,11 +468,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
             print_error("failed epoll_ctl ------");
             return -1;
         }
-
-        // std::cout << "cgi fd " << conn->cgi_fd << std::endl;
-
-        // std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
-
     }
 
     return 0;

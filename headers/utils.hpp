@@ -17,8 +17,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
-// #include "Request.hpp"
-// #include "Response.hpp"
 
 typedef enum file_types_t { TYPE_FILE, TYPE_DIR, TYPE_UNKOWN } file_types;
 

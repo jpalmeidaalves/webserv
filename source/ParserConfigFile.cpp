@@ -372,7 +372,6 @@ void ParserConfFile::printMembers(void) const {
         std::cout << "----------------------------------------------------------" << std::endl;
         std::cout << "Host: " << ite->host << std::endl;
         std::cout << "Port: " << ite->port << std::endl;
-        // std::cout << "test first: " << ite->server_names[0] << std::endl;
         std::cout << "Server name: ";
         print_vector_with_space(ite->server_names);
         std::cout << std::endl;

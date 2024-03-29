@@ -9,7 +9,7 @@
 
 class Server;
 class HTTP;
-class Connection;
+struct Connection;
 class Request;
 
 class Response {
@@ -18,7 +18,6 @@ class Response {
     std::string _status_code;
     std::string _content_type;
     std::size_t _content_length;
-    // int _req_file_fd;
     std::map<std::string, std::string> _headers;
 
     Response(const Response &src);

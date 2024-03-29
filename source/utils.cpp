@@ -43,7 +43,6 @@ file_types get_file_type(const char *name) {
     DIR *directory = opendir(name);
 
     if (directory == NULL) {
-        // closedir(directory);
         if (errno == ENOTDIR)
             return TYPE_FILE;
         return TYPE_UNKOWN;

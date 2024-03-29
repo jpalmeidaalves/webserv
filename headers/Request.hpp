@@ -14,8 +14,7 @@
 #define STD_IN 1
 #define STD_OUT 0
 
-// class HTTP;
-class Connection;
+struct Connection;
 class Response;
 class Server;
 

@@ -16,9 +16,6 @@ struct Connection;
 class Server {
 
   private:
-    struct sockaddr_in _address;
-    unsigned long _address_len;
-    int _sockfd;
     std::map<std::string, std::string> _error_pages;
     std::map<std::string, std::string> _default_error_pages;
 
@@ -27,7 +24,6 @@ class Server {
     std::map<std::string, struct LocationOptions> locations;
     Connection *connection;
     ~Server();
-    /* ----- */
     std::size_t client_max_body_size;
     std::string host;
     std::string port;
