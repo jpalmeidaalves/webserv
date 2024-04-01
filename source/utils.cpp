@@ -43,7 +43,6 @@ file_types get_file_type(const char *name) {
     DIR *directory = opendir(name);
 
     if (directory == NULL) {
-        // closedir(directory);
         if (errno == ENOTDIR)
             return TYPE_FILE;
         return TYPE_UNKOWN;
@@ -219,17 +218,6 @@ void end_timer(struct timeval *begin, struct timeval *end) {
 
     std::cout << YELLOW << "Time elapsed: " << elapsed << RESET << std::endl;
 }
-
-// void print_nonprintables(std::string str) {
-//     for (char c : str) {
-//         if (!isprint(static_cast<unsigned char>(c))) {
-//             // Print the non-printable character as its ASCII code
-//             std::cout << static_cast<int>(c) << " ";
-//         }
-//     }
-//     std::cout << std::endl;
-// }
-
 std::size_t remaining_bytes(const std::stringstream &s) {
     std::streambuf *buf = s.rdbuf();
     std::streampos pos = buf->pubseekoff(0, std::ios_base::cur, std::ios_base::in);
@@ -243,4 +231,38 @@ bool only_digits(std::string s)
     if (s.find_first_not_of("1234567890") != std::string::npos)
         return false;
     return true;
+}
+
+std::string urlDecode(const std::string& encoded) {
+    std::ostringstream decoded;
+    std::string::size_type i = 0;
+
+    while (i < encoded.length()) {
+        if (encoded[i] == '%') {
+            // If we find a percent sign, we decode the following two characters
+            if (i + 2 < encoded.length()) {
+                std::istringstream iss(encoded.substr(i + 1, 2));
+                int c;
+                if (iss >> std::hex >> c) {
+                    decoded << static_cast<char>(c);
+                    i += 3; // Move to the next character after the decoded sequence
+                } else {
+                    decoded << encoded[i]; // If decoding fails, keep the '%'
+                    ++i;
+                }
+            } else {
+                // Incomplete percent-encoded sequence, keep the '%' as is
+                decoded << encoded[i++];
+            }
+        } else if (encoded[i] == '+') {
+            // Convert '+' to space
+            decoded << ' ';
+            ++i;
+        } else {
+            // Keep the character as is
+            decoded << encoded[i++];
+        }
+    }
+
+    return decoded.str();
 }

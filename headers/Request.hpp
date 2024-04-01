@@ -14,8 +14,7 @@
 #define STD_IN 1
 #define STD_OUT 0
 
-// class HTTP;
-class Connection;
+struct Connection;
 class Response;
 class Server;
 
@@ -58,7 +57,7 @@ class Request {
     bool not_parsed();
     void setUrl(std::string url);
     void parse_request_header();
-    void process_request(Connection *conn, int epfd);
+    void process_request(Connection *conn);
     void process_requested_file(Connection *conn, std::string full_path);
     int list_directory(std::string full_path, Connection *conn);
     bool has_cgi(Connection *conn);
@@ -69,13 +68,10 @@ class Request {
     std::size_t get_content_length() const;
 
     int process_cgi(Connection *conn, int epfd);
-    // std::string upload_files(Server *server);
-    std::string getline_from_body(std::size_t &bytes_read);
-    // std::string extract_filename_from_body(size_t &bytes_read);
-    // std::string upload_single_file(size_t &bytes_read, std::string boundary, Server *server);
+    std::string create_html_dir(std::map<std::string, struct dir_entry> &dir_entries);
     void append_buffer(const char *buf, int len);
     std::string url_without_query();
-    void process_url(Connection *conn);
+    void process_url(void);
 };
 std::ostream &operator<<(std::ostream &out, const Request &obj);
 

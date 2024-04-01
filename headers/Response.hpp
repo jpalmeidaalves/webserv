@@ -9,7 +9,7 @@
 
 class Server;
 class HTTP;
-class Connection;
+struct Connection;
 class Request;
 
 class Response {
@@ -18,7 +18,6 @@ class Response {
     std::string _status_code;
     std::string _content_type;
     std::size_t _content_length;
-    // int _req_file_fd;
     std::map<std::string, std::string> _headers;
 
     Response(const Response &src);
@@ -40,15 +39,11 @@ class Response {
 
     void set_header(std::string key, std::string value);
     void set_status_code(std::string code, Server *server, Request &request);
-    // void set_content_data(unsigned char * data);
     void set_content_type(const std::string type);
     void set_content_length(std::size_t length);
-    // int get_requested_fd();
-    // void set_req_file_fd(int ffd);
     void set_error_page_fd(std::string full_path);
 
     std::string get_status_code() const;
-    // std::string get_content_data() const;
     std::size_t get_content_length() const;
     std::string assemble_header();
     void parse_cgi_headers(Connection *conn);

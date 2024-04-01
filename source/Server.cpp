@@ -6,10 +6,10 @@
 /*                         Constructors & Desctructor                         */
 /* -------------------------------------------------------------------------- */
 
-/*  Constructor: Initialize the members of the struct sockaddr_in and its adress_len
-    a atribute. Also intalls a signal handler  */
-    // client max body size is 200MB by default unless overritten by client_max_body_size directive in server block
-Server::Server() : client_max_body_size(209715200), s_addr(0), sin_port(0) {
+// Initialize the members of the struct sockaddr_in and its adress_len a atribute.
+// client max body size is 200MB by default unless overritten by client_max_body_size directive in server block
+Server::Server() : client_max_body_size(209715200), s_addr(0), sin_port(0), has_listen(false),
+                   has_server_name(false), has_root(false), has_index(false){
 
     // init error pages
     this->_default_error_pages["400"] = "./etc/default_pages/400.html";
@@ -81,11 +81,9 @@ void Server::update_error_page(std::string error_code, std::string path) {
 }
 
 std::string Server::get_default_error_page(std::string code) {
-    std::cout << "searching default page with code: " << code << std::endl;
     std::map<std::string, std::string>::iterator it;
     for (it = this->_default_error_pages.begin(); it != this->_default_error_pages.end(); it++) {
         if (it->first == code) {
-            std::cout << "found defualt error page: " << it->second << std::endl;
             return it->second;
         }
     }
@@ -98,8 +96,11 @@ std::string Server::get_default_error_page(std::string code) {
 bool Server::server_dir_listing(Connection *conn) {
     std::map<std::string, struct LocationOptions>::iterator it;
 
+    std::cout << "path: " << conn->request.getUrl() << std::endl;
+
     for (it = this->locations.begin(); it != this->locations.end(); it++) {
-        if (it->first == conn->request.url_path) {
+        std::cout << "check location: " << it->first << std::endl;
+        if (it->first == conn->request.getUrl()) {
             return it->second.autoindex;
         }
     }
@@ -125,14 +126,9 @@ bool Server::server_index_page_exists(Connection *conn) {
                 std::string filename = full_path + *pages_it;
                 if (file_exists(filename.c_str()) == 0) {
                     conn->request.url_path = full_path + *pages_it;
-                    // if (conn->request.has_cgi()) {
-                    //     conn->request.is_cgi = true;
-                    // }
                     return true;
                 }
-
             }
-
         }
     }
 
@@ -143,30 +139,23 @@ bool Server::server_index_page_exists(Connection *conn) {
         std::string filename = full_path + *pages_it;
         if (file_exists(filename.c_str()) == 0) {
             conn->request.url_path = full_path + *pages_it;
-            // if (conn->request.has_cgi()) {
-            //     conn->request.is_cgi = true;
-            // }
             return true;
         }
     }
     return false;
 }
 
+/**
+ * Define the absolute path to the requested file
+ * Note: It takes into consideration the location directory
+ * 
+ * "/" -> ./www/a/
+ * "/subdemo" -> ./www/a/demo/subdemo (location directive)
+ * 
+*/
 void Server::set_full_path(Connection *conn) {
     std::map<std::string, struct LocationOptions>::iterator it;
 
-    // "/" -> ./www/a/
-    // "/subdemo" -> ./www/a/demo/subdemo
-    // "/subdemo/other" -> ./www/b/folder
-
-    // /subdemo
-
-    // /subdemo/puet/folder | ./www/a/demo/subdemo/puet/folder
-
-    // if match
-        // substitue that part with the root value
-    // else
-        // use the server root + url_path
 
     // location / {}
     LocationOptions *root_location = NULL;
@@ -217,8 +206,6 @@ void Server::set_full_path(Connection *conn) {
                     conn->request.url_path = it->second.root + tmp;
                 } else
                     conn->request.url_path = it->second.root + tmp;
-                
-                std::cout << YELLOW << "final url_path1: " << conn->request.url_path << RESET << std::endl;
                 return;
             }
         }
@@ -246,7 +233,6 @@ void Server::set_full_path(Connection *conn) {
             return;
         }
 
-
         // check if this route supports uploads
         if(root_location->client_body_temp_path != "" && conn->request.getMethod() == "POST") {
             conn->request.is_cgi = true;
@@ -271,22 +257,8 @@ void Server::set_full_path(Connection *conn) {
             conn->request.url_path = prefix + conn->request.url_path;
         } else
             conn->request.url_path = prefix + conn->request.url_path;
-        std::cout << YELLOW << "final url_path2: " << conn->request.url_path << RESET << std::endl;
         return;
     }
-
-    /*
-    
-    Our rule: /subdemo -> ./www/a/demo/subdemo
-
-    url_path: /subdemo/index.html
-
-    final url_path3: ./www/a/subdemo/index.html
-
-    correct: ./www/a/demo/subdemo/index.html
-    */
-
-   std::cout << RED << "current status code " << conn->response.get_status_code() << RESET << std::endl;
 
     if (has_suffix(conn->server->root, "/")) {
         conn->request.url_path.erase(0, 1);
@@ -294,12 +266,13 @@ void Server::set_full_path(Connection *conn) {
     } else {
         conn->request.url_path = conn->server->root + conn->request.url_path;
     }
-    std::cout << YELLOW << "final url_path3: " << conn->request.url_path << RESET << std::endl;
 }
 
-
+/**
+ * Check the index directicve and search for a matching index file. 
+ * Update the url path if necessary
+*/
 void Server::update_url_with_index_page(Connection *conn) {
-    std::cout << "update_url_with_index_page" << std::endl;
     std::map<std::string, struct LocationOptions>::iterator it;
 
     std::string full_path = conn->server->root + conn->request.url_path;
@@ -322,9 +295,7 @@ void Server::update_url_with_index_page(Connection *conn) {
                     conn->request.url_path = url_with_slash + *pages_it;
                     return;
                 }
-
             }
-
         }
     }
 
@@ -338,56 +309,6 @@ void Server::update_url_with_index_page(Connection *conn) {
             return;
         }
     }
-
     // Indicates this is a dir
     conn->request.is_dir = true;
 }
-
-
-/*
-
-bool Server::server_index_page_exists(Connection *conn) {
-    std::map<std::string, struct LocationOptions>::iterator it;
-
-    std::string full_path = conn->request.url_path;
-    
-    if (!has_suffix(full_path, "/"))
-            full_path += "/";
-
-    for (it = this->locations.begin(); it != this->locations.end(); it++) {
-        if (it->first == conn->request.getUrl() || (it->first + "/") == conn->request.getUrl()) {
-
-            std::vector<std::string>::iterator pages_it;
-            for (pages_it = it->second.index_pages.begin(); pages_it != it->second.index_pages.end(); pages_it++) {
-                
-                // Check if the file exists in the FileSystem
-                std::string filename = full_path + *pages_it;
-                if (file_exists(filename.c_str()) == 0) {
-                    conn->request.setUrl(full_path + *pages_it);
-                    if (conn->request.has_cgi()) {
-                        conn->request.is_cgi = true;
-                    }
-                    return true;
-                }
-
-            }
-
-        }
-    }
-
-    // Check index pages in the Server scope
-    std::vector<std::string>::iterator pages_it;
-    for (pages_it = conn->server->index_pages.begin(); pages_it != conn->server->index_pages.end(); pages_it++) {
-         // Check if the file exists in the FileSystem
-        std::string filename = full_path + *pages_it;
-        if (file_exists(filename.c_str()) == 0) {
-            conn->request.setUrl(full_path + *pages_it);
-            if (conn->request.has_cgi()) {
-                conn->request.is_cgi = true;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-*/

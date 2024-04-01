@@ -3,9 +3,8 @@
     <div class="container">
         <div class="row">
             <div class="col-sm-5 mr-auto">
-                <h5>About Knight</h5>
-                <p class="text-muted">Magnis modipsae que voloratati andigen daepeditem quiate conecus aut labore.
-                    Laceaque quiae sitiorem rest non restibusaes maio es dem tumquam explabo.</p>
+                <h5>About Us</h5>
+                <p class="text-muted">JOAOALME - NUMARTIM - DBRAGA</p>
                 <ul class="list-inline social social-sm">
                     <li class="list-inline-item">
                         <a href=""><i class="fa fa-facebook"></i></a>
@@ -46,7 +45,7 @@
         </div>
         <div class="row mt-5">
             <div class="col-12 text-muted text-center small-xl">
-                &copy; 2019 Knight - All Rights Reserved
+                &copy; 2024  - All Rights Reserved
             </div>
         </div>
     </div>

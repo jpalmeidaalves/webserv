@@ -14,7 +14,6 @@
 
 class ParserConfFile {
   private:
-    int fd;
     std::string _path;
     std::vector<Server> _servers;
     int _servers_count;
@@ -34,10 +33,10 @@ class ParserConfFile {
     int check_brackets_integrity();
 
     void printMembers(void) const;
-    void print_server_data();
     std::vector<Server> &extract_servers_data();
     int extract_location(std::vector<std::string>::iterator &it, Server &s);
     bool is_directive(const std::string &line);
+    int get_server_count(void);
 };
 std::ostream &operator<<(std::ostream &out, const Server &obj);
 

@@ -6,7 +6,8 @@ bool g_stop = false;
 
 void sighandler(int signum) {
     (void)signum;
-    std::cout << "control-c triggered!!" << std::endl;
+    std::cout << " Shutting down webserv..." << std::endl;
+
     g_stop = true;
 }
 
@@ -14,7 +15,7 @@ HTTP::HTTP() {}
 
 HTTP::HTTP(std::vector<Server> &servers) : _epoll_fd(0), _servers(servers) {
     signal(SIGINT, sighandler);
-    // signal(SIGQUIT, sighandler);
+    signal(SIGQUIT, sighandler);
 }
 
 HTTP::~HTTP() {}
@@ -55,7 +56,6 @@ int HTTP::open_listening_sockets(std::vector<struct sockaddr_in> addresses) {
 
 int HTTP::add_listening_socket_to_poll(struct epoll_event &ev, int sockfd) {
 
-    // std::cout << "adding listening socket " << sockfd << " to epoll" << std::endl;
     int ret;
     ev.events = EPOLLIN;
     ev.data.fd = sockfd;
@@ -78,8 +78,8 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
         print_error("failed to accept connection");
         return 1;
     }
-    std::cout << RED << "accepted connection in listing socket: " << sockfd << " for incoming socket: " << accepted_fd
-              << RESET << std::endl;
+    std::cout << "New connection on socket: " << BOLDBLUE << sockfd << RESET
+        << " from watched file descriptor: " << BOLDBLUE << accepted_fd << RESET << std::endl;
 
     ev.events = EPOLLIN | EPOLLRDHUP;
     ev.data.fd = accepted_fd;
@@ -109,8 +109,6 @@ int HTTP::accept_and_add_to_poll(struct epoll_event &ev, int &epfd, int sockfd) 
  * ip and port as the default server.
  */
 void HTTP::redirect_to_server(Connection *conn) {
-    std::cout << "redirecting to server " << conn->host << ":" << conn->port << std::endl;
-    std::cout << "host from header " << conn->request.getHost() << std::endl;
 
     Server *default_server = NULL;
 
@@ -120,8 +118,6 @@ void HTTP::redirect_to_server(Connection *conn) {
             // if is the first match and default server is not defined, define it now
             if (!default_server) {
                 default_server = &(*ite);
-                // std::cout << "default server updated " << std::endl;
-                // printVector(default_server->server_names);
             }
 
             std::vector<std::string>::iterator it;
@@ -142,9 +138,7 @@ void HTTP::redirect_to_server(Connection *conn) {
 
     if (!conn->server) {
         print_error("FAILED TO REDIRECT TO SERVER");
-    } else {
-        std::cout << "redirected sucessfuly to " << conn->server->host << ":" << conn->server->port << std::endl;
-    }
+    } 
 }
 
 /**
@@ -153,10 +147,6 @@ void HTTP::redirect_to_server(Connection *conn) {
  */
 int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
     std::string header = response.assemble_header();
-    // response.set_content_type("application/zip");
-
-    std::cout << BLUE << "Will send this header" << RESET << std::endl;
-    std::cout << BLUE << header << RESET << std::endl;
 
     if (send(cfd, header.c_str(), header.size(), MSG_NOSIGNAL) <= 0) {
         print_error("failed to write in write_socket");
@@ -170,24 +160,20 @@ int HTTP::send_header(int &cfd, struct epoll_event &ev, Response &response) {
 
 void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
-    std::cout << "Closing connection for socket " << cfd << " ..." << std::endl;
-
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
     Connection *conn = this->_active_connects[cfd];
 
-    if (response.inputfilestream.is_open())
+    if (conn && response.inputfilestream.is_open())
         response.inputfilestream.close();
 
-    if (request.request_body.is_open())
+    if (conn && request.request_body.is_open())
         request.request_body.close();
 
     // check if the client socket has a CGI socket active
-    if (request.is_cgi) {
+    if (conn && request.is_cgi) {
 
         if (conn->cgi_fd) {
-
-            std::cout << "removing cgi socket associated with this connection" << std::endl;
 
             // Remove CGI socket from EPOLL
             epoll_event tmp;
@@ -201,16 +187,11 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
 
             kill(this->_active_connects[cfd]->cgi_pid, SIGKILL);
 
-            if (close(conn->cgi_fd) == 0) {
-                std::cout << GREEN << "Removed CGI socket " << conn->cgi_fd << RESET << std::endl;
-            } else {
-                 perror("Close: ");
-            }   
+            close(conn->cgi_fd);
         }
-
     }
 
-    if (request.body_file_name != "")
+    if (conn && request.body_file_name != "")
         std::remove(request.body_file_name.c_str());
 
     delete this->_active_connects[cfd];
@@ -227,7 +208,7 @@ void HTTP::close_connection(int cfd, int &epfd, epoll_event &ev) {
     if (close(cfd) == -1) {
         print_error("failed to close fd");
     } else {
-        std::cout << "Connection closed for socket " << cfd << "!" << std::endl;
+        std::cout << "Connection closed for FD " << RED << cfd << RESET << std::endl;
     }
 }
 
@@ -249,16 +230,11 @@ int HTTP::epoll_mod(struct epoll_event &ev, uint32_t flag) {
         return ret;
     }
 
-    std::cout << CYAN << "Changed fd " << ev.data.fd << " to " << ((flag & EPOLLIN) ? "[EPOLLIN] " : "")
-              << ((flag & EPOLLOUT) ? "[EPOLLOUT] " : "") << RESET << std::endl;
-
     return 0;
 }
 
 void HTTP::handle_timeouts() {
     connects_map::iterator it;
-
-    // std::cout << CYAN << "active connections: " << this->_active_connects.size() << RESET << std::endl;
 
     // fds = [5,6] 
     std::vector<Connection *> timedout_fds;
@@ -279,14 +255,9 @@ void HTTP::handle_timeouts() {
                 it->second->timedout = true;
 
             } else {
-
                 std::cout << "connection with fd " << it->second->fd << " has timed out!! closing..." << std::endl;
                 timedout_fds.push_back(it->second);
-                // this->close_connection(it->second->fd, this->_epoll_fd, *(it->second->ev_ptr));
-                // it--;
-                // it = this->_active_connects.begin();
             }
-
         }
     }
 
@@ -313,22 +284,19 @@ int HTTP::handle_connections() {
         if (this->add_listening_socket_to_poll(ev, *it))
             return 1;
     }
-    // program is hanging, waiting for events
+
+    // waiting for events
     while (!g_stop) {
         // put the epoll instance waiting for events(requests) until a fd delivers an event
         int nfds = epoll_wait(this->_epoll_fd, evlist, MAXEPOLLSIZE, 2000);
 
-        if (nfds == -1) {
-            print_error("epoll_wait failed");
+        // if epoll_wait failed move to the next iteration instead of closing the program
+        if (nfds == -1)
             continue;
-        }
         
         // Check for timeouts
-        // std::cout << "after epoll_wait" << std::endl;
         this->handle_timeouts();
-        // std::cout << "after handle_timeouts()" << std::endl;
         
-
         for (int i = 0; i < nfds; i++) {
 
             if (is_listening_socket(evlist[i].data.fd, this->_listening_sockets)) {
@@ -337,26 +305,17 @@ int HTTP::handle_connections() {
 
             } else if (evlist[i].events & EPOLLIN) {
                 // Ready for read
-                std::cout << YELLOW << "READING" << RESET << std::endl;
 
                 Connection *associated_conn = this->get_associated_conn(evlist[i].data.fd);
 
                 if (associated_conn) {
-                    std::cout << "CGI read in fd:" << evlist[i].data.fd << std::endl;
-                    this->read_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i], evlist[associated_conn->fd]);
+                    this->read_cgi_socket(evlist[i].data.fd, associated_conn, evlist[i]);
                 } else {
-                    std::cout << "NORMAL read in fd: " << evlist[i].data.fd << std::endl;
                     this->read_socket(evlist[i]);
                 }
             } else if (evlist[i].events & EPOLLOUT) {
                 // Ready for write
-                std::cout << BLUE << "WRITING to client socket" << evlist[i].data.fd << RESET << std::endl;
-   
                 this->write_socket(evlist[i]);
-            } else if (evlist[i].events & EPOLLRDHUP) {
-                std::cout << "++++++++++++++++++++EPOLLHUP" << std::endl;
-            } else {
-                std::cout << "++++++++++++++++++++ TIME OUT" << std::endl;
             }
         }
     }
@@ -393,43 +352,21 @@ void HTTP::read_socket(struct epoll_event &ev) {
     ft_memset(&buf, 0, BUFFERSIZE);
 
     int bytes_read = recv(cfd, buf, BUFFERSIZE, MSG_NOSIGNAL);
-    std::cout << RED << "**bytes_read: " << bytes_read << RESET << std::endl;
 
     if (bytes_read <= 0) {
-        print_error("read 0 bytes or failed to read. closing connection...");
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
 
-    // if (bytes_read == 0) {
-    //     if (request.chunked) {
-    //         conn->request.process_request(conn, this->_epoll_fd);
-    //         return;
-    //     }
-    //     print_error("read 0 bytes or failed to read. closing connection...");
-    //     this->close_connection(cfd, this->_epoll_fd, ev);
-    //     return;
-    // }
-
     // update time since last operation
     conn->last_operation = get_timestamp();
 
-    // if (bytes_read == 0) {
-    //     print_error("read 0 bytes");
-    //     this->close_connection(cfd, this->_epoll_fd, ev);
-    //     return;
-    // }
-
     std::string tmp(buf);
 
-    // print_ascii(buf);
-
     if (request.is_cgi) {    
-        std::cout << "this request has CGI" << std::endl;
         request.request_body.write(buf, bytes_read);
 
         request.request_body_writes += bytes_read;
-        std::cout << "request.request_body_writes " << request.request_body_writes << " request.get_content_length() " << request.get_content_length() << std::endl; 
 
         if (request.chunked && tmp == "\r\n") {
             return;
@@ -437,48 +374,21 @@ void HTTP::read_socket(struct epoll_event &ev) {
 
         // When we wrote all bytes from the request to the request body file, process CGI
         if (request.request_body_writes >= request.get_content_length()) {
-            std::cout << "done writing to the temp file" << std::endl;
             request.process_cgi(conn, this->_epoll_fd);
         }
 
         return;
     }
-
   
     request.append_buffer(buf, bytes_read);
-
-
-    // header\r\n
-    // header\r\n
-    // \r\n
-    // body\r\n
-    // body\r\n
-    // \r\n
-    std::cout << "request.getRaw() " << request.getRaw() << std::endl;
-
-    // request->_buffer ss
-    // --------------
-
-    // POST / HTTP/1.1\r\n
-    // Content-Length: 12\r\n
-    // \r\n
-    // hello world!
-
-    // POST / HTTP/1.1\r\n
-    // Transfer-Encoding: chunked\r\n
-    // \r\n
-    // ola\r\n
-    // adeus\r\n
-    // \r\n
 
     if (request.chunked && (request.getRaw().find( "\r\n\r\n") != std::string::npos )) {
         request.chunked_complete = true;
     }
 
     if (request.chunked_complete) {
-        std::cout << CYAN << "done reading socket" << RESET << std::endl;
         if (conn->request.getMethod() == "GET") {
-            conn->request.process_request(conn, this->_epoll_fd);
+            conn->request.process_request(conn);
         } else {
             conn->response.set_status_code("405", conn->server, conn->request);
         }
@@ -504,26 +414,14 @@ void HTTP::read_socket(struct epoll_event &ev) {
 void HTTP::write_socket(struct epoll_event &ev) {
     int cfd = ev.data.fd;
 
-    // if the connection has been removed in this happens to be in the list of FDs ready to read
-    // stop here
+    // if the connection has been removed in this happens to be in the list of FDs ready to read stop here
     if (!this->_active_connects[cfd]) {
-        std::cout << RED << "CGI socket entered in write_socket" << std::endl;
         return;
     }
 
     Request &request = this->_active_connects[cfd]->request;
     Response &response = this->_active_connects[cfd]->response;
     Connection *conn = this->_active_connects[cfd];
-
-    std::cout << "writing to socket: " << cfd << std::endl;
-    std::cout << "active connects: " << this->_active_connects.size() << std::endl;
-    std::cout << "request url is: " << request.getUrl() << std::endl;
-    std::cout << "request url_path: " << request.url_path << std::endl;
-    std::cout << "request url_query: " << request.url_query << std::endl;
-    std::cout << "request url_fragment: " << request.url_fragment << std::endl;
-
-    // %% update time since last operation
-    // conn->last_operation = get_timestamp();
 
     if (!response._sent_header) {
         this->send_header(cfd, ev, response);
@@ -532,9 +430,9 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
+    // REQUEST TO FOLDER
     if (response.isdir) {
-        std::cout << "response will be a dir" << std::endl;
-        // TODO use the response buffer instead of dir_data
+        // Use the response buffer instead of dir_data
         if (send(cfd, response.dir_data.c_str(), response.get_content_length(), MSG_NOSIGNAL) <= 0) {
             print_error("failed to send directory response");
         }
@@ -542,9 +440,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
-    if (request.is_cgi && !conn->timedout) {
-        std::cout << "CGI OUTPUT TO CLIENT" << std::endl;
-        std::cout << RED << "CGI COMPLETE? " << request.cgi_complete << RESET << std::endl;
+    // REQUEST TO CGI
+    if (request.is_cgi && !conn->timedout && !(response.get_status_code()[0] == '4' || response.get_status_code()[0] == '5')) {
         int bytes_read = 0;
 
         char buff[BUFFERSIZE];
@@ -553,17 +450,12 @@ void HTTP::write_socket(struct epoll_event &ev) {
         response._response_buffer.read(buff, BUFFERSIZE - 1);
         bytes_read = response._response_buffer.gcount();
 
-        // std::cout << "bytes_read " << bytes_read << std::endl;
-        // std::cout << "size in rdbuf" << response._response_buffer.str().size() << std::endl;
-
         if (bytes_read) {
 
             if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) <= 0) {
                 print_error("failed to write in write_socket");
                 this->close_connection(cfd, this->_epoll_fd, ev);
                 return;
-            } else {
-                std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
             }
 
             // update time since last operation
@@ -571,7 +463,6 @@ void HTTP::write_socket(struct epoll_event &ev) {
         }
 
         if (request.cgi_complete && response._response_buffer.peek() == EOF) {
-            std::cout << "will close connection now" << std::endl;
             this->close_connection(cfd, this->_epoll_fd, ev);
             close(cfd);
         }
@@ -579,8 +470,8 @@ void HTTP::write_socket(struct epoll_event &ev) {
         return;
     }
 
+    // NORMAL REQUEST
     if (!response.inputfilestream) {
-        std::cout << "No inputfilestream, will close this connection" << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
         return;
     }
@@ -591,47 +482,41 @@ void HTTP::write_socket(struct epoll_event &ev) {
     response.inputfilestream.read(buff, BUFFERSIZE);
     int bytes_read = response.inputfilestream.gcount();
 
-    std::cout << "bytes read from inputfilestream" << bytes_read << std::endl;
-
     if (bytes_read) {
-        std::cout << "read sucessfully from inputfilestream" << std::endl;
 
         if (send(cfd, buff, bytes_read, MSG_NOSIGNAL) <= 0) {
             print_error("failed to write in write_socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
-        } else {
-            std::cout << BLUE << "wrote to socket " << cfd << " " << bytes_read << " bytes" << RESET << std::endl;
-            std::cout << buff << std::endl;
-        }
+            return;
+        } 
         // update time since last operation
         conn->last_operation = get_timestamp();
 
     } else {
-        std::cout << RED << "CLOSING THIS FD" << RESET << std::endl;
         this->close_connection(cfd, this->_epoll_fd, ev);
+        return;
     }
 }
-
-// void HTTP::apply_server_location_rules(Connection *conn) {
-
-// }
 
 void HTTP::process_request(struct epoll_event &ev) {
     int cfd = ev.data.fd;
     Connection *conn = this->_active_connects[cfd];
 
-    // print_ascii(conn->request.getRaw().c_str());
-
     conn->request.parse_request_header(); // extract header info
     this->redirect_to_server(conn);
+
+    // print request type
+    std::cout << conn->request.getMethod() << " " 
+    << conn->request.getUrl() << " " << conn->request.getHost() << std::endl;
+
 
     if (conn->request.chunked && !conn->request.chunked_complete)
         return;
 
-/* ----------------------------------- ll ----------------------------------- */
+    /* ----------------------------------- DEFINE FULL PATH ----------------------------------- */
 
     // extract url query and fragments from full url 
-    conn->request.process_url(conn);
+    conn->request.process_url();
 
     // update url_path depending on the server root or location root
     conn->server->set_full_path(conn);
@@ -645,21 +530,15 @@ void HTTP::process_request(struct epoll_event &ev) {
         return;
     }
 
-    std::cout << YELLOW << "1 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
-
     conn->server->server_index_page_exists(conn);
 
     if (conn->request.url_path.find("/") == 0)
         conn->request.url_path = "." + conn->request.url_path;
 
-    std::cout << YELLOW << "2 url_path: " << conn->request.url_path.c_str() << RESET << std::endl;
-
-
     // check if is a file or dir
     file_types curr_type = get_file_type(conn->request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
-        print_error("-- failed to check if is a dir");
 
         conn->response.set_status_code("404", conn->server, conn->request);
 
@@ -670,29 +549,24 @@ void HTTP::process_request(struct epoll_event &ev) {
 
         return;
     } else if (curr_type == TYPE_DIR) {
-        std::cout << "------- dir --------" << std::endl;
         conn->server->update_url_with_index_page(conn);
     }
 
-/* ----------------------------------- ll ----------------------------------- */
+    /* ----------------------------------- DEFINE FULL PATH END ----------------------------------- */
 
-
+    // Check client max body size limits
     if (conn->request.get_content_length() > conn->server->client_max_body_size){
         conn->response.set_status_code("413", conn->server, conn->request);
         conn->request.is_cgi = false;
 
         if (epoll_mod(ev, EPOLLOUT) == -1) {
-            print_error("failed to set write mode in incomming socket");
             this->close_connection(cfd, this->_epoll_fd, ev);
         }
 
         return;
     }
 
-    // this->apply_server_location_rules(conn);
-
     if (conn->request.has_cgi(conn)) {
-        std::cout << GREEN << "cgi request" << RESET << std::endl;
         if (conn->request.prepare_file_to_save_body(cfd, conn, this->_epoll_fd) == -1) {
             std::cout << "Missing directory /tmp. Must be present to work.";
             std::cout << "If the directory is missing, create it manually." << std::endl;
@@ -705,11 +579,8 @@ void HTTP::process_request(struct epoll_event &ev) {
             }
         }
     } else {
-
-        std::cout << GREEN << "normal request" << RESET << std::endl;
-
         if (conn->request.getMethod() == "GET") {
-            conn->request.process_request(conn, this->_epoll_fd);
+            conn->request.process_request(conn);
         } else {
             conn->response.set_status_code("400", conn->server, conn->request);
         }
@@ -721,34 +592,21 @@ void HTTP::process_request(struct epoll_event &ev) {
     }
 }
 
-void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev) {
-    (void)conn_ev;
-    (void)cgi_ev;
+void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev) {
     char buffer[BUFFERSIZE + 1];
     ft_memset(&buffer, 0, sizeof(buffer));
 
     int bytes_read = recv(fd, buffer, BUFFERSIZE, MSG_NOSIGNAL);
 
-    std::cout << "content from CGI" << std::endl;
-    std::cout << RED << buffer << RESET << std::endl;
-    std::cout << YELLOW << "recv returned " << bytes_read << RESET << std::endl;
-
     if (bytes_read <= 0) {
         conn->request.cgi_complete = true;
 
-       
         // Remove CGI fd from Epoll
         if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_DEL, fd, &cgi_ev) == -1) {
             print_error(strerror(errno));
         }
 
-        if (close(fd) == 0) {
-            std::cout << YELLOW << "Removed CGI socket " << fd << RESET << std::endl;
-
-        } else {
-              std::cout << YELLOW << "Error closing: " << fd << RESET << std::endl;
-             
-        }
+        close(fd);
         std::remove(conn->request.body_file_name.c_str());
         conn->cgi_fd = 0;
     }
@@ -770,6 +628,7 @@ void HTTP::read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev,
             print_error(strerror(errno));
             std::cout << "failed to modify from EPOLL" << std::endl;
             close(conn->fd);
+            return ;
         }
     }
 }
@@ -786,37 +645,3 @@ Connection *HTTP::get_associated_conn(int sock) {
     }
     return NULL;
 }
-
-/*
-
-* input operation
-- output operation
-
-Request A |*****************--------------------------------------------------------------]
-Request B |***-----]
-
-
-Logger Ex
-
-timestamp [INFO] - incomming connection from x, GET /
-timestamp [INFO] - finish send response to x
-timestamp [INFO] - closed connection for x
-
-timestamp [ERROR] - failed to read
-
-
-    printf("File Permissions: \t");
-    printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
-    printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
-    printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
-    printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
-    printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
-    printf("\n\n");
-
-
-*/

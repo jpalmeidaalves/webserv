@@ -70,13 +70,12 @@ class HTTP {
     void write_socket(struct epoll_event &ev);
     int epoll_mod(struct epoll_event &ev, uint32_t flag);
     void redirect_to_server(Connection *conn);
-    void read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev, struct epoll_event &conn_ev);
+    void read_cgi_socket(int fd, Connection *conn, struct epoll_event &cgi_ev);
     Connection *get_associated_conn(int sock);
     static void remove_cgi_socket(int sock);
     static void add_cgi_socket(int sock, int connection_socket);
     void process_request(struct epoll_event &ev);
     void handle_timeouts();
-    // void apply_server_location_rules(Connection *conn);
 };
 
 #endif/* HTTP_HPP */

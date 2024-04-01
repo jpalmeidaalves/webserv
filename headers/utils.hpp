@@ -17,8 +17,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
-// #include "Request.hpp"
-// #include "Response.hpp"
 
 typedef enum file_types_t { TYPE_FILE, TYPE_DIR, TYPE_UNKOWN } file_types;
 
@@ -74,5 +72,7 @@ void print_vector_with_space(std::vector<T> v) {
 long get_timestamp();
 void start_timer(struct timeval *begin);
 void end_timer(struct timeval *begin, struct timeval *end);
+
+std::string urlDecode(const std::string& encoded);
 
 #endif /* UTILS_HPP */

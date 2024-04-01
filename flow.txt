@@ -1,8 +1,9 @@
 1 - Starting program
     1.1 - Open config file and extract data => class ParserConfigFile
-        a - Create a vector of tokens to be parsed => ParserConfigFile.create_tokens()
-        b - Extract the data from _server token vector and create a 'Server' object for each, creating a
-            vector with unique adresses (ip:port) => ParserConfigFile.extract()
+        a - Create a vector of tokens to be parsed, a token is a word or one of the following
+            characters '{};' => ParserConfigFile.create_tokens()
+        b - Iterate the array of tokens, extract the data and create a 'Server' object for
+            each block of a unique adress (ip:port) => ParserConfigFile.extract_server()
         c - Get unique addresses (ip:port) and store in a vector of sockaddr_in(IPv4) structs that 
             contains necessarry data to bind a sokcet  => ParserConfigFile.get_unique_addresses()
         d - Store all server objects(settings) in '_servers' private member on 'HTTP' 
@@ -20,10 +21,11 @@
         a - create an epoll instance using epoll_create that returns a fd(_epfd) to that instance
         b - iterate over the sockfd vector and add each one to the epoll interest list for
             reading events => epoll_ctl(this->_epfd, EPOLL_CTL_ADD, sockfd, &ev) (flag EPOLLIN)
-        c - put the epoll instance in wait mode, that is waiting for events(requests) => epoll_wait(), returns
-            the number of fds the epoll instance is monitoring
-        d - when a request for connection is received and the socket is in the interest list, the request
-            is accepted and added to de interest list for reading and writing now => accept_and_add_to_poll()
+        c - put the epoll instance in wait mode, that is waiting for events(requests) => epoll_wait(),
+            returns the number of fds the epoll instance is monitoring
+        d - when a request for connection is received and the socket is in the interest list, 
+            the request is accepted and added to de interest list for reading and 
+            writing now => accept_and_add_to_poll()
         e - extract ip and port related to each socket and store in a struct => get_port_host_from_sockfd()
 3 - Proccess the requests and send responses. At this point, diverse events will be processed simultenously,
     even so, the program will be able accpet more requests becasue of non-blocking nature of epoll system call 
@@ -36,5 +38,3 @@
             whether to serve a file, list a directory, or ... //TODO continue diferent reponses
         b - If serving a file, it opens the file and sends the appropriate headers => process_requested_file(ev)
         c - If its a directory, generates an HTML page listing the contents of a directory and sends it to the client.
-
-TEST

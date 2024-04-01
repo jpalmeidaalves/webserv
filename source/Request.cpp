@@ -10,7 +10,6 @@ Request::Request() : _content_length(0), request_body_writes(0), is_cgi(false), 
 
 Request::~Request() {}
 
-/* -------------------------------- Disabled -------------------------------- */
 Request &Request::operator=(const Request &rhs) {
     (void)rhs;
     return *this;
@@ -22,10 +21,7 @@ Request::Request(const Request &src) { *this = src; }
 /* -------------------------------------------------------------------------- */
 
 void Request::parse_request_header() {
-    std::cout << RED << "parsed request" << RESET << std::endl;
-    std::cout << MAGENTA << this->_buffer.str() << RESET << std::endl;
     // parse request
-    // std::stringstream ss(this->_buffer.str());
     std::string line;
 
     // process first line
@@ -33,16 +29,13 @@ void Request::parse_request_header() {
     getline(this->_buffer, this->_url, ' ');
     getline(this->_buffer, line); // ignore the rest of the line
 
-    // std::cout << "---------- parsing header -----------" << std::endl;
+    this->_url = urlDecode(this->_url);
 
     while (getline(this->_buffer, line)) {
 
         // has reach the end of the header
         if (line == "\r")
             break;
-
-        // std::cout << line << std::endl;
-        // print_ascii(line.c_str());
 
         if (line.find("Host:") == 0) {
             remove_char_from_string(line, '\r');
@@ -54,7 +47,6 @@ void Request::parse_request_header() {
             remove_char_from_string(line, '\r');
             this->_content_type = line.substr(line.find(" ") + 1);
         } else if (line.find("Transfer-Encoding: chunked") == 0) {
-            std::cout << YELLOW << "request is chunked++++++++" << RESET << std::endl;
             this->chunked = true;
         }
     }
@@ -64,31 +56,11 @@ void Request::parse_request_header() {
     _buffer.str(std::string()); // clear the underlying buffer
     _buffer << tmp.str();
 
-  
-
-    std::cout << MAGENTA << "buffer content:" << std::endl;
-    // size_t pos = _buffer.str().find("\r\n\r\n");
-    // _buffer.ignore(pos + 4);
-    // std::cout << this->_buffer.str() << std::endl;
-
-    std::cout << _buffer.str() << std::endl;
-    std::cout << "-- end buffer content --" << RESET << std::endl;
-
-    // std::string tmp = this->_buffer.rdbuf();
-     
     if (_buffer.str().find( "\r\n\r\n") != std::string::npos) {
         this->chunked_complete = true;
-        std::cout << "read complete body with the request" << std::endl;
-       
     }
 
-
-
-    
-
     // all subsequent reads on that client socket will be written in request_body too
-
-    // std::cout << "---------- end parsing header -----------" << std::endl;
 }
 
 std::string Request::getMethod() const { return (this->_method); }
@@ -116,7 +88,6 @@ void Request::set_content_length(std::size_t length) { this->_content_length = l
 
 void Request::append_buffer(const char *buf, int len) {
     this->_buffer.write(buf, len);
-    std::cout << "appended data in the request buffer" << std::endl;
 }
 
 std::ostream &operator<<(std::ostream &out, const Request &obj) {
@@ -129,7 +100,7 @@ std::ostream &operator<<(std::ostream &out, const Request &obj) {
 
 void Request::setUrl(std::string url) { this->_url = url; }
 
-void Request::process_url(Connection *conn) {
+void Request::process_url(void) {
 
     // /upload.php?name=nuno&other=stuff
     // /upload.html?name=.php&other=stuff
@@ -153,23 +124,13 @@ void Request::process_url(Connection *conn) {
     if (has_fragment != std::string::npos) {
         base_url = base_url.substr(0, has_fragment);
         this->url_fragment = this->getUrl().substr(has_fragment + 1);
-    } else {
-        base_url = base_url;
-    }
+    } 
+
 
     this->url_path = base_url;
-
-    std::cout << "[Request Header]" << conn->request.getRaw() << std::endl;
-    std::cout << GREEN << "url_path: " << url_path << RESET << std::endl;
-
-    // std::string full_path = conn->server->root + conn->request.url_path;
-
-
 }
 
 bool Request::has_cgi(Connection *conn) {
-
-    std::cout << "checking if has CGI: url_path = " << this->url_path << std::endl;
 
     if (this->is_cgi)
         return true;
@@ -178,9 +139,7 @@ bool Request::has_cgi(Connection *conn) {
 
     for (it = conn->server->locations.begin(); it != conn->server->locations.end(); it++) {
 
-        // *.php
-        // *.bla
-        // *.py
+        // *.php | *.bla | *.py
 
         if (it->first.find("*.") ==  0 && it->first.size() > 2 ) {
             std::string ext = it->first.substr(1);
@@ -203,11 +162,6 @@ bool Request::has_cgi(Connection *conn) {
 
         }
     }
-
-    // if (has_suffix(this->url_path, ".php")) {
-    //     this->is_cgi = true;
-    //     return true;
-    // }
     
     return false;
 }
@@ -230,33 +184,21 @@ void Request::process_requested_file(Connection *conn, std::string full_path) {
         }
     }
     std::string file_type = MimeTypes::identify(full_path);
-    // std::cout << RED << "file mimetype: " << file_type << RESET << std::endl;
     response.set_content_type(file_type);
-
-    // response.set_req_file_fd(file_fd);
 }
 
-void Request::process_request(Connection *conn, int epfd) {
-    (void)epfd;
-    // int cfd = ev.data.fd;
+void Request::process_request(Connection *conn) {
     Request &request = conn->request;
     Response &response = conn->response;
-
-    // std::cout << "[Request Header]" << request.getRaw() << std::endl;
-    // std::cout << GREEN << "processing request full_path: " << request.url_path.c_str() << RESET << std::endl;
 
     // check if is a file or dir
     file_types curr_type = get_file_type(request.url_path.c_str());
 
     if (curr_type == TYPE_UNKOWN) {
-        print_error("failed to check if is a dir");
         response.set_status_code("404", conn->server, request);
     } else if (curr_type == TYPE_FILE) {
-        std::cout << "------- file --------" << std::endl;
         this->process_requested_file(conn, request.url_path);
     } else if (request.is_dir) {
-        std::cout << "------- dir --------" << std::endl;
-
         bool is_dir_listing = conn->server->server_dir_listing(conn);
 
         if (!is_dir_listing) {
@@ -266,6 +208,48 @@ void Request::process_request(Connection *conn, int epfd) {
             this->list_directory(request.url_path, conn);
         }
     }
+}
+
+std::string Request::create_html_dir(std::map<std::string, struct dir_entry> &dir_entries) {
+    std::stringstream ss;
+
+    ss << "<html><head><title>Index of " << this->url_path << "/</title></head><body><h1>Index of "
+       << this->url_path << "</h1><hr><pre>";
+
+    std::map<std::string, struct dir_entry>::iterator it;
+    {
+        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
+            if (it->second.is_file == false) {
+
+                std::string folder_name = it->first + "/";
+
+                ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
+                   << std::setw(51 - folder_name.size()) << " ";
+
+                // parent folder has no modified date and size
+                if (it->first == "..") {
+                    ss << "\n";
+                } else {
+                    ss << it->second.last_modified << " ";
+                    ss << std::right << std::setw(20) << "-\n";
+                }
+            }
+        }
+        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
+            if (it->second.is_file == true) {
+
+                ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
+                   << std::setw(51 - it->first.size()) << " ";
+
+                ss << it->second.last_modified << " ";
+                ss << std::right << std::setw(19) << it->second.size << "\n";
+            }
+        }
+    }
+
+    ss << "</pre><hr></body></html>";
+
+    return ss.str();
 }
 
 int Request::list_directory(std::string full_path, Connection *conn) {
@@ -305,10 +289,6 @@ int Request::list_directory(std::string full_path, Connection *conn) {
 
         std::string item_path = full_path + "/" + dp->d_name;
 
-        std::cout << "full_path: " << full_path << std::endl;
-        std::cout << "dp->d_name: " << dp->d_name << std::endl;
-        std::cout << "item_path: " << item_path << std::endl;
-
         std::string href = item_path.substr(5);
 
         ft_memset(&struc_st, 0, sizeof(struc_st));
@@ -339,48 +319,10 @@ int Request::list_directory(std::string full_path, Connection *conn) {
         return -1;
     }
 
-    std::stringstream ss;
-
-    ss << "<html><head><title>Index of " << request.url_path << "/</title></head><body><h1>Index of "
-       << request.url_path << "</h1><hr><pre>";
-
-    std::map<std::string, struct dir_entry>::iterator it;
-    {
-        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-            if (it->second.is_file == false) {
-
-                std::string folder_name = it->first + "/";
-
-                ss << "<a href=\"" << it->second.href << "\">" << folder_name << "</a>"
-                   << std::setw(51 - folder_name.size()) << " ";
-
-                // parent folder has no modified date and size
-                if (it->first == "..") {
-                    ss << "\n";
-                } else {
-                    ss << it->second.last_modified << " ";
-                    ss << std::right << std::setw(20) << "-\n";
-                }
-            }
-        }
-        for (it = dir_entries.begin(); it != dir_entries.end(); it++) {
-            if (it->second.is_file == true) {
-
-                ss << "<a href=\"" << it->second.href << "\">" << it->first << "</a>"
-                   << std::setw(51 - it->first.size()) << " ";
-
-                ss << it->second.last_modified << " ";
-                ss << std::right << std::setw(19) << it->second.size << "\n";
-            }
-        }
-    }
-
-    ss << "</pre><hr></body></html>";
+    response.dir_data = create_html_dir(dir_entries);
 
     response.set_status_code("200", conn->server, conn->request);
-    response.set_content_length(ss.str().size());
-
-    response.dir_data = ss.str();
+    response.set_content_length(response.dir_data.size());
 
     return 0;
 }
@@ -390,15 +332,12 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
     if (this->getMethod() == "GET"){
         if (process_cgi(conn, epfd) == -1)
             return -1;
-        std::cout << "ENTROU AQUI!" << std::endl;
         return 0;
     }
     this->body_file_name = "./tmp/.tmp-req-body-" + ft_itos(fd);
-    std::cout << "will use this filename: " << this->body_file_name.c_str() << std::endl;
     this->request_body.open(this->body_file_name.c_str());
 
     if (!this->request_body.is_open()) {
-        std::cout << "this" << std::endl;
         return -1;
     }
 
@@ -425,26 +364,13 @@ int Request::prepare_file_to_save_body(int fd, Connection *conn, int epfd) {
         process_cgi(conn, epfd);
     }
 
-    std::cout << YELLOW << "number of bytes left in request buffer: " << bytes_read  << std::endl << buf << RESET << std::endl;
-
     return 0;
 }
 
 int Request::process_cgi(Connection *conn, int epfd) {
-    std::cout << "processing CGI" << std::endl;
 
     if (this->request_body.is_open())
         this->request_body.close();
-
-    // std::size_t bytes_left = remaining_bytes(this->_buffer);
-    // std::cout << "request buffer has " << bytes_left << " bytes left" << std::endl;
-
-    // std::cout << "[request]" << std::endl;
-    // std::cout << this->getRaw() << std::endl;
-    // std::cout << "[end request]" << std::endl;
-
-    std::cout << "content-length from request: " << this->get_content_length() << std::endl;
-    std::cout << "content-type from request: " << this->get_content_type() << std::endl;
 
     int sockets[2];
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, sockets) < 0) {
@@ -452,11 +378,8 @@ int Request::process_cgi(Connection *conn, int epfd) {
         return -1;
     }
 
-    std::cout << GREEN << "added new FDs from socketspair: " << sockets[0] << " " << sockets[1] << RESET << std::endl;
-
     pid_t pid = fork();
     if (pid == -1) {
-        // conn->response.set_status_code("500", conn->server, conn->request);
         this->cgi_complete = true;
         return -1;
     }
@@ -473,7 +396,7 @@ int Request::process_cgi(Connection *conn, int epfd) {
         if (this->request_body_writes) {
             fd = open(this->body_file_name.c_str(), O_RDONLY);
             if (!fd) {
-                std::cout << "error oping body_file_name" << std::endl;
+                std::cout << "error openning body_file_name" << std::endl;
                 exit(EXIT_FAILURE);
             }
         }
@@ -483,20 +406,11 @@ int Request::process_cgi(Connection *conn, int epfd) {
             close(fd);
         }
 
-        // std::string file_path = this->url_path;
-
-
         // /usr/bin/php-cgi
         // cgi_pass /usr/bin/php8.1-cgi;
         
-        // std::cout << RED << "cgi_path: " <<  this->cgi_path << RESET << std::endl;
-        // std::cout << RED << "url_path: " <<  this->url_path << RESET << std::endl;
-
-        // chdir("./YoupiBanane");
-
         char *cmd[] = {(char *)this->cgi_path.c_str(), (char *)this->url_path.c_str(), NULL};
-
-        // std::string path_translated = "PATH_TRANSLATED=" + this->url_path;        
+      
         std::string server_port = "SERVER_PORT=" + conn->server->port;
         std::string remote_host = "REMOTE_HOST=" + conn->server->host;
         std::string server_protocol = "SERVER_PROTOCOL=HTTP/1.1";
@@ -505,8 +419,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
         std::string script_filename = "SCRIPT_FILENAME=" + this->url_path;
         std::string script_name = "SCRIPT_NAME=" + this->url_path;
         std::string path_info = "PATH_INFO=" + this->url_path;
-        // std::string script_name = "SCRIPT_NAME=/youpi.bla"; // + this->url_path;
-        // std::string path_info = "PATH_INFO=./YoupiBanane/youpi.bla"; // + this->url_path;
         std::string content_type = "CONTENT_TYPE=" + this->get_content_type();
         
         std::string url_query;
@@ -515,9 +427,6 @@ int Request::process_cgi(Connection *conn, int epfd) {
             url_query = "QUERY_STRING=upload_path=" + conn->request.upload_path; // pass upload path here inside the query
         else
             url_query = "QUERY_STRING=" + this->url_query;
-
-        // std::cout << YELLOW << "url_query" << url_query << RESET << std::endl;
-        
 
         char *custom_envp[] = {
             (char *)script_filename.c_str(),
@@ -532,14 +441,10 @@ int Request::process_cgi(Connection *conn, int epfd) {
         }
     } else if (pid > 0) {               // parent
 
-        if (close(sockets[1]) == 0) {
-            std::cout << GREEN << "Removed unused socket " << sockets[1] << RESET << std::endl;
-
-        } else {
-                print_error("Close: ");
+        if (!(close(sockets[1]) == 0)) {
+            print_error("Close: ");
         }
         conn->cgi_pid = pid;
-        // std::cout << GREEN << "conn->cgi_pid: " << conn->cgi_pid << std::endl;
 
         // Add the socket in the parent end to the EPOLL
         /**
@@ -563,37 +468,11 @@ int Request::process_cgi(Connection *conn, int epfd) {
             print_error("failed epoll_ctl ------");
             return -1;
         }
-
-        std::cout << GREEN << "added cgi socket to epoll " << conn->cgi_fd << RESET << std::endl;
-
     }
 
     return 0;
 }
 
-std::string Request::getline_from_body(std::size_t &bytes_read) {
-    std::stringstream line;
-
-    // stop reading when reach the end of content length
-    while (bytes_read < this->get_content_length()) {
-        char buf[1];
-        this->_buffer.read(buf, 1);
-        if (this->_buffer.fail()) {
-            print_error("Failed to extract line from request body");
-            this->_buffer.clear();
-            return line.str();
-        }
-        bytes_read++;
-        line << buf;
-        if (*buf == '\n' && line.str().find("\r\n") != std::string::npos)
-            break;
-    }
-
-    // std::string tmp = line.str();
-    // tmp.erase(tmp.size() - 2); // remove \r\n from string
-
-    return line.str();
-}
 
 // SERVER_PROTOCOL -The name and revision of the information protcol this request came
 // in with. Format: protocol/revision
@@ -658,18 +537,3 @@ std::string Request::getline_from_body(std::size_t &bytes_read) {
 // CONTENT_LENGTH
 
 // The length of the said content as given by the client.
-
-// std::cout << "size of envp " << i << std::endl;
-
-// export GATEWAY_INTERFACE="CGI/1.1"
-// export SCRIPT_FILENAME="/home/xzhttpd/htdocs/test.php"
-// export REQUEST_METHOD="POST"
-// export REDIRECT_STATUS=200
-// export SERVER_PROTOCOL="HTTP/1.1"
-// export REMOTE_HOST="127.0.0.1"
-// export CONTENT_LENGHT=3
-// export HTTP_ACCEPT="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-// export CONTENT_TYPE="application/x-www-form-urlencoded"
-// export BODY="t=1"
-
-// url: http:127.0.0.1:8084?name=testing&age=35
